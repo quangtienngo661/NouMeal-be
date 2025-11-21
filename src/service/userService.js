@@ -7,6 +7,10 @@ class UserService {
   // Register a new user
   async registerUser(userData) {
     try {
+      // Prevent client from assigning admin role during registration
+      if (userData && userData.role === 'admin') {
+        throw new AppError('Cannot assign admin role during registration', 403);
+      }
       // Check if user already exists
       const existingUser = await User.findOne({ email: userData.email });
       if (existingUser) {

@@ -30,6 +30,7 @@ const profileRoute = require('./route/profileRoute');
 const authRoute = require('./route/authRoute');
 const foodRoute = require('./route/foodRoute');
 const reportRoute = require('./route/reportRoute');
+const adminRoute = require('./route/adminRoute');
 
 // ========= MIDDLEWARE SECTION =========
 const app = express();
@@ -64,6 +65,7 @@ app.use('/api/v1/profile', profileRoute); // Profile management routes
 app.use('/api/v1/auth', authRoute); // Enhanced authentication routes
 app.use('/api/v1/foods', foodRoute) // Food information
 app.use('/api/v1/reports', reportRoute); // Reports and statistics
+app.use('/api/v1/admin', adminRoute); // Admin utilities
 
 // Home route
 app.use('/', (req, res) => {
