@@ -1,0 +1,943 @@
+openapi: 3.0.3
+info:
+  title: Food Recognition & Nutrition API
+  description: |
+    **API tư vấn dinh dưỡng và nhận diện món ăn bằng AI cho người Việt Nam**
+
+    Hệ thống kết hợp Clarifai và OpenAI GPT-4 để:
+    - 🥗 Nhận diện món ăn từ ảnh
+    - 📊 Phân tích thành phần dinh dưỡng chi tiết
+    - 🍽️ So sánh nhiều món ăn
+    - 📈 Theo dõi calo hàng ngày
+    - 💡 Gợi ý thực đơn lành mạnh
+    - 🤖 Chat với chuyên gia dinh dưỡng AI
+
+    **Công nghệ:**
+    - Clarifai API: Nhận diện món ăn
+    - OpenAI GPT-4o & GPT-4 Vision: Phân tích và tư vấn
+    - Flask: Backend API
+  contact:
+    name: API Support
+    email: support@foodapi.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.0
+servers:
+- url: http://localhost:5000
+  description: Development Server
+- url: https://api.foodrecognition.com
+  description: Production Server
+security:
+- ApiKeyAuth: []
+tags:
+- name: Utilities
+  description: Các chức năng hỗ trợ và kiểm tra
+- name: Chat
+  description: Chat với chuyên gia dinh dưỡng AI
+- name: Food Analysis
+  description: Phân tích và nhận diện món ăn
+- name: Comparison & Tracking
+  description: So sánh món ăn và theo dõi calo
+- name: Meal Planning
+  description: Lập kế hoạch thực đơn
+- name: User Profile
+  description: Quản lý hồ sơ người dùng
+paths:
+  /api/health:
+    get:
+      tags:
+      - Utilities
+      summary: Health Check
+      description: Kiểm tra trạng thái API và danh sách endpoints khả dụng
+      operationId: healthCheck
+      responses:
+        "200":
+          description: API đang hoạt động
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /api/chat:
+    post:
+      tags:
+      - Chat
+      summary: Chat với chuyên gia dinh dưỡng AI
+      description: |
+        Tư vấn dinh dưỡng dạng chat với lịch sử hội thoại.
+        Sử dụng GPT-4o-mini để trả lời nhanh và tiết kiệm.
+      operationId: chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            examples:
+              basic_question:
+                summary: Câu hỏi cơ bản
+                value:
+                  message: "Tôi bị tiểu đường, nên ăn gì?"
+              with_session:
+                summary: Tiếp tục hội thoại
+                value:
+                  message: Còn món nào khác không?
+                  session_id: 550e8400-e29b-41d4-a716-446655440000
+        required: true
+      responses:
+        "200":
+          description: Trả lời thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "400":
+          description: Tin nhắn không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/analyze-food:
+    post:
+      tags:
+      - Food Analysis
+      summary: Phân tích món ăn chi tiết
+      description: |
+        Nhận diện món ăn bằng Clarifai và phân tích dinh dưỡng chi tiết bằng GPT-4 Vision.
+
+        **Kết quả bao gồm:**
+        - Xác nhận món ăn
+        - Thông tin dinh dưỡng (calo, protein, carbs, fat, chất xơ, vitamin)
+        - Đánh giá phù hợp với sức khỏe (1-5 sao)
+        - Ưu/nhược điểm
+        - Gợi ý cải thiện và món thay thế
+      operationId: analyzeFood
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeFoodRequest"
+            examples:
+              basic_analysis:
+                summary: Phân tích cơ bản
+                value:
+                  image: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+              with_health_condition:
+                summary: Phân tích cho người tiểu đường
+                value:
+                  image: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+                  health_condition: tiểu đường
+                  dietary_goals: giảm cân
+        required: true
+      responses:
+        "200":
+          description: Phân tích thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeFoodResponse"
+              example:
+                success: true
+                detected_foods:
+                - name: phở bò
+                  confidence: 98.5
+                - name: thịt bò
+                  confidence: 95.2
+                analysis: |
+                  ## 1. 🍽️ XÁC NHẬN MÓN ĂN
+                  - Phở bò: Một tô phở đầy đủ với thịt bò, bánh phở...
+
+                  ## 2. 📊 THÔNG TIN DINH DƯỠNG
+                  - **Calo**: 450 kcal
+                  - **Protein**: 25g
+                  - **Carbohydrate**: 60g
+                  - **Chất béo**: 12g
+
+                  ## 3. ⭐ ĐÁNH GIÁ PHÙ HỢP
+                  - **Mức độ**: ⭐⭐⭐⭐ (4/5 sao)
+                health_condition: tiểu đường
+                dietary_goals: giảm cân
+        "400":
+          description: Không nhận diện được món ăn hoặc thiếu ảnh
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorWithSuggestion"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/compare-foods:
+    post:
+      tags:
+      - Comparison & Tracking
+      summary: So sánh nhiều món ăn
+      description: |
+        So sánh 2-4 món ăn về mặt dinh dưỡng và xếp hạng.
+
+        **Kết quả bao gồm:**
+        - Bảng so sánh dinh dưỡng chi tiết
+        - Xếp hạng từ tốt nhất đến kém nhất
+        - Khuyến nghị nên chọn món nào
+        - Cảnh báo đặc biệt cho người có bệnh
+      operationId: compareFoods
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompareFoodsRequest"
+            examples:
+              compare_two:
+                summary: So sánh 2 món
+                value:
+                  images:
+                  - "data:image/jpeg;base64,..."
+                  - "data:image/jpeg;base64,..."
+                  health_condition: tim mạch
+              compare_multiple:
+                summary: So sánh nhiều món
+                value:
+                  images:
+                  - "data:image/jpeg;base64,..."
+                  - "data:image/jpeg;base64,..."
+                  - "data:image/jpeg;base64,..."
+                  - "data:image/jpeg;base64,..."
+        required: true
+      responses:
+        "200":
+          description: So sánh thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompareFoodsResponse"
+        "400":
+          description: Cần ít nhất 2 ảnh
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/track-calories:
+    post:
+      tags:
+      - Comparison & Tracking
+      summary: Theo dõi calo trong ngày
+      description: |
+        Theo dõi tất cả các bữa ăn trong ngày và tính tổng calo.
+
+        **Kết quả bao gồm:**
+        - Chi tiết từng bữa ăn (Sáng, Trưa, Tối, Phụ)
+        - Tổng hợp calo và so với mục tiêu
+        - Phân bố dinh dưỡng (protein, carbs, fat)
+        - Biểu đồ phân bố dạng text
+        - Đánh giá tổng thể
+        - Gợi ý điều chỉnh nếu thiếu/thừa calo
+      operationId: trackCalories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackCaloriesRequest"
+            examples:
+              full_day:
+                summary: Theo dõi cả ngày
+                value:
+                  images:
+                  - "data:image/jpeg;base64,..."
+                  - "data:image/jpeg;base64,..."
+                  - "data:image/jpeg;base64,..."
+                  target_calories: 1800
+                  health_condition: béo phì
+        required: true
+      responses:
+        "200":
+          description: Theo dõi thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackCaloriesResponse"
+        "400":
+          description: Chưa có ảnh bữa ăn
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/quick-scan:
+    post:
+      tags:
+      - Food Analysis
+      summary: Quét nhanh nhận diện món
+      description: |
+        Nhận diện nhanh món ăn chỉ bằng Clarifai (không phân tích chi tiết).
+        Dùng khi cần kết quả nhanh hoặc chỉ muốn biết tên món.
+      operationId: quickScan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuickScanRequest"
+        required: true
+      responses:
+        "200":
+          description: Nhận diện thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuickScanResponse"
+        "400":
+          description: Không nhận diện được hoặc thiếu ảnh
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorWithSuggestion"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/meal-suggestion:
+    post:
+      tags:
+      - Meal Planning
+      summary: Gợi ý thực đơn 1 bữa
+      description: |
+        Đề xuất 2-3 món ăn Việt phù hợp cho bữa ăn dựa trên:
+        - Tình trạng sức khỏe
+        - Sở thích ăn uống
+        - Ngân sách
+        - Thời gian nấu
+        - Bữa ăn nào trong ngày
+      operationId: mealSuggestion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MealSuggestionRequest"
+            examples:
+              quick_lunch:
+                summary: Bữa trưa nhanh
+                value:
+                  meal_time: trưa
+                  cooking_time: 15 phút
+                  budget_range: 50k
+              healthy_dinner:
+                summary: Bữa tối lành mạnh
+                value:
+                  meal_time: tối
+                  health_condition: tiểu đường
+                  dietary_preferences: ít dầu mỡ
+                  budget_range: 100k
+                  cooking_time: 30 phút
+        required: true
+      responses:
+        "200":
+          description: Gợi ý thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealSuggestionResponse"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/weekly-menu:
+    post:
+      tags:
+      - Meal Planning
+      summary: Lập thực đơn tuần
+      description: |
+        Tạo thực đơn 7 ngày với 3 bữa/ngày (21 bữa).
+
+        **Bao gồm:**
+        - Thực đơn chi tiết từng bữa
+        - Tổng calo mỗi ngày
+        - Danh sách mua sắm cho cả tuần
+        - Tips tiết kiệm thời gian
+      operationId: weeklyMenu
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WeeklyMenuRequest"
+        required: true
+      responses:
+        "200":
+          description: Thực đơn tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyMenuResponse"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/detailed-recipes:
+    post:
+      tags:
+      - Meal Planning
+      summary: Công thức nấu chi tiết
+      description: |
+        Tạo công thức nấu ăn chi tiết với:
+        - Nguyên liệu cụ thể (khối lượng)
+        - Các bước làm từng bước
+        - Thời gian chuẩn bị và nấu
+        - Thông tin dinh dưỡng
+        - Chi phí ước tính
+        - Tips hữu ích
+      operationId: detailedRecipes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DetailedRecipesRequest"
+        required: true
+      responses:
+        "200":
+          description: Công thức tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DetailedRecipesResponse"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/user/profile:
+    post:
+      tags:
+      - User Profile
+      summary: Lưu hồ sơ người dùng
+      description: |
+        Lưu hoặc cập nhật thông tin sức khỏe và sở thích của người dùng.
+        Dùng để cá nhân hóa gợi ý dinh dưỡng.
+      operationId: saveUserProfile
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfile"
+            example:
+              name: Nguyễn Văn A
+              age: 35
+              weight: 70.5
+              height: 170
+              health_condition: tiểu đường
+              dietary_preferences:
+              - ít đường
+              - nhiều rau xanh
+              allergies:
+              - hải sản
+              target_calories: 1800
+              activity_level: vừa phải
+        required: true
+      responses:
+        "200":
+          description: Lưu thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveProfileResponse"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/user/profile/{user_id}:
+    get:
+      tags:
+      - User Profile
+      summary: Lấy hồ sơ người dùng
+      description: Truy xuất thông tin hồ sơ người dùng đã lưu
+      operationId: getUserProfile
+      parameters:
+      - name: user_id
+        in: path
+        description: ID của người dùng
+        required: true
+        schema:
+          type: string
+          example: 550e8400-e29b-41d4-a716-446655440000
+      responses:
+        "200":
+          description: Lấy thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: Không tìm thấy người dùng
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    DetectedFood:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tên món ăn
+          example: phở bò
+        confidence:
+          maximum: 100
+          minimum: 0
+          type: number
+          description: Độ tin cậy (%)
+          format: float
+          example: 98.5
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Mô tả lỗi
+          example: Tin nhắn không được để trống
+    ErrorWithSuggestion:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Không nhận diện được món ăn
+        suggestion:
+          type: string
+          example: Vui lòng chụp ảnh rõ hơn hoặc thử ảnh khác
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: OK
+        message:
+          type: string
+          example: Food Recognition API is running!
+        endpoints:
+          type: array
+          example:
+          - /api/chat
+          - /api/analyze-food
+          - /api/compare-foods
+          items:
+            type: string
+    ChatRequest:
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          type: string
+          description: Tin nhắn của người dùng
+          example: "Tôi bị tiểu đường, nên ăn gì?"
+        session_id:
+          type: string
+          description: ID phiên chat (tự động tạo nếu không có)
+          example: 550e8400-e29b-41d4-a716-446655440000
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+          description: Trả lời từ AI
+          example: "Với người bị tiểu đường, bạn nên ưu tiên các món..."
+        session_id:
+          type: string
+          example: 550e8400-e29b-41d4-a716-446655440000
+    AnalyzeFoodRequest:
+      required:
+      - image
+      type: object
+      properties:
+        image:
+          type: string
+          description: Ảnh món ăn dạng base64 (có hoặc không có prefix data:image)
+          format: byte
+          example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+        health_condition:
+          type: string
+          description: Tình trạng sức khỏe
+          example: tiểu đường
+          default: khỏe mạnh
+          enum:
+          - khỏe mạnh
+          - tiểu đường
+          - béo phì
+          - tim mạch
+          - huyết áp cao
+          - gout
+        dietary_goals:
+          type: string
+          description: Mục tiêu dinh dưỡng
+          example: giảm cân
+          default: duy trì cân nặng
+          enum:
+          - duy trì cân nặng
+          - giảm cân
+          - tăng cân
+          - tăng cơ
+    AnalyzeFoodResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        detected_foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/DetectedFood"
+        analysis:
+          type: string
+          description: Phân tích chi tiết dạng markdown
+        health_condition:
+          type: string
+          example: tiểu đường
+        dietary_goals:
+          type: string
+          example: giảm cân
+    CompareFoodsRequest:
+      required:
+      - images
+      type: object
+      properties:
+        images:
+          maxItems: 4
+          minItems: 2
+          type: array
+          description: Mảng ảnh các món ăn (base64)
+          example:
+          - "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+          - "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+          items:
+            type: string
+            format: byte
+        health_condition:
+          type: string
+          example: tim mạch
+          default: khỏe mạnh
+    DishDetection:
+      type: object
+      properties:
+        dish_number:
+          type: integer
+          description: Số thứ tự món ăn
+          example: 1
+        foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/DetectedFood"
+    CompareFoodsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        detected_foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/DishDetection"
+        comparison:
+          type: string
+          description: Kết quả so sánh chi tiết dạng markdown
+        total_foods:
+          type: integer
+          description: Tổng số món đã so sánh
+          example: 3
+        health_condition:
+          type: string
+          example: tim mạch
+    TrackCaloriesRequest:
+      required:
+      - images
+      type: object
+      properties:
+        images:
+          type: array
+          description: Ảnh các bữa ăn trong ngày (tối đa 4 bữa)
+          example:
+          - "data:image/jpeg;base64,..."
+          - "data:image/jpeg;base64,..."
+          - "data:image/jpeg;base64,..."
+          items:
+            type: string
+            format: byte
+        target_calories:
+          type: integer
+          description: Mục tiêu calo hàng ngày
+          example: 1800
+          default: 2000
+        health_condition:
+          type: string
+          example: béo phì
+          default: khỏe mạnh
+    MealTracking:
+      type: object
+      properties:
+        meal_number:
+          type: integer
+          example: 1
+        meal_name:
+          type: string
+          description: "Tên bữa ăn (Sáng, Trưa, Tối, Phụ)"
+          example: Bữa Sáng
+        foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/DetectedFood"
+    TrackCaloriesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        daily_meals:
+          type: array
+          items:
+            $ref: "#/components/schemas/MealTracking"
+        tracking:
+          type: string
+          description: Báo cáo theo dõi calo chi tiết dạng markdown
+        target_calories:
+          type: integer
+          example: 1800
+        meals_count:
+          type: integer
+          example: 3
+        health_condition:
+          type: string
+          example: béo phì
+    QuickScanRequest:
+      required:
+      - image
+      type: object
+      properties:
+        image:
+          type: string
+          description: Ảnh món ăn (base64)
+          format: byte
+          example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+    QuickScanResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        detected_foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/DetectedFood"
+        total:
+          type: integer
+          description: Tổng số món nhận diện được
+          example: 3
+    MealSuggestionRequest:
+      type: object
+      properties:
+        health_condition:
+          type: string
+          example: tiểu đường
+          default: khỏe mạnh
+        dietary_preferences:
+          type: string
+          description: Sở thích ăn uống
+          example: ăn chay
+          default: không
+        budget_range:
+          type: string
+          description: Ngân sách cho bữa ăn
+          example: 50k
+          default: 100k
+        cooking_time:
+          type: string
+          description: Thời gian nấu
+          example: 15 phút
+          default: 30 phút
+        meal_time:
+          type: string
+          description: Bữa ăn nào trong ngày
+          example: sáng
+          default: trưa
+          enum:
+          - sáng
+          - trưa
+          - tối
+          - phụ
+    MealSuggestionResponse:
+      type: object
+      properties:
+        suggestion:
+          type: string
+          description: Gợi ý thực đơn chi tiết
+        meal_time:
+          type: string
+          example: sáng
+    WeeklyMenuRequest:
+      type: object
+      properties:
+        health_condition:
+          type: string
+          example: tim mạch
+          default: khỏe mạnh
+        dietary_preferences:
+          type: string
+          example: ít dầu mỡ
+          default: không
+        budget_range:
+          type: string
+          description: Ngân sách mỗi ngày
+          example: 300k
+          default: 500k
+        cooking_time:
+          type: string
+          example: 30 phút
+          default: 45 phút
+    WeeklyMenuResponse:
+      type: object
+      properties:
+        menu:
+          type: string
+          description: Thực đơn chi tiết 7 ngày dạng markdown
+        duration:
+          type: string
+          example: 7 ngày
+    DetailedRecipesRequest:
+      type: object
+      properties:
+        health_condition:
+          type: string
+          example: gout
+          default: khỏe mạnh
+        dietary_preferences:
+          type: string
+          example: ít purin
+          default: không
+        budget_range:
+          type: string
+          example: 400k
+          default: 500k
+        days:
+          maximum: 7
+          minimum: 1
+          type: integer
+          description: Số ngày cần thực đơn
+          example: 5
+          default: 3
+    DetailedRecipesResponse:
+      type: object
+      properties:
+        recipes:
+          type: string
+          description: Công thức nấu chi tiết dạng markdown
+        days:
+          type: integer
+          example: 5
+    UserProfile:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: ID người dùng (tự động tạo nếu không có)
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          description: Tên người dùng
+          example: Nguyễn Văn A
+        age:
+          maximum: 150
+          minimum: 1
+          type: integer
+          description: Tuổi
+          example: 35
+        weight:
+          type: number
+          description: Cân nặng (kg)
+          format: float
+          example: 70.5
+        height:
+          type: number
+          description: Chiều cao (cm)
+          format: float
+          example: 170
+        health_condition:
+          type: string
+          description: Tình trạng sức khỏe
+          example: tiểu đường
+          default: khỏe mạnh
+          enum:
+          - khỏe mạnh
+          - tiểu đường
+          - béo phì
+          - tim mạch
+          - huyết áp cao
+          - gout
+          - dị ứng thực phẩm
+        dietary_preferences:
+          type: array
+          description: Sở thích ăn uống
+          example:
+          - ăn chay
+          - ít dầu mỡ
+          items:
+            type: string
+        allergies:
+          type: array
+          description: Dị ứng thực phẩm
+          example:
+          - hải sản
+          - đậu phộng
+          items:
+            type: string
+        target_calories:
+          type: integer
+          description: Mục tiêu calo hàng ngày
+          example: 1800
+          default: 2000
+        activity_level:
+          type: string
+          description: Mức độ vận động
+          example: nhiều
+          default: vừa phải
+          enum:
+          - ít vận động
+          - vừa phải
+          - nhiều
+          - rất nhiều
+    SaveProfileResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Lưu thông tin thành công
+        user_id:
+          type: string
+          example: 550e8400-e29b-41d4-a716-446655440000
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      description: API key để xác thực (tùy chọn cho production)
+      name: X-API-Key
+      in: header
