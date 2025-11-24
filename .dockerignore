@@ -1,0 +1,22 @@
+# Ignore node_modules (sẽ cài lại trong container)
+node_modules
+
+# Ignore logs
+*.log
+
+# Ignore git
+.git
+.gitignore
+
+# Ignore docker files
+Dockerfile
+docker-compose.yml
+
+# Ignore editor files
+.vscode
+.idea
+*.swp
+
+# Ignore OS files
+.DS_Store
+Thumbs.db

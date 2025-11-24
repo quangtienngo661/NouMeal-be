@@ -1,0 +1,26 @@
+{
+  "testEnvironment": "node",
+  "coverageDirectory": "coverage",
+  "collectCoverageFrom": [
+    "src/**/*.js",
+    "!src/server.js",
+    "!src/app.js",
+    "!src/swagger.js",
+    "!src/test/**",
+    "!src/config/**"
+  ],
+  "testMatch": [
+    "**/src/test/**/*.test.js"
+  ],
+  "setupFilesAfterEnv": ["<rootDir>/src/test/setup.js"],
+  "verbose": true,
+  "testTimeout": 10000,
+  "coverageThreshold": {
+    "global": {
+      "branches": 70,
+      "functions": 70,
+      "lines": 70,
+      "statements": 70
+    }
+  }
+}

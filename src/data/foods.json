@@ -1,0 +1,602 @@
+[
+  {
+    "name": "Oatmeal with Banana",
+    "description": "Warm rolled oats topped with sliced banana and a drizzle of honey.",
+    "imageUrl": "https://example.com/images/oatmeal-with-banana.jpg",
+    "instructions": [
+      { "step": 1, "description": "Bring water to a gentle boil in a small pot." },
+      { "step": 2, "description": "Stir in rolled oats and cook, stirring occasionally, until creamy (about 5 minutes)." },
+      { "step": 3, "description": "Top with sliced banana and drizzle with honey before serving." }
+    ],
+    "category": "grains",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "rolled oats", "amount": "3/4 cup" },
+      { "name": "water", "amount": "1 cup" },
+      { "name": "banana", "amount": "1 small" },
+      { "name": "honey", "amount": "1 tsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 380,
+      "protein": 10,
+      "carbohydrates": 62,
+      "fat": 8,
+      "fiber": 8,
+      "sugar": 16,
+      "sodium": 80,
+      "cholesterol": 0
+    },
+    "allergens": ["banana"],
+    "isActive": true,
+    "tags": ["vegetarian", "high_fiber"]
+  },
+  {
+    "name": "Grilled Chicken Breast",
+    "description": "Skinless chicken breast grilled with herbs, served with brown rice.",
+    "imageUrl": "https://example.com/images/grilled-chicken-breast.jpg",
+    "instructions": [
+      { "step": 1, "description": "Season chicken breast with herbs, salt, and pepper; brush with olive oil." },
+      { "step": 2, "description": "Grill over medium-high heat 6–8 minutes per side until internal temp reaches 74°C (165°F)." },
+      { "step": 3, "description": "Serve with cooked brown rice." }
+    ],
+    "category": "protein",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "chicken breast", "amount": "180 g" },
+      { "name": "olive oil", "amount": "1 tsp" },
+      { "name": "herbs", "amount": "to taste" },
+      { "name": "brown rice", "amount": "1 cup cooked" }
+    ],
+    "nutritionalInfo": {
+      "calories": 650,
+      "protein": 45,
+      "carbohydrates": 55,
+      "fat": 12,
+      "fiber": 3,
+      "sugar": 1,
+      "sodium": 320,
+      "cholesterol": 120
+    },
+    "allergens": [],
+    "isActive": true,
+    "tags": ["high_protein", "balanced"]
+  },
+  {
+    "name": "Greek Yogurt",
+    "description": "Plain low-fat Greek yogurt.",
+    "imageUrl": "https://example.com/images/greek-yogurt.jpg",
+    "instructions": [
+      { "step": 1, "description": "Spoon Greek yogurt into a serving bowl." },
+      { "step": 2, "description": "Serve chilled; optionally top with fresh fruit or honey." }
+    ],
+    "category": "dairy",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "greek yogurt", "amount": "200 g" }
+    ],
+    "nutritionalInfo": {
+      "calories": 190,
+      "protein": 19,
+      "carbohydrates": 14,
+      "fat": 4,
+      "fiber": 0,
+      "sugar": 10,
+      "sodium": 70,
+      "cholesterol": 15
+    },
+    "allergens": ["milk"],
+    "isActive": true,
+    "tags": ["high_protein"]
+  },
+  {
+    "name": "Quinoa Salad",
+    "description": "Quinoa with cherry tomatoes, cucumber, avocado, and lemon dressing.",
+    "imageUrl": "https://example.com/images/quinoa-salad.jpg",
+    "instructions": [
+      { "step": 1, "description": "Combine cooked quinoa, halved cherry tomatoes, diced cucumber, and avocado in a bowl." },
+      { "step": 2, "description": "Whisk lemon juice with olive oil; season with salt and pepper." },
+      { "step": 3, "description": "Toss salad with dressing and serve." }
+    ],
+    "category": "grains",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "quinoa", "amount": "1 cup cooked" },
+      { "name": "cherry tomatoes", "amount": "8 pieces" },
+      { "name": "cucumber", "amount": "3/4 cup" },
+      { "name": "avocado", "amount": "1/2 medium" },
+      { "name": "lemon juice", "amount": "1 tbsp" },
+      { "name": "olive oil", "amount": "1 tsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 680,
+      "protein": 18,
+      "carbohydrates": 80,
+      "fat": 26,
+      "fiber": 10,
+      "sugar": 6,
+      "sodium": 380,
+      "cholesterol": 0
+    },
+    "allergens": [],
+    "isActive": true,
+    "tags": ["vegetarian", "vegan"]
+  },
+  {
+    "name": "Avocado Toast",
+    "description": "Whole-grain toast topped with mashed avocado and chili flakes.",
+    "imageUrl": "https://example.com/images/avocado-toast.jpg",
+    "instructions": [
+      { "step": 1, "description": "Toast the bread slices to desired crispness." },
+      { "step": 2, "description": "Mash avocado with a pinch of salt; spread on toast." },
+      { "step": 3, "description": "Sprinkle chili flakes and serve." }
+    ],
+    "category": "grains",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "whole-grain bread", "amount": "2 slices" },
+      { "name": "avocado", "amount": "1/2 medium" },
+      { "name": "chili flakes", "amount": "pinch" }
+    ],
+    "nutritionalInfo": {
+      "calories": 360,
+      "protein": 8,
+      "carbohydrates": 42,
+      "fat": 16,
+      "fiber": 9,
+      "sugar": 4,
+      "sodium": 260,
+      "cholesterol": 0
+    },
+    "allergens": ["wheat_gluten"],
+    "isActive": true,
+    "tags": ["vegetarian", "high_fiber"]
+  },
+  {
+    "name": "Apple",
+    "description": "Fresh medium red apple.",
+    "imageUrl": "https://example.com/images/apple.jpg",
+    "instructions": [
+      { "step": 1, "description": "Rinse the apple thoroughly under running water." },
+      { "step": 2, "description": "Pat dry and serve whole or sliced." }
+    ],
+    "category": "fruits",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "apple", "amount": "1 medium" }
+    ],
+    "nutritionalInfo": {
+      "calories": 130,
+      "protein": 0,
+      "carbohydrates": 34,
+      "fat": 0,
+      "fiber": 5,
+      "sugar": 25,
+      "sodium": 2,
+      "cholesterol": 0
+    },
+    "allergens": ["apple"],
+    "isActive": true,
+    "tags": ["vegan", "gluten_free"]
+  },
+  {
+    "name": "Salmon Fillet",
+    "description": "Baked salmon with lemon and dill, served with brown rice.",
+    "imageUrl": "https://example.com/images/salmon-fillet.jpg",
+    "instructions": [
+      { "step": 1, "description": "Preheat oven to 200°C (400°F). Place salmon on a lined tray." },
+      { "step": 2, "description": "Top with lemon slices and dill; season lightly." },
+      { "step": 3, "description": "Bake 12–15 minutes until flaky. Serve with cooked brown rice." }
+    ],
+    "category": "protein",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "salmon", "amount": "170 g" },
+      { "name": "lemon", "amount": "2 slices" },
+      { "name": "dill", "amount": "to taste" },
+      { "name": "brown rice", "amount": "3/4 cup cooked" }
+    ],
+    "nutritionalInfo": {
+      "calories": 620,
+      "protein": 38,
+      "carbohydrates": 40,
+      "fat": 28,
+      "fiber": 3,
+      "sugar": 1,
+      "sodium": 120,
+      "cholesterol": 95
+    },
+    "allergens": ["fish"],
+    "isActive": true,
+    "tags": ["omega_3", "gluten_free"]
+  },
+  {
+    "name": "Mixed Nuts",
+    "description": "A handful of mixed nuts (almonds, cashews, walnuts).",
+    "imageUrl": "https://example.com/images/mixed-nuts.jpg",
+    "instructions": [
+      { "step": 1, "description": "Combine almonds, cashews, and walnuts in a small bowl." },
+      { "step": 2, "description": "Serve as a snack portion." }
+    ],
+    "category": "snacks",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "almonds", "amount": "12 pieces" },
+      { "name": "cashews", "amount": "10 pieces" },
+      { "name": "walnuts", "amount": "4 halves" }
+    ],
+    "nutritionalInfo": {
+      "calories": 240,
+      "protein": 7,
+      "carbohydrates": 9,
+      "fat": 21,
+      "fiber": 4,
+      "sugar": 2,
+      "sodium": 2,
+      "cholesterol": 0
+    },
+    "allergens": ["peanuts", "tree_nuts"],
+    "isActive": true,
+    "tags": ["vegetarian", "keto_friendly"]
+  },
+  {
+    "name": "Spinach Smoothie",
+    "description": "Blend of spinach, banana, water, and a splash of Greek yogurt.",
+    "imageUrl": "https://example.com/images/spinach-smoothie.jpg",
+    "instructions": [
+      { "step": 1, "description": "Add spinach, banana, yogurt, and water to a blender." },
+      { "step": 2, "description": "Blend until smooth and serve immediately." }
+    ],
+    "category": "beverages",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "spinach", "amount": "1 cup" },
+      { "name": "banana", "amount": "1 small" },
+      { "name": "greek yogurt", "amount": "1/2 cup" },
+      { "name": "water", "amount": "1 cup" }
+    ],
+    "nutritionalInfo": {
+      "calories": 360,
+      "protein": 18,
+      "carbohydrates": 48,
+      "fat": 10,
+      "fiber": 6,
+      "sugar": 22,
+      "sodium": 120,
+      "cholesterol": 15
+    },
+    "allergens": ["banana", "milk"],
+    "isActive": true,
+    "tags": ["vegetarian"]
+  },
+  {
+    "name": "Dark Chocolate (70%)",
+    "description": "Two squares of 70% cocoa dark chocolate.",
+    "imageUrl": "https://example.com/images/dark-chocolate-70.jpg",
+    "instructions": [
+      { "step": 1, "description": "Break off two squares of dark chocolate." },
+      { "step": 2, "description": "Serve at room temperature." }
+    ],
+    "category": "desserts",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "dark chocolate", "amount": "25 g" }
+    ],
+    "nutritionalInfo": {
+      "calories": 220,
+      "protein": 3,
+      "carbohydrates": 18,
+      "fat": 14,
+      "fiber": 4,
+      "sugar": 10,
+      "sodium": 3,
+      "cholesterol": 0
+    },
+    "allergens": [],
+    "isActive": true,
+    "tags": ["vegetarian"]
+  },
+  {
+    "name": "Egg Omelette with Veggies",
+    "description": "Three-egg omelette with spinach and bell peppers.",
+    "imageUrl": "https://example.com/images/egg-omelette-veggies.jpg",
+    "instructions": [
+      { "step": 1, "description": "Whisk eggs with a pinch of salt and pepper." },
+      { "step": 2, "description": "Sauté spinach and bell peppers in olive oil until tender." },
+      { "step": 3, "description": "Pour eggs into the pan, cook until set, fold, and serve." }
+    ],
+    "category": "protein",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "eggs", "amount": "3 large" },
+      { "name": "spinach", "amount": "1/2 cup" },
+      { "name": "bell pepper", "amount": "1/2 cup" },
+      { "name": "olive oil", "amount": "1 tsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 420,
+      "protein": 26,
+      "carbohydrates": 6,
+      "fat": 32,
+      "fiber": 2,
+      "sugar": 3,
+      "sodium": 420,
+      "cholesterol": 370
+    },
+    "allergens": ["eggs"],
+    "isActive": true,
+    "tags": ["keto_friendly", "high_protein"]
+  },
+  {
+    "name": "Beef Stir-Fry with Rice",
+    "description": "Lean beef stir-fried with veggies and served over white rice.",
+    "imageUrl": "https://example.com/images/beef-stir-fry-rice.jpg",
+    "instructions": [
+      { "step": 1, "description": "Stir-fry sliced beef over high heat until browned; set aside." },
+      { "step": 2, "description": "Stir-fry bell peppers and onions until crisp-tender; add beef back." },
+      { "step": 3, "description": "Season with soy sauce and serve over cooked white rice." }
+    ],
+    "category": "protein",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "beef", "amount": "150 g" },
+      { "name": "white rice", "amount": "1 cup cooked" },
+      { "name": "bell peppers", "amount": "1/2 cup" },
+      { "name": "soy sauce", "amount": "1 tbsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 750,
+      "protein": 35,
+      "carbohydrates": 85,
+      "fat": 22,
+      "fiber": 5,
+      "sugar": 8,
+      "sodium": 900,
+      "cholesterol": 95
+    },
+    "allergens": ["soy"],
+    "isActive": true,
+    "tags": ["high_protein"]
+  },
+  {
+    "name": "Tofu Buddha Bowl",
+    "description": "Tofu with quinoa, broccoli, and sesame seeds drizzled with soy sauce.",
+    "imageUrl": "https://example.com/images/tofu-buddha-bowl.jpg",
+    "instructions": [
+      { "step": 1, "description": "Pan-sear tofu until golden on all sides." },
+      { "step": 2, "description": "Arrange tofu with cooked quinoa and steamed broccoli in a bowl." },
+      { "step": 3, "description": "Sprinkle sesame seeds and drizzle with soy sauce." }
+    ],
+    "category": "protein",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "tofu", "amount": "200 g" },
+      { "name": "quinoa", "amount": "3/4 cup cooked" },
+      { "name": "broccoli", "amount": "1 cup" },
+      { "name": "sesame seeds", "amount": "1 tbsp" },
+      { "name": "soy sauce", "amount": "1 tbsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 620,
+      "protein": 28,
+      "carbohydrates": 70,
+      "fat": 20,
+      "fiber": 10,
+      "sugar": 8,
+      "sodium": 700,
+      "cholesterol": 0
+    },
+    "allergens": ["soy", "sesame"],
+    "isActive": true,
+    "tags": ["vegan", "high_protein"]
+  },
+  {
+    "name": "Peanut Butter Banana Toast",
+    "description": "Whole-grain toast with peanut butter and banana slices.",
+    "imageUrl": "https://example.com/images/peanut-butter-banana-toast.jpg",
+    "instructions": [
+      { "step": 1, "description": "Toast the bread slice to your liking." },
+      { "step": 2, "description": "Spread peanut butter evenly on the toast." },
+      { "step": 3, "description": "Top with banana slices and serve." }
+    ],
+    "category": "grains",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "whole-grain bread", "amount": "1 slice" },
+      { "name": "peanut butter", "amount": "1 tbsp" },
+      { "name": "banana", "amount": "1/4 medium" }
+    ],
+    "nutritionalInfo": {
+      "calories": 240,
+      "protein": 8,
+      "carbohydrates": 30,
+      "fat": 10,
+      "fiber": 4,
+      "sugar": 12,
+      "sodium": 180,
+      "cholesterol": 0
+    },
+    "allergens": ["peanuts", "wheat_gluten", "banana"],
+    "isActive": true,
+    "tags": ["vegetarian"]
+  },
+  {
+    "name": "Protein Pancakes",
+    "description": "Oat-based pancakes with eggs and milk.",
+    "imageUrl": "https://example.com/images/protein-pancakes.jpg",
+    "instructions": [
+      { "step": 1, "description": "Blend oats, eggs, and milk until smooth." },
+      { "step": 2, "description": "Cook batter on a non-stick pan over medium heat until bubbles form, then flip." },
+      { "step": 3, "description": "Cook the other side until golden; serve warm." }
+    ],
+    "category": "grains",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "oats", "amount": "3/4 cup" },
+      { "name": "eggs", "amount": "2 large" },
+      { "name": "milk", "amount": "1/2 cup" }
+    ],
+    "nutritionalInfo": {
+      "calories": 480,
+      "protein": 28,
+      "carbohydrates": 56,
+      "fat": 14,
+      "fiber": 7,
+      "sugar": 9,
+      "sodium": 520,
+      "cholesterol": 190
+    },
+    "allergens": ["eggs", "milk", "wheat_gluten"],
+    "isActive": true,
+    "tags": ["high_protein"]
+  },
+  {
+    "name": "Turkey Sandwich on Whole Grain",
+    "description": "Turkey breast with lettuce and tomato on whole-grain bread.",
+    "imageUrl": "https://example.com/images/turkey-sandwich-whole-grain.jpg",
+    "instructions": [
+      { "step": 1, "description": "Layer turkey, lettuce, and tomato between bread slices." },
+      { "step": 2, "description": "Slice in half and serve." }
+    ],
+    "category": "grains",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "turkey breast", "amount": "120 g" },
+      { "name": "whole-grain bread", "amount": "2 slices" },
+      { "name": "lettuce", "amount": "2 leaves" },
+      { "name": "tomato", "amount": "2 slices" }
+    ],
+    "nutritionalInfo": {
+      "calories": 620,
+      "protein": 35,
+      "carbohydrates": 60,
+      "fat": 20,
+      "fiber": 8,
+      "sugar": 8,
+      "sodium": 900,
+      "cholesterol": 85
+    },
+    "allergens": ["wheat_gluten"],
+    "isActive": true,
+    "tags": ["balanced", "high_protein"]
+  },
+  {
+    "name": "Shrimp Pasta",
+    "description": "Pasta tossed with shrimp, garlic, and olive oil.",
+    "imageUrl": "https://example.com/images/shrimp-pasta.jpg",
+    "instructions": [
+      { "step": 1, "description": "Cook pasta until al dente; reserve some pasta water." },
+      { "step": 2, "description": "Sauté garlic in olive oil, add shrimp and cook until pink." },
+      { "step": 3, "description": "Toss shrimp with pasta; adjust with pasta water if needed and serve." }
+    ],
+    "category": "grains",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "pasta", "amount": "2 cups cooked" },
+      { "name": "shrimp", "amount": "140 g" },
+      { "name": "garlic", "amount": "2 cloves" },
+      { "name": "olive oil", "amount": "1 tbsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 650,
+      "protein": 30,
+      "carbohydrates": 85,
+      "fat": 15,
+      "fiber": 6,
+      "sugar": 8,
+      "sodium": 600,
+      "cholesterol": 180
+    },
+    "allergens": ["shellfish", "wheat_gluten"],
+    "isActive": true,
+    "tags": ["balanced"]
+  },
+  {
+    "name": "Greek Yogurt Parfait",
+    "description": "Greek yogurt layered with berries and granola.",
+    "imageUrl": "https://example.com/images/greek-yogurt-parfait.jpg",
+    "instructions": [
+      { "step": 1, "description": "Layer Greek yogurt with mixed berries in a glass." },
+      { "step": 2, "description": "Top with granola and serve immediately." }
+    ],
+    "category": "dairy",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "greek yogurt", "amount": "150 g" },
+      { "name": "mixed berries", "amount": "1/2 cup" },
+      { "name": "granola", "amount": "1/4 cup" }
+    ],
+    "nutritionalInfo": {
+      "calories": 230,
+      "protein": 16,
+      "carbohydrates": 24,
+      "fat": 6,
+      "fiber": 3,
+      "sugar": 18,
+      "sodium": 80,
+      "cholesterol": 15
+    },
+    "allergens": ["milk"],
+    "isActive": true,
+    "tags": ["high_protein"]
+  },
+  {
+    "name": "Protein Shake",
+    "description": "Whey protein blended with banana and milk.",
+    "imageUrl": "https://example.com/images/protein-shake.jpg",
+    "instructions": [
+      { "step": 1, "description": "Add milk, whey protein, and banana to a blender." },
+      { "step": 2, "description": "Blend until smooth; serve chilled." }
+    ],
+    "category": "beverages",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "whey protein", "amount": "1 scoop" },
+      { "name": "banana", "amount": "1/2 medium" },
+      { "name": "milk", "amount": "300 ml" }
+    ],
+    "nutritionalInfo": {
+      "calories": 420,
+      "protein": 35,
+      "carbohydrates": 40,
+      "fat": 12,
+      "fiber": 5,
+      "sugar": 8,
+      "sodium": 240,
+      "cholesterol": 25
+    },
+    "allergens": ["milk", "banana"],
+    "isActive": true,
+    "tags": ["high_protein", "post_workout"]
+  },
+  {
+    "name": "Veggie Chili",
+    "description": "Hearty chili with beans, tomatoes, and mixed vegetables.",
+    "imageUrl": "https://example.com/images/veggie-chili.jpg",
+    "instructions": [
+      { "step": 1, "description": "Sauté onions and bell peppers until softened." },
+      { "step": 2, "description": "Add tomatoes and beans; simmer to meld flavors." },
+      { "step": 3, "description": "Season to taste and serve hot." }
+    ],
+    "category": "vegetables",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "kidney beans", "amount": "1 cup" },
+      { "name": "tomato", "amount": "1 cup" },
+      { "name": "onion", "amount": "1/2 cup" },
+      { "name": "bell pepper", "amount": "1/2 cup" }
+    ],
+    "nutritionalInfo": {
+      "calories": 550,
+      "protein": 24,
+      "carbohydrates": 70,
+      "fat": 14,
+      "fiber": 16,
+      "sugar": 12,
+      "sodium": 780,
+      "cholesterol": 0
+    },
+    "allergens": [],
+    "isActive": true,
+    "tags": ["vegan", "high_fiber"]
+  }
+]
