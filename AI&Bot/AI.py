@@ -16,7 +16,28 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-swagger = Swagger(app)
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": 'apispec',
+            "route": '/api-docs/apispec.json',
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/api-docs/"  
+}
+
+swagger_template = {
+    "info": {
+        "title": "Nutrition API",
+        "description": "API tư vấn dinh dưỡng thông minh cho người Việt",
+        "version": "1.0.0"
+    }
+}
+
+swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
 CLARIFAI_PAT = os.getenv("CLARIFAI_PAT")
 CLARIFAI_USER_ID = os.getenv("CLARIFAI_USER_ID")
@@ -1846,6 +1867,6 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    app.run(host='localhost', port=3000, debug=True)
 
 
