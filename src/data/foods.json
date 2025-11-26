@@ -59,7 +59,8 @@
     },
     "allergens": [],
     "isActive": true,
-    "tags": ["high_protein", "balanced"]
+    "tags": ["high_protein", "balanced"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Greek Yogurt",
@@ -86,7 +87,8 @@
     },
     "allergens": ["milk"],
     "isActive": true,
-    "tags": ["high_protein"]
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Quinoa Salad",
@@ -119,7 +121,8 @@
     },
     "allergens": [],
     "isActive": true,
-    "tags": ["vegetarian", "vegan"]
+    "tags": ["vegetarian", "vegan"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Avocado Toast",
@@ -149,7 +152,8 @@
     },
     "allergens": ["wheat_gluten"],
     "isActive": true,
-    "tags": ["vegetarian", "high_fiber"]
+    "tags": ["vegetarian", "high_fiber"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Apple",
@@ -176,7 +180,8 @@
     },
     "allergens": ["apple"],
     "isActive": true,
-    "tags": ["vegan", "gluten_free"]
+    "tags": ["vegan", "gluten_free"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Salmon Fillet",
@@ -207,7 +212,8 @@
     },
     "allergens": ["fish"],
     "isActive": true,
-    "tags": ["omega_3", "gluten_free"]
+    "tags": ["omega_3", "gluten_free"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Mixed Nuts",
@@ -236,7 +242,8 @@
     },
     "allergens": ["peanuts", "tree_nuts"],
     "isActive": true,
-    "tags": ["vegetarian", "keto_friendly"]
+    "tags": ["vegetarian", "keto_friendly"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Spinach Smoothie",
@@ -266,7 +273,8 @@
     },
     "allergens": ["banana", "milk"],
     "isActive": true,
-    "tags": ["vegetarian"]
+    "tags": ["vegetarian"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Dark Chocolate (70%)",
@@ -293,7 +301,8 @@
     },
     "allergens": [],
     "isActive": true,
-    "tags": ["vegetarian"]
+    "tags": ["vegetarian"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Egg Omelette with Veggies",
@@ -324,7 +333,8 @@
     },
     "allergens": ["eggs"],
     "isActive": true,
-    "tags": ["keto_friendly", "high_protein"]
+    "tags": ["keto_friendly", "high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Beef Stir-Fry with Rice",
@@ -355,7 +365,8 @@
     },
     "allergens": ["soy"],
     "isActive": true,
-    "tags": ["high_protein"]
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Tofu Buddha Bowl",
@@ -387,7 +398,8 @@
     },
     "allergens": ["soy", "sesame"],
     "isActive": true,
-    "tags": ["vegan", "high_protein"]
+    "tags": ["vegan", "high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Peanut Butter Banana Toast",
@@ -417,7 +429,8 @@
     },
     "allergens": ["peanuts", "wheat_gluten", "banana"],
     "isActive": true,
-    "tags": ["vegetarian"]
+    "tags": ["vegetarian"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Protein Pancakes",
@@ -447,7 +460,8 @@
     },
     "allergens": ["eggs", "milk", "wheat_gluten"],
     "isActive": true,
-    "tags": ["high_protein"]
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Turkey Sandwich on Whole Grain",
@@ -477,7 +491,8 @@
     },
     "allergens": ["wheat_gluten"],
     "isActive": true,
-    "tags": ["balanced", "high_protein"]
+    "tags": ["balanced", "high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Shrimp Pasta",
@@ -508,7 +523,8 @@
     },
     "allergens": ["shellfish", "wheat_gluten"],
     "isActive": true,
-    "tags": ["balanced"]
+    "tags": ["balanced"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Greek Yogurt Parfait",
@@ -537,7 +553,8 @@
     },
     "allergens": ["milk"],
     "isActive": true,
-    "tags": ["high_protein"]
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Protein Shake",
@@ -566,7 +583,8 @@
     },
     "allergens": ["milk", "banana"],
     "isActive": true,
-    "tags": ["high_protein", "post_workout"]
+    "tags": ["high_protein", "post_workout"],
+    "postedBy": "692597af9106c79565447ce8"
   },
   {
     "name": "Veggie Chili",
@@ -597,6 +615,531 @@
     },
     "allergens": [],
     "isActive": true,
-    "tags": ["vegan", "high_fiber"]
+    "tags": ["vegan", "high_fiber"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Scrambled Eggs with Toast",
+    "description": "Fluffy scrambled eggs served with whole-grain toast.",
+    "imageUrl": "https://example.com/images/scrambled-eggs-toast.jpg",
+    "instructions": [
+      { "step": 1, "description": "Whisk eggs with milk, salt, and pepper." },
+      { "step": 2, "description": "Scramble in a non-stick pan over medium-low heat until fluffy." },
+      { "step": 3, "description": "Serve with toasted bread." }
+    ],
+    "category": "protein",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "eggs", "amount": "2 large" },
+      { "name": "milk", "amount": "2 tbsp" },
+      { "name": "whole-grain bread", "amount": "2 slices" }
+    ],
+    "nutritionalInfo": {
+      "calories": 380,
+      "protein": 20,
+      "carbohydrates": 38,
+      "fat": 16,
+      "fiber": 5,
+      "sugar": 6,
+      "sodium": 480,
+      "cholesterol": 370
+    },
+    "allergens": ["eggs", "milk", "wheat_gluten"],
+    "isActive": true,
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Chicken Caesar Salad",
+    "description": "Romaine lettuce with grilled chicken, parmesan, and Caesar dressing.",
+    "imageUrl": "https://example.com/images/chicken-caesar-salad.jpg",
+    "instructions": [
+      { "step": 1, "description": "Grill chicken breast and slice into strips." },
+      { "step": 2, "description": "Toss romaine lettuce with Caesar dressing." },
+      { "step": 3, "description": "Top with chicken and parmesan; serve immediately." }
+    ],
+    "category": "protein",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "chicken breast", "amount": "150 g" },
+      { "name": "romaine lettuce", "amount": "2 cups" },
+      { "name": "parmesan cheese", "amount": "2 tbsp" },
+      { "name": "caesar dressing", "amount": "2 tbsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 580,
+      "protein": 42,
+      "carbohydrates": 12,
+      "fat": 38,
+      "fiber": 3,
+      "sugar": 4,
+      "sodium": 880,
+      "cholesterol": 130
+    },
+    "allergens": ["milk", "eggs"],
+    "isActive": true,
+    "tags": ["high_protein", "low_carb"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Baked Sweet Potato",
+    "description": "Whole baked sweet potato with olive oil and herbs.",
+    "imageUrl": "https://example.com/images/baked-sweet-potato.jpg",
+    "instructions": [
+      { "step": 1, "description": "Preheat oven to 200°C (400°F). Pierce sweet potato with a fork." },
+      { "step": 2, "description": "Bake 45-55 minutes until tender." },
+      { "step": 3, "description": "Slice open, drizzle with olive oil, season with herbs." }
+    ],
+    "category": "vegetables",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "sweet potato", "amount": "1 medium (200g)" },
+      { "name": "olive oil", "amount": "1 tsp" },
+      { "name": "herbs", "amount": "to taste" }
+    ],
+    "nutritionalInfo": {
+      "calories": 450,
+      "protein": 4,
+      "carbohydrates": 95,
+      "fat": 5,
+      "fiber": 12,
+      "sugar": 18,
+      "sodium": 120,
+      "cholesterol": 0
+    },
+    "allergens": [],
+    "isActive": true,
+    "tags": ["vegan", "high_fiber"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Grilled Tilapia with Vegetables",
+    "description": "Grilled tilapia fillet with roasted mixed vegetables.",
+    "imageUrl": "https://example.com/images/grilled-tilapia-vegetables.jpg",
+    "instructions": [
+      { "step": 1, "description": "Season tilapia with lemon, salt, and pepper; grill 4-5 minutes per side." },
+      { "step": 2, "description": "Roast vegetables (bell peppers, zucchini, carrots) at 200°C for 20 minutes." },
+      { "step": 3, "description": "Serve tilapia alongside roasted vegetables." }
+    ],
+    "category": "protein",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "tilapia", "amount": "180 g" },
+      { "name": "mixed vegetables", "amount": "2 cups" },
+      { "name": "olive oil", "amount": "1 tbsp" },
+      { "name": "lemon", "amount": "2 slices" }
+    ],
+    "nutritionalInfo": {
+      "calories": 580,
+      "protein": 48,
+      "carbohydrates": 32,
+      "fat": 26,
+      "fiber": 8,
+      "sugar": 14,
+      "sodium": 280,
+      "cholesterol": 100
+    },
+    "allergens": ["fish"],
+    "isActive": true,
+    "tags": ["high_protein", "balanced"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Carrot Sticks with Hummus",
+    "description": "Fresh carrot sticks with creamy hummus dip.",
+    "imageUrl": "https://example.com/images/carrot-sticks-hummus.jpg",
+    "instructions": [
+      { "step": 1, "description": "Cut carrots into stick shapes." },
+      { "step": 2, "description": "Serve with hummus for dipping." }
+    ],
+    "category": "vegetables",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "carrots", "amount": "2 medium" },
+      { "name": "hummus", "amount": "3 tbsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 180,
+      "protein": 5,
+      "carbohydrates": 24,
+      "fat": 7,
+      "fiber": 8,
+      "sugar": 10,
+      "sodium": 320,
+      "cholesterol": 0
+    },
+    "allergens": ["sesame"],
+    "isActive": true,
+    "tags": ["vegan", "high_fiber"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Cottage Cheese with Berries",
+    "description": "Low-fat cottage cheese topped with fresh mixed berries.",
+    "imageUrl": "https://example.com/images/cottage-cheese-berries.jpg",
+    "instructions": [
+      { "step": 1, "description": "Spoon cottage cheese into a bowl." },
+      { "step": 2, "description": "Top with fresh berries and serve chilled." }
+    ],
+    "category": "dairy",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "cottage cheese", "amount": "200 g" },
+      { "name": "mixed berries", "amount": "1/2 cup" }
+    ],
+    "nutritionalInfo": {
+      "calories": 210,
+      "protein": 24,
+      "carbohydrates": 18,
+      "fat": 4,
+      "fiber": 3,
+      "sugar": 14,
+      "sodium": 460,
+      "cholesterol": 20
+    },
+    "allergens": ["milk"],
+    "isActive": true,
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Chia Pudding",
+    "description": "Chia seeds soaked in almond milk with vanilla and honey.",
+    "imageUrl": "https://example.com/images/chia-pudding.jpg",
+    "instructions": [
+      { "step": 1, "description": "Mix chia seeds with almond milk, vanilla, and honey." },
+      { "step": 2, "description": "Refrigerate overnight or at least 4 hours until thickened." },
+      { "step": 3, "description": "Stir and serve chilled, optionally topped with fruit." }
+    ],
+    "category": "grains",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "chia seeds", "amount": "3 tbsp" },
+      { "name": "almond milk", "amount": "1 cup" },
+      { "name": "honey", "amount": "1 tsp" },
+      { "name": "vanilla extract", "amount": "1/4 tsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 320,
+      "protein": 8,
+      "carbohydrates": 38,
+      "fat": 14,
+      "fiber": 12,
+      "sugar": 16,
+      "sodium": 180,
+      "cholesterol": 0
+    },
+    "allergens": ["tree_nuts"],
+    "isActive": true,
+    "tags": ["vegan", "high_fiber"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Tuna Salad Wrap",
+    "description": "Whole-wheat wrap filled with tuna salad and greens.",
+    "imageUrl": "https://example.com/images/tuna-salad-wrap.jpg",
+    "instructions": [
+      { "step": 1, "description": "Mix canned tuna with mayo, diced celery, and seasonings." },
+      { "step": 2, "description": "Spread tuna salad on a whole-wheat tortilla." },
+      { "step": 3, "description": "Add lettuce and tomato, roll tightly, and slice in half." }
+    ],
+    "category": "protein",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "canned tuna", "amount": "120 g" },
+      { "name": "whole-wheat tortilla", "amount": "1 large" },
+      { "name": "mayo", "amount": "1 tbsp" },
+      { "name": "lettuce", "amount": "1/2 cup" },
+      { "name": "tomato", "amount": "2 slices" }
+    ],
+    "nutritionalInfo": {
+      "calories": 640,
+      "protein": 38,
+      "carbohydrates": 58,
+      "fat": 24,
+      "fiber": 7,
+      "sugar": 6,
+      "sodium": 820,
+      "cholesterol": 70
+    },
+    "allergens": ["fish", "eggs", "wheat_gluten"],
+    "isActive": true,
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Lentil Soup",
+    "description": "Hearty lentil soup with carrots, celery, and spices.",
+    "imageUrl": "https://example.com/images/lentil-soup.jpg",
+    "instructions": [
+      { "step": 1, "description": "Sauté diced onions, carrots, and celery in olive oil." },
+      { "step": 2, "description": "Add lentils, vegetable broth, and spices; bring to a boil." },
+      { "step": 3, "description": "Simmer 30-40 minutes until lentils are tender; serve hot." }
+    ],
+    "category": "vegetables",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "lentils", "amount": "1 cup" },
+      { "name": "carrots", "amount": "1/2 cup" },
+      { "name": "celery", "amount": "1/2 cup" },
+      { "name": "vegetable broth", "amount": "3 cups" }
+    ],
+    "nutritionalInfo": {
+      "calories": 560,
+      "protein": 26,
+      "carbohydrates": 88,
+      "fat": 8,
+      "fiber": 20,
+      "sugar": 10,
+      "sodium": 920,
+      "cholesterol": 0
+    },
+    "allergens": [],
+    "isActive": true,
+    "tags": ["vegan", "high_fiber", "high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Rice Cakes with Almond Butter",
+    "description": "Plain rice cakes topped with almond butter.",
+    "imageUrl": "https://example.com/images/rice-cakes-almond-butter.jpg",
+    "instructions": [
+      { "step": 1, "description": "Spread almond butter evenly on rice cakes." },
+      { "step": 2, "description": "Serve as a light snack." }
+    ],
+    "category": "snacks",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "rice cakes", "amount": "2 pieces" },
+      { "name": "almond butter", "amount": "2 tbsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 260,
+      "protein": 7,
+      "carbohydrates": 26,
+      "fat": 14,
+      "fiber": 4,
+      "sugar": 2,
+      "sodium": 80,
+      "cholesterol": 0
+    },
+    "allergens": ["tree_nuts"],
+    "isActive": true,
+    "tags": ["vegetarian"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Blueberry Smoothie Bowl",
+    "description": "Thick blueberry smoothie topped with granola and sliced fruits.",
+    "imageUrl": "https://example.com/images/blueberry-smoothie-bowl.jpg",
+    "instructions": [
+      { "step": 1, "description": "Blend frozen blueberries, banana, and Greek yogurt until thick." },
+      { "step": 2, "description": "Pour into a bowl and top with granola, banana slices, and berries." },
+      { "step": 3, "description": "Serve immediately." }
+    ],
+    "category": "fruits",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "frozen blueberries", "amount": "1 cup" },
+      { "name": "banana", "amount": "1/2 medium" },
+      { "name": "greek yogurt", "amount": "1/2 cup" },
+      { "name": "granola", "amount": "1/4 cup" }
+    ],
+    "nutritionalInfo": {
+      "calories": 410,
+      "protein": 16,
+      "carbohydrates": 68,
+      "fat": 8,
+      "fiber": 9,
+      "sugar": 38,
+      "sodium": 90,
+      "cholesterol": 15
+    },
+    "allergens": ["milk", "banana"],
+    "isActive": true,
+    "tags": ["high_fiber"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Chicken Wrap with Hummus",
+    "description": "Grilled chicken with hummus, lettuce, and tomato in a tortilla.",
+    "imageUrl": "https://example.com/images/chicken-wrap-hummus.jpg",
+    "instructions": [
+      { "step": 1, "description": "Grill chicken breast and slice thinly." },
+      { "step": 2, "description": "Spread hummus on tortilla, add chicken, lettuce, and tomato." },
+      { "step": 3, "description": "Roll tightly and slice in half." }
+    ],
+    "category": "protein",
+    "meal": "lunch",
+    "ingredients": [
+      { "name": "chicken breast", "amount": "140 g" },
+      { "name": "whole-wheat tortilla", "amount": "1 large" },
+      { "name": "hummus", "amount": "2 tbsp" },
+      { "name": "lettuce", "amount": "1/2 cup" },
+      { "name": "tomato", "amount": "2 slices" }
+    ],
+    "nutritionalInfo": {
+      "calories": 670,
+      "protein": 44,
+      "carbohydrates": 62,
+      "fat": 22,
+      "fiber": 9,
+      "sugar": 8,
+      "sodium": 740,
+      "cholesterol": 105
+    },
+    "allergens": ["wheat_gluten", "sesame"],
+    "isActive": true,
+    "tags": ["high_protein", "balanced"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Baked Cod with Quinoa",
+    "description": "Baked cod fillet served with fluffy quinoa and steamed broccoli.",
+    "imageUrl": "https://example.com/images/baked-cod-quinoa.jpg",
+    "instructions": [
+      { "step": 1, "description": "Season cod with lemon, herbs, salt, and pepper." },
+      { "step": 2, "description": "Bake at 180°C (350°F) for 15-18 minutes until flaky." },
+      { "step": 3, "description": "Serve with cooked quinoa and steamed broccoli." }
+    ],
+    "category": "protein",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "cod fillet", "amount": "180 g" },
+      { "name": "quinoa", "amount": "3/4 cup cooked" },
+      { "name": "broccoli", "amount": "1 cup" },
+      { "name": "lemon", "amount": "2 slices" }
+    ],
+    "nutritionalInfo": {
+      "calories": 610,
+      "protein": 52,
+      "carbohydrates": 58,
+      "fat": 12,
+      "fiber": 10,
+      "sugar": 4,
+      "sodium": 340,
+      "cholesterol": 90
+    },
+    "allergens": ["fish"],
+    "isActive": true,
+    "tags": ["high_protein", "balanced"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Banana",
+    "description": "Fresh ripe banana.",
+    "imageUrl": "https://example.com/images/banana.jpg",
+    "instructions": [
+      { "step": 1, "description": "Peel and eat fresh." }
+    ],
+    "category": "fruits",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "banana", "amount": "1 medium" }
+    ],
+    "nutritionalInfo": {
+      "calories": 105,
+      "protein": 1,
+      "carbohydrates": 27,
+      "fat": 0,
+      "fiber": 3,
+      "sugar": 14,
+      "sodium": 1,
+      "cholesterol": 0
+    },
+    "allergens": ["banana"],
+    "isActive": true,
+    "tags": ["vegan", "gluten_free"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Whole Wheat Bagel with Cream Cheese",
+    "description": "Toasted whole wheat bagel with light cream cheese.",
+    "imageUrl": "https://example.com/images/whole-wheat-bagel-cream-cheese.jpg",
+    "instructions": [
+      { "step": 1, "description": "Slice bagel in half and toast to desired crispness." },
+      { "step": 2, "description": "Spread cream cheese evenly on both halves." },
+      { "step": 3, "description": "Serve immediately." }
+    ],
+    "category": "grains",
+    "meal": "breakfast",
+    "ingredients": [
+      { "name": "whole wheat bagel", "amount": "1 medium" },
+      { "name": "cream cheese", "amount": "2 tbsp" }
+    ],
+    "nutritionalInfo": {
+      "calories": 390,
+      "protein": 14,
+      "carbohydrates": 56,
+      "fat": 12,
+      "fiber": 6,
+      "sugar": 8,
+      "sodium": 580,
+      "cholesterol": 30
+    },
+    "allergens": ["wheat_gluten", "milk"],
+    "isActive": true,
+    "tags": ["vegetarian"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Pork Chop with Mashed Potatoes",
+    "description": "Grilled pork chop served with creamy mashed potatoes.",
+    "imageUrl": "https://example.com/images/pork-chop-mashed-potatoes.jpg",
+    "instructions": [
+      { "step": 1, "description": "Season pork chop with salt, pepper, and herbs; grill 5-6 minutes per side." },
+      { "step": 2, "description": "Boil potatoes until tender, mash with butter and milk." },
+      { "step": 3, "description": "Serve pork chop alongside mashed potatoes." }
+    ],
+    "category": "protein",
+    "meal": "dinner",
+    "ingredients": [
+      { "name": "pork chop", "amount": "180 g" },
+      { "name": "potatoes", "amount": "1 cup" },
+      { "name": "butter", "amount": "1 tbsp" },
+      { "name": "milk", "amount": "1/4 cup" }
+    ],
+    "nutritionalInfo": {
+      "calories": 720,
+      "protein": 42,
+      "carbohydrates": 48,
+      "fat": 38,
+      "fiber": 4,
+      "sugar": 6,
+      "sodium": 460,
+      "cholesterol": 140
+    },
+    "allergens": ["milk"],
+    "isActive": true,
+    "tags": ["high_protein"],
+    "postedBy": "692597af9106c79565447ce8"
+  },
+  {
+    "name": "Orange",
+    "description": "Fresh orange, peeled and segmented.",
+    "imageUrl": "https://example.com/images/orange.jpg",
+    "instructions": [
+      { "step": 1, "description": "Peel orange and separate into segments." },
+      { "step": 2, "description": "Serve fresh." }
+    ],
+    "category": "fruits",
+    "meal": "snack",
+    "ingredients": [
+      { "name": "orange", "amount": "1 medium" }
+    ],
+    "nutritionalInfo": {
+      "calories": 62,
+      "protein": 1,
+      "carbohydrates": 15,
+      "fat": 0,
+      "fiber": 3,
+      "sugar": 12,
+      "sodium": 0,
+      "cholesterol": 0
+    },
+    "allergens": [],
+    "isActive": true,
+    "tags": ["vegan", "gluten_free"],
+    "postedBy": "692597af9106c79565447ce8"
   }
 ]
