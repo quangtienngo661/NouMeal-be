@@ -1161,6 +1161,6 @@ def internal_error(error):
     return jsonify({"error": "Lỗi server"}), 500
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=3000, debug=True)
+    app.run(host='localhost', port=5002, debug=True)
 
 

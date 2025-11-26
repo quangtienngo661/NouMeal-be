@@ -1,5 +1,6 @@
 const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const axios = require('axios');
 
 // Swagger definition
 const swaggerOptions = {
@@ -9,7 +10,12 @@ const swaggerOptions = {
       title: 'MealGenie API',
       version: '1.0.0',
       description: `
-        A comprehensive meal planning and nutrition tracking API built with Node.js, Express, and MongoDB.
+        A comprehensive meal planning and nutrition tracking API built with Node.js, Express, Python AI services, and MongoDB.
+        
+        This documentation includes:
+        - Node.js backend services (Authentication, Users, Foods)
+        - Python AI recommendation service (port 5001)
+        - Python chatbot service (port 5002)
       `,
       contact: {
         name: 'MealGenie API Support',
@@ -18,11 +24,19 @@ const swaggerOptions = {
     servers: [
       {
         url: 'http://localhost:5000',
-        description: 'Development Server',
+        description: 'Node.js Backend Server',
       },
       {
         url: 'http://localhost:3000',
         description: 'Alternative Development Server',
+      },
+      {
+        url: 'http://localhost:5001',
+        description: 'Python AI Recommendation Service',
+      },
+      {
+        url: 'http://localhost:5002',
+        description: 'Python Chatbot Service',
       },
     ],
     components: {
@@ -743,37 +757,170 @@ const swaggerOptions = {
     ],
   },
   apis: [
-    './src/route/*.js', // Path to the API routes
-    './src/controller/*.js', // Path to controllers (if they contain docs)
-    './src/model/*.js', // Path to models (if they contain docs)
+    './src/route/*.js',
+    './src/controller/*.js',
+    './src/model/*.js',
   ],
 };
 
-// Generate Swagger specification
-const swaggerSpec = swaggerJSDoc(swaggerOptions);
+// Generate initial Swagger specification
+let swaggerSpec = swaggerJSDoc(swaggerOptions);
+
+// Deep merge helper function
+function deepMerge(target, source) {
+  const output = Object.assign({}, target);
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) {
+          Object.assign(output, { [key]: source[key] });
+        } else {
+          output[key] = deepMerge(target[key], source[key]);
+        }
+      } else {
+        Object.assign(output, { [key]: source[key] });
+      }
+    });
+  }
+  return output;
+}
+
+function isObject(item) {
+  return item && typeof item === 'object' && !Array.isArray(item);
+}
+
+// Merge Python Swagger specs asynchronously
+async function mergePythonSpecs() {
+  try {
+    console.log('🔄 Attempting to merge Python Swagger specifications...');
+    
+    const fetchPromises = [
+      axios.get('http://localhost:5001/api-docs/apispec.json', { timeout: 3000 })
+        .catch(err => {
+          console.warn('⚠️  AI Service (5001) not available:', err.message);
+          return null;
+        }),
+      axios.get('http://localhost:5002/api-docs/apispec.json', { timeout: 3000 })
+        .catch(err => {
+          console.warn('⚠️  Chatbot Service (5002) not available:', err.message);
+          return null;
+        })
+    ];
+
+    const [aiSpecResponse, botSpecResponse] = await Promise.all(fetchPromises);
+
+    // Merge AI Service specs
+    if (aiSpecResponse && aiSpecResponse.data) {
+      const aiSpec = aiSpecResponse.data;
+      
+      // Merge paths
+      swaggerSpec.paths = {
+        ...(swaggerSpec.paths || {}),
+        ...(aiSpec.paths || {})
+      };
+
+      // Merge components (schemas, securitySchemes, etc.)
+      if (aiSpec.components) {
+        swaggerSpec.components = deepMerge(
+          swaggerSpec.components || {},
+          aiSpec.components
+        );
+      }
+
+      // Merge tags (avoid duplicates)
+      if (aiSpec.tags && Array.isArray(aiSpec.tags)) {
+        const existingTagNames = (swaggerSpec.tags || []).map(t => t.name);
+        const newTags = aiSpec.tags.filter(t => !existingTagNames.includes(t.name));
+        swaggerSpec.tags = [...(swaggerSpec.tags || []), ...newTags];
+      }
+
+      console.log('✅ AI Service Swagger merged successfully');
+    }
+
+    // Merge Chatbot Service specs
+    if (botSpecResponse && botSpecResponse.data) {
+      const botSpec = botSpecResponse.data;
+      
+      // Merge paths
+      swaggerSpec.paths = {
+        ...(swaggerSpec.paths || {}),
+        ...(botSpec.paths || {})
+      };
+
+      // Merge components
+      if (botSpec.components) {
+        swaggerSpec.components = deepMerge(
+          swaggerSpec.components || {},
+          botSpec.components
+        );
+      }
+
+      // Merge tags (avoid duplicates)
+      if (botSpec.tags && Array.isArray(botSpec.tags)) {
+        const existingTagNames = (swaggerSpec.tags || []).map(t => t.name);
+        const newTags = botSpec.tags.filter(t => !existingTagNames.includes(t.name));
+        swaggerSpec.tags = [...(swaggerSpec.tags || []), ...newTags];
+      }
+
+      console.log('✅ Chatbot Service Swagger merged successfully');
+    }
+
+    if (!aiSpecResponse && !botSpecResponse) {
+      console.log('ℹ️  No Python services available. Using Node.js specs only.');
+    }
+
+  } catch (err) {
+    console.error('❌ Failed to merge Python Swagger:', err.message);
+    console.log('ℹ️  Continuing with Node.js API documentation only.');
+  }
+}
 
 // Swagger UI options
 const swaggerUiOptions = {
   swaggerOptions: {
-    persistAuthorization: true, // Keep authorization between page refreshes
-    displayRequestDuration: true, // Show request duration
-    docExpansion: 'none', // Don't expand operations by default
-    filter: true, // Enable filtering
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
     showExtensions: true,
     showCommonExtensions: true,
-    tryItOutEnabled: true, // Enable "Try it out" by default
+    tryItOutEnabled: true,
   },
   customCss: `
     .swagger-ui .topbar { display: none }
     .swagger-ui .info .title { color: #2E7D32; }
-    .swagger-ui .scheme-container { background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    .swagger-ui .scheme-container { 
+      background: #f5f5f5; 
+      padding: 15px; 
+      border-radius: 5px; 
+      margin: 15px 0; 
+    }
+    .swagger-ui .info .description p {
+      margin: 10px 0;
+      line-height: 1.6;
+    }
   `,
   customSiteTitle: 'MealGenie API Documentation',
   customfavIcon: '/favicon.ico',
+  explorer: true,
 };
+
+// Initialize merge on module load
+mergePythonSpecs().catch(err => {
+  console.error('Error during initial spec merge:', err.message);
+});
+
+// Export function to get current spec (useful for dynamic updates)
+const getSwaggerSpec = () => swaggerSpec;
+
+// Export function to manually trigger re-merge
+const refreshPythonSpecs = mergePythonSpecs;
 
 module.exports = {
   swaggerSpec,
+  getSwaggerSpec,
+  refreshPythonSpecs: mergePythonSpecs, 
+  mergePythonSpecs,                     
   swaggerUi,
   swaggerUiOptions,
 };

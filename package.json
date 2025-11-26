@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "concurrently \"nodemon src/server.js\" \"python ./AI&Bot/AI.py\" \"python ./AI&Bot/Bot.py\"",
     "start": "node src/server.js",
     "test": "jest --detectOpenHandles --passWithNoTests",
     "test:watch": "jest --watch",
@@ -39,6 +39,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^10.1.8",
