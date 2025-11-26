@@ -304,12 +304,7 @@ const forgotPassword = catchAsync(async (req, res, next) => {
     if (process.env.NODE_ENV !== 'production') {
       return res.status(200).json({
         success: true,
-        message: 'Password reset OTP generated successfully! Use dev-otp endpoint to get OTP for testing.',
-        development: {
-          note: 'Email sending failed. Use POST /api/v1/auth/dev-otp to retrieve the OTP.',
-          email: email,
-          otpInConsole: 'Check server console for OTP details'
-        }
+        message: 'Password reset OTP generated successfully (email send failed). Check server console for OTP during development.'
       });
     }
 
@@ -552,158 +547,7 @@ const logout = catchAsync(async (req, res, next) => {
   });
 });
 
-/**
- * @swagger
- * /api/v1/auth/dev-get-otp:
- *   post:
- *     summary: Get OTP for development testing
- *     description: Retrieve the current OTP for email verification or password reset (development only)
- *     tags: [Development]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: User's email address
- *                 example: "alex.nguyen@example.com"
- *               type:
- *                 type: string
- *                 enum: [email_verification, password_reset]
- *                 description: Type of OTP to retrieve
- *                 example: "email_verification"
- *           examples:
- *             getEmailOTP:
- *               summary: Get email verification OTP
- *               value:
- *                 email: "alex.nguyen@example.com"
- *                 type: "email_verification"
- *             getPasswordOTP:
- *               summary: Get password reset OTP
- *               value:
- *                 email: "alex.nguyen@example.com"
- *                 type: "password_reset"
- *     responses:
- *       200:
- *         description: OTP retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "OTP retrieved successfully (development mode)"
- *                 data:
- *                   type: object
- *                   properties:
- *                     email:
- *                       type: string
- *                       example: "alex.nguyen@example.com"
- *                     otp:
- *                       type: string
- *                       example: "123456"
- *                     type:
- *                       type: string
- *                       example: "email_verification"
- *                     expiresAt:
- *                       type: string
- *                       format: date-time
- *                       example: "2024-10-31T14:45:00.000Z"
- *                     timeRemaining:
- *                       type: string
- *                       example: "245 seconds"
- *                     isExpired:
- *                       type: boolean
- *                       example: false
- *       400:
- *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       403:
- *         description: Not available in production
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: User not found or no valid OTP
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-const getDevOTP = catchAsync(async (req, res, next) => {
-  // Only allow in development mode
-  if (process.env.NODE_ENV === 'production') {
-    return next(new AppError('This endpoint is only available in development mode', 403));
-  }
-
-  const { email, type = 'email_verification' } = req.body;
-
-  if (!email) {
-    return next(new AppError('Email is required', 400));
-  }
-
-  if (!['email_verification', 'password_reset'].includes(type)) {
-    return next(new AppError('Type must be either "email_verification" or "password_reset"', 400));
-  }
-
-  // Find user with OTP fields
-  const selectFields = type === 'email_verification' 
-    ? '+emailVerificationOTP +emailVerificationOTPExpires'
-    : '+passwordResetOTP +passwordResetOTPExpires';
-    
-  const user = await User.findOne({ email }).select(selectFields);
-
-  if (!user) {
-    return next(new AppError('User not found with this email address', 404));
-  }
-
-  // Get the appropriate OTP and expiration
-  let otp, expiresAt;
-  if (type === 'email_verification') {
-    otp = user.emailVerificationOTP;
-    expiresAt = user.emailVerificationOTPExpires;
-  } else {
-    otp = user.passwordResetOTP;
-    expiresAt = user.passwordResetOTPExpires;
-  }
-
-  // Check if OTP exists and is valid
-  if (!otp || !expiresAt) {
-    return next(new AppError(`No ${type.replace('_', ' ')} OTP found. Please request a new one.`, 404));
-  }
-
-  const now = new Date();
-  const isExpired = expiresAt < now;
-  const timeRemaining = isExpired ? 0 : Math.ceil((expiresAt - now) / 1000);
-
-  res.status(200).json({
-    success: true,
-    message: `OTP retrieved successfully (development mode)`,
-    data: {
-      email: user.email,
-      otp: otp,
-      type: type,
-      expiresAt: expiresAt,
-      timeRemaining: `${timeRemaining} seconds`,
-      isExpired: isExpired,
-      status: isExpired ? 'EXPIRED' : 'VALID'
-    }
-  });
-});
+// Development-only OTP endpoint and docs removed
 
 module.exports = {
   verifyEmail,
@@ -712,7 +556,6 @@ module.exports = {
   resetPassword,
   refreshToken,
   logout,
-  getDevOTP,
   validateEmailVerification,
   validateForgotPassword,
   validateResetPassword,

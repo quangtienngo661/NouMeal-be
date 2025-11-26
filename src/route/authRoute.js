@@ -8,7 +8,6 @@ const {
   resetPassword,
   refreshToken,
   logout,
-  getDevOTP,
   validateEmailVerification,
   validateForgotPassword,
   validateResetPassword,
@@ -29,6 +28,6 @@ router.post('/refresh-token', validateRefreshToken, handleValidationErrors, refr
 router.post('/logout', authenticate, logout);
 
 // Development only - Get OTP for testing
-router.post('/dev-otp', getDevOTP);
+// Development-only OTP endpoint removed
 
 module.exports = router;

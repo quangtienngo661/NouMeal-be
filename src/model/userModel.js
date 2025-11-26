@@ -52,6 +52,15 @@ const userSchema = new mongoose.Schema(
       min: [20, 'Weight must be at least 20 kg'],
       max: [500, 'Weight cannot exceed 500 kg'],
     },
+    // Role for authorization: 'user' or 'admin'
+    role: {
+      type: String,
+      enum: {
+        values: ['user', 'admin'],
+        message: 'Role must be either user or admin',
+      },
+      default: 'user',
+    },
     activity: {
       type: String,
       required: [true, 'Activity level is required'],

@@ -3,6 +3,7 @@ const router = express.Router();
 const {
     getFoods,
     foodsRecommendation,
+    weeklyFoodsRecommendation,
     getFoodById,
     createFood,
     updateFood,
@@ -21,6 +22,7 @@ const {
 // 📦 READ operations
 router.get('/', getFoods);
 router.get('/recommended', authenticate, foodsRecommendation);
+router.get('/weekly-recommended', authenticate, weeklyFoodsRecommendation);
 router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById);
 
 // ✏️ CREATE / UPDATE / DELETE

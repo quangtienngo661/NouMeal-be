@@ -70,6 +70,11 @@ class UserService {
         throw new AppError('Invalid email or password', 401);
       }
 
+      // Require email verification before allowing login
+      if (!user.isEmailVerified) {
+        throw new AppError('Please verify your email address before logging in.', 401);
+      }
+
       // Update last login
       user.lastLogin = new Date();
       const newUser = await user.save({ validateBeforeSave: false });
