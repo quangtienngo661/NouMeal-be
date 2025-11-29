@@ -3,6 +3,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+RUN apk add --no-cache python3 py3-pip make g++ jpeg-dev zlib-dev
 # copy package trước để cài nhanh khi code thay đổi
 COPY package*.json ./
 
@@ -14,6 +15,9 @@ RUN npm install -g nodemon
 
 # copy code còn lại
 COPY . .
+
+COPY AI_Bot/requirements.txt ./AI_Bot/
+RUN pip3 install --no-cache-dir -r AI_Bot/requirements.txt --break-system-packages
 
 # set environment dev
 ENV NODE_ENV=development

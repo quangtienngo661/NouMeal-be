@@ -1,0 +1,7 @@
+flask
+flask-cors
+clarifai-grpc
+openai
+python-dotenv
+pillow
+flasgger
