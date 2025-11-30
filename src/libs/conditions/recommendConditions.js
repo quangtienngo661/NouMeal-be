@@ -26,6 +26,8 @@ const nutritionalProfilePercentages = {
   },
 };
 
+
+
 exports.nutritiousFoodConditions = (user) => {
   let bmr;
   if (user.gender === 'male') {

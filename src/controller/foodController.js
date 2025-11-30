@@ -67,6 +67,107 @@ exports.foodsRecommendation = catchAsync(async (req, res, next) => {
 
 /**
  * @swagger
+ * /api/v1/foods/weekly:
+ *   get:
+ *     summary: Get weekly food recommendations for current user
+ *     description: Returns 7 days of recommended foods (breakfast, lunch, dinner, snacks) based on the authenticated user's profile with diversity across days.
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: refresh
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Force refresh cache and generate new recommendations
+ *     responses:
+ *       200:
+ *         description: Weekly recommendations generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     week:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           date:
+ *                             type: string
+ *                             format: date
+ *                             example: "2025-11-25"
+ *                           dayOfWeek:
+ *                             type: string
+ *                             example: "Monday"
+ *                           meals:
+ *                             type: object
+ *                             properties:
+ *                               breakfast:
+ *                                 type: array
+ *                                 items:
+ *                                   $ref: '#/components/schemas/Food'
+ *                               lunch:
+ *                                 type: array
+ *                                 items:
+ *                                   $ref: '#/components/schemas/Food'
+ *                               dinner:
+ *                                 type: array
+ *                                 items:
+ *                                   $ref: '#/components/schemas/Food'
+ *                               snacks:
+ *                                 type: array
+ *                                 items:
+ *                                   $ref: '#/components/schemas/Food'
+ *                     nutritionTarget:
+ *                       type: object
+ *                       properties:
+ *                         dailyCalories:
+ *                           type: number
+ *                           example: 2000
+ *                         protein:
+ *                           type: number
+ *                           example: 150
+ *                         carbs:
+ *                           type: number
+ *                           example: 200
+ *                         fat:
+ *                           type: number
+ *                           example: 67
+ *                     cached:
+ *                       type: boolean
+ *                       example: false
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.weeklyFoodsRecommendation = catchAsync(async (req, res, next) => {
+    const userId = req.user._id;
+    const refresh = req.query.refresh === 'true';
+
+    const result = await FoodService.weeklyFoodRecommendation(userId, refresh);
+    return res.ok(result, 200);
+});
+
+/**
+ * @swagger
  * /api/v1/foods/{foodId}:
  *   get:
  *     summary: Get a food by ID
@@ -144,7 +245,7 @@ exports.getFoodById = catchAsync(async (req, res, next) => {
 exports.createFood = catchAsync(async (req, res, next) => {
     const foodInfo = { ...req.body };
 
-    const result = await FoodService.createFood(foodInfo);
+    const result = await FoodService.createFood(foodInfo, req.user._id);
     return res.ok(result, 201);
 });
 
@@ -198,7 +299,7 @@ exports.updateFood = catchAsync(async (req, res, next) => {
     const { foodId } = req.params;
     const foodInfo = { ...req.body }
 
-    const result = await FoodService.updateFood(foodId, foodInfo);
+    const result = await FoodService.updateFood(foodId, foodInfo, req.user._id);
     return res.ok(result, 200);
 });
 
@@ -238,6 +339,6 @@ exports.updateFood = catchAsync(async (req, res, next) => {
  */
 exports.deleteFood = catchAsync(async (req, res, next) => {
     const { foodId } = req.params;
-    const result = await FoodService.deleteFood(foodId);
+    const result = await FoodService.deleteFood(foodId, req.user._id);
     return res.ok(result, 200);
 });

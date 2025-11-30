@@ -1,0 +1,873 @@
+openapi: 3.0.3
+info:
+  title: AI Nutrition Agent API
+  description: |
+    **API tư vấn dinh dưỡng thông minh với AI Agent**
+
+    Hệ thống AI Agent tự động phân tích ý định người dùng và thực thi các chức năng phù hợp:
+    - Phân tích món ăn từ ảnh (Clarifai + GPT-4 Vision)
+    - So sánh và theo dõi calo
+    - Gợi ý thực đơn và công thức nấu
+    - Chat tư vấn dinh dưỡng
+
+    **Công nghệ:**
+    - Clarifai API: Nhận diện món ăn
+    - OpenAI GPT-4o: Phân tích và tư vấn
+    - Flask: Backend API
+  contact:
+    name: API Support
+    email: support@nutrition-ai.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 2.0.0
+servers:
+- url: http://localhost:5000
+  description: Development Server
+- url: https://api.nutrition-ai.com
+  description: Production Server
+security:
+- ApiKeyAuth: []
+tags:
+- name: AI Agent
+  description: Các endpoint AI Agent thông minh
+- name: Food Analysis
+  description: Phân tích món ăn
+- name: Meal Planning
+  description: Lập kế hoạch bữa ăn
+- name: User Profile
+  description: Quản lý hồ sơ người dùng
+- name: Utilities
+  description: Các chức năng hỗ trợ
+paths:
+  /api/health:
+    get:
+      tags:
+      - Utilities
+      summary: Health Check
+      description: Kiểm tra trạng thái API và danh sách endpoints
+      responses:
+        "200":
+          description: API đang hoạt động
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200"
+  /api/agent:
+    post:
+      tags:
+      - AI Agent
+      summary: AI Agent - Tự động phân tích và thực thi
+      description: |
+        **Endpoint chính của AI Agent** - Tự động:
+        1. Phân tích ý định người dùng từ tin nhắn
+        2. Chọn chức năng phù hợp nhất
+        3. Thực thi và trả về kết quả
+        4. Đề xuất hành động tiếp theo
+
+        **Ưu điểm:**
+        - Không cần chỉ định function cụ thể
+        - Tự động điền tham số từ context
+        - Học từ lịch sử hội thoại
+        - Đa nhiệm liên tiếp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_agent_body"
+            examples:
+              analyze_with_image:
+                summary: Phân tích món ăn
+                value:
+                  message: Món này có tốt cho người tiểu đường không?
+                  images:
+                  - "data:image/jpeg;base64,/9j/4AAQ..."
+                  auto_execute: true
+              meal_suggestion:
+                summary: Gợi ý bữa ăn
+                value:
+                  message: Tôi muốn ăn gì cho bữa trưa vừa rẻ vừa nhanh?
+                  auto_execute: true
+              compare_foods:
+                summary: So sánh nhiều món
+                value:
+                  message: "So sánh 2 món này, món nào ít calo hơn?"
+                  images:
+                  - "data:image/jpeg;base64,..."
+                  - "data:image/jpeg;base64,..."
+        required: true
+      responses:
+        "200":
+          description: Phân tích và thực thi thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_1"
+              examples:
+                successful_analysis:
+                  summary: Phân tích thành công
+                  value:
+                    success: true
+                    session_id: 550e8400-e29b-41d4-a716-446655440000
+                    intent_analysis:
+                      intent: analyze_food
+                      confidence: 0.95
+                      explanation: User muốn phân tích món ăn
+                      alternative_actions:
+                      - quick_scan
+                      missing_info: []
+                    result:
+                      detected_foods:
+                      - name: phở bò
+                        confidence: 98.5
+                      analysis: Phở bò có khoảng 350-400 kcal...
+                    suggestions:
+                    - 💡 Bạn có muốn so sánh với món khác không?
+                    executed: true
+        "400":
+          description: Thiếu thông tin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/agent/suggest:
+    post:
+      tags:
+      - AI Agent
+      summary: AI Agent - Chỉ gợi ý không thực thi
+      description: |
+        Phân tích ý định và đề xuất chức năng mà **không thực thi**.
+        Dùng khi muốn user xác nhận trước khi chạy.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/agent_suggest_body"
+        required: true
+      responses:
+        "200":
+          description: Gợi ý thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_2"
+  /api/agent/multi-step:
+    post:
+      tags:
+      - AI Agent
+      summary: AI Agent - Thực thi workflow đa bước
+      description: |
+        Chạy chuỗi hành động theo workflow định sẵn:
+        - **complete_analysis**: Quét → Phân tích → Gợi ý món tương tự
+        - **daily_tracking**: Theo dõi calo → Gợi ý bữa tối cân bằng
+        - **meal_planning**: Gợi ý 1 bữa → Công thức chi tiết → Thực đơn tuần
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/agent_multistep_body"
+            examples:
+              complete_analysis:
+                summary: Phân tích hoàn chỉnh
+                value:
+                  workflow: complete_analysis
+                  images:
+                  - "data:image/jpeg;base64,..."
+                  user_preferences:
+                    health_condition: tiểu đường
+              daily_tracking:
+                summary: Theo dõi cả ngày
+                value:
+                  workflow: daily_tracking
+                  images:
+                  - '...'
+                  - '...'
+                  - '...'
+                  user_preferences:
+                    target_calories: 2000
+        required: true
+      responses:
+        "200":
+          description: Workflow hoàn thành
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_3"
+  /api/analyze-food:
+    post:
+      tags:
+      - Food Analysis
+      summary: Phân tích món ăn chi tiết
+      description: Nhận diện và phân tích dinh dưỡng từ 1 ảnh món ăn
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_analyzefood_body"
+        required: true
+      responses:
+        "200":
+          description: Phân tích thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_4"
+              example:
+                success: true
+                detected_foods:
+                - name: phở bò
+                  confidence: 98.5
+                - name: thịt bò
+                  confidence: 95.2
+                analysis: |
+                  **Món ăn:** Phở bò
+                  **Calo:** ~350-400 kcal/tô
+                  **Đánh giá:** ⭐⭐⭐⭐ (4/5)
+
+                  **Ưu điểm:**
+                  - Giàu protein từ thịt bò
+                  - Nhiều vitamin từ rau thơm
+
+                  **Lưu ý cho người tiểu đường:**
+                  - Giảm lượng bánh phở (carb cao)
+                  - Không thêm đường vào nước dùng
+  /api/compare-foods:
+    post:
+      tags:
+      - Food Analysis
+      summary: So sánh nhiều món ăn
+      description: So sánh 2-4 món ăn về dinh dưỡng và phù hợp
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_comparefoods_body"
+        required: true
+      responses:
+        "200":
+          description: So sánh thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_5"
+  /api/track-calories:
+    post:
+      tags:
+      - Food Analysis
+      summary: Theo dõi calo trong ngày
+      description: Tính tổng calo từ nhiều bữa ăn và so với mục tiêu
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_trackcalories_body"
+        required: true
+      responses:
+        "200":
+          description: Theo dõi thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_6"
+  /api/quick-scan:
+    post:
+      tags:
+      - Food Analysis
+      summary: Quét nhanh nhận diện món
+      description: "Chỉ nhận diện tên món, không phân tích chi tiết"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_quickscan_body"
+        required: true
+      responses:
+        "200":
+          description: Nhận diện thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_7"
+  /api/meal-suggestion:
+    post:
+      tags:
+      - Meal Planning
+      summary: Gợi ý thực đơn 1 bữa
+      description: Đề xuất 2-3 món phù hợp cho bữa ăn
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_mealsuggestion_body"
+        required: true
+      responses:
+        "200":
+          description: Gợi ý thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_8"
+  /api/weekly-menu:
+    post:
+      tags:
+      - Meal Planning
+      summary: Lập thực đơn tuần
+      description: Tạo thực đơn 7 ngày với 3 bữa/ngày
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_weeklymenu_body"
+        required: true
+      responses:
+        "200":
+          description: Thực đơn tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_9"
+  /api/detailed-recipes:
+    post:
+      tags:
+      - Meal Planning
+      summary: Công thức nấu chi tiết
+      description: "Tạo công thức với nguyên liệu, bước làm, calo"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_detailedrecipes_body"
+        required: true
+      responses:
+        "200":
+          description: Công thức tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_10"
+  /api/chat:
+    post:
+      tags:
+      - AI Agent
+      summary: Chat tự do
+      description: "Tư vấn dinh dưỡng dạng chat, có lịch sử"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/api_chat_body"
+        required: true
+      responses:
+        "200":
+          description: Chat thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_11"
+  /api/user/profile:
+    post:
+      tags:
+      - User Profile
+      summary: Lưu hồ sơ người dùng
+      description: "Lưu thông tin sức khỏe, sở thích để cá nhân hóa"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfile"
+        required: true
+      responses:
+        "200":
+          description: Lưu thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_12"
+  /api/user/profile/{user_id}:
+    get:
+      tags:
+      - User Profile
+      summary: Lấy hồ sơ người dùng
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Lấy thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: Không tìm thấy user
+components:
+  schemas:
+    UserProfile:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Nguyễn Văn A
+        age:
+          type: integer
+          example: 30
+        weight:
+          type: number
+          description: Cân nặng (kg)
+          example: 70
+        height:
+          type: number
+          description: Chiều cao (cm)
+          example: 170
+        health_condition:
+          type: string
+          example: khỏe mạnh
+          enum:
+          - khỏe mạnh
+          - tiểu đường
+          - huyết áp cao
+          - béo phì
+          - tim mạch
+        dietary_preferences:
+          type: array
+          example:
+          - ăn chay
+          - ít muối
+          items:
+            type: string
+        allergies:
+          type: array
+          example:
+          - hải sản
+          - đậu phộng
+          items:
+            type: string
+        target_calories:
+          type: integer
+          example: 2000
+        activity_level:
+          type: string
+          example: vừa phải
+          enum:
+          - ít vận động
+          - vừa phải
+          - năng động
+          - rất năng động
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Tin nhắn không được để trống
+    inline_response_200:
+      type: object
+      properties:
+        status:
+          type: string
+          example: OK
+        message:
+          type: string
+          example: AI Agent Nutrition API is running!
+        version:
+          type: string
+          example: 2.0 - AI Agent
+        endpoints:
+          type: object
+    api_agent_body:
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          type: string
+          description: Tin nhắn/yêu cầu của người dùng
+          example: Món này bao nhiêu calo?
+        images:
+          type: array
+          description: Mảng base64 của ảnh món ăn
+          example:
+          - "data:image/jpeg;base64,/9j/4AAQ..."
+          items:
+            type: string
+        session_id:
+          type: string
+          description: ID phiên chat (tự tạo nếu không có)
+          example: 550e8400-e29b-41d4-a716-446655440000
+        user_id:
+          type: string
+          description: ID người dùng (để lấy profile)
+          example: user_123
+        auto_execute:
+          type: boolean
+          description: Tự động thực thi hay chỉ gợi ý
+          default: true
+    inline_response_200_1:
+      type: object
+      properties:
+        success:
+          type: boolean
+        session_id:
+          type: string
+        intent_analysis:
+          $ref: "#/components/schemas/inline_response_200_1_intent_analysis"
+        result:
+          type: object
+          description: Kết quả thực thi function
+        suggestions:
+          type: array
+          example:
+          - 💡 Bạn có muốn so sánh với món khác không?
+          items:
+            type: string
+        executed:
+          type: boolean
+    agent_suggest_body:
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        session_id:
+          type: string
+    inline_response_200_2:
+      type: object
+      properties:
+        success:
+          type: boolean
+        intent_analysis:
+          type: object
+        message:
+          type: string
+          description: Giải thích chi tiết
+        can_execute:
+          type: boolean
+          description: Có đủ thông tin để thực thi không
+    apiagentmultistep_user_preferences:
+      type: object
+      properties:
+        health_condition:
+          type: string
+          example: tiểu đường
+        target_calories:
+          type: integer
+          example: 1800
+        budget_range:
+          type: string
+          example: 150k
+    agent_multistep_body:
+      type: object
+      properties:
+        workflow:
+          type: string
+          default: complete_analysis
+          enum:
+          - complete_analysis
+          - daily_tracking
+          - meal_planning
+        images:
+          type: array
+          items:
+            type: string
+        user_preferences:
+          $ref: "#/components/schemas/apiagentmultistep_user_preferences"
+    inline_response_200_3:
+      type: object
+      properties:
+        success:
+          type: boolean
+        workflow:
+          type: string
+        total_steps:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+        summary:
+          type: string
+    api_analyzefood_body:
+      required:
+      - image
+      type: object
+      properties:
+        image:
+          type: string
+          description: Base64 string của ảnh
+        health_condition:
+          type: string
+          example: tiểu đường
+          default: khỏe mạnh
+        dietary_goals:
+          type: string
+          example: giảm cân
+          default: duy trì cân nặng
+    inline_response_200_4:
+      type: object
+      properties:
+        success:
+          type: boolean
+        detected_foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/inline_response_200_4_detected_foods"
+        analysis:
+          type: string
+        health_condition:
+          type: string
+        dietary_goals:
+          type: string
+    api_comparefoods_body:
+      required:
+      - images
+      type: object
+      properties:
+        images:
+          maxItems: 4
+          minItems: 2
+          type: array
+          items:
+            type: string
+        health_condition:
+          type: string
+          default: khỏe mạnh
+    inline_response_200_5:
+      type: object
+      properties:
+        success:
+          type: boolean
+        detected_foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/inline_response_200_5_detected_foods"
+        comparison:
+          type: string
+          description: Kết quả so sánh chi tiết
+        total_foods:
+          type: integer
+          description: Tổng số món đã so sánh
+    api_trackcalories_body:
+      required:
+      - images
+      type: object
+      properties:
+        images:
+          type: array
+          description: Ảnh các bữa ăn trong ngày
+          items:
+            type: string
+        target_calories:
+          type: integer
+          default: 2000
+        health_condition:
+          type: string
+          default: khỏe mạnh
+    inline_response_200_6:
+      type: object
+      properties:
+        success:
+          type: boolean
+        daily_meals:
+          type: array
+          items:
+            $ref: "#/components/schemas/inline_response_200_6_daily_meals"
+        tracking:
+          type: string
+          description: Phân tích theo dõi calo chi tiết
+        target_calories:
+          type: integer
+    api_quickscan_body:
+      required:
+      - image
+      type: object
+      properties:
+        image:
+          type: string
+    inline_response_200_7:
+      type: object
+      properties:
+        success:
+          type: boolean
+        detected_foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/inline_response_200_4_detected_foods"
+        total:
+          type: integer
+    api_mealsuggestion_body:
+      type: object
+      properties:
+        meal_time:
+          type: string
+          default: trưa
+          enum:
+          - sáng
+          - trưa
+          - tối
+          - phụ
+        health_condition:
+          type: string
+          default: khỏe mạnh
+        dietary_preferences:
+          type: string
+          example: ăn chay
+          default: không
+        budget_range:
+          type: string
+          default: 100k
+        cooking_time:
+          type: string
+          default: 30 phút
+    inline_response_200_8:
+      type: object
+      properties:
+        suggestion:
+          type: string
+        meal_time:
+          type: string
+    api_weeklymenu_body:
+      type: object
+      properties:
+        health_condition:
+          type: string
+          default: khỏe mạnh
+        dietary_preferences:
+          type: string
+          default: không
+        budget_range:
+          type: string
+          description: Ngân sách/ngày
+          default: 500k
+        cooking_time:
+          type: string
+          default: 45 phút
+    inline_response_200_9:
+      type: object
+      properties:
+        menu:
+          type: string
+        duration:
+          type: string
+          example: 7 ngày
+    api_detailedrecipes_body:
+      type: object
+      properties:
+        days:
+          type: integer
+          description: Số ngày muốn tạo công thức
+          default: 3
+        health_condition:
+          type: string
+          default: khỏe mạnh
+        dietary_preferences:
+          type: string
+          default: không
+        budget_range:
+          type: string
+          default: 500k
+    inline_response_200_10:
+      type: object
+      properties:
+        recipes:
+          type: string
+        days:
+          type: integer
+    api_chat_body:
+      required:
+      - message
+      type: object
+      properties:
+        message:
+          type: string
+        session_id:
+          type: string
+        use_agent:
+          type: boolean
+          description: Bật AI Agent mode
+          default: false
+    inline_response_200_11:
+      type: object
+      properties:
+        reply:
+          type: string
+        session_id:
+          type: string
+    inline_response_200_12:
+      type: object
+      properties:
+        message:
+          type: string
+        user_id:
+          type: string
+    inline_response_200_1_intent_analysis:
+      type: object
+      properties:
+        intent:
+          type: string
+          description: Chức năng được chọn
+          example: analyze_food
+        confidence:
+          type: number
+          description: Độ tự tin (0-1)
+          example: 0.95
+        explanation:
+          type: string
+          example: User muốn phân tích món ăn cho người tiểu đường
+        alternative_actions:
+          type: array
+          example:
+          - quick_scan
+          - meal_suggestion
+          items:
+            type: string
+        missing_info:
+          type: array
+          example: []
+          items:
+            type: string
+    inline_response_200_4_detected_foods:
+      type: object
+      properties:
+        name:
+          type: string
+        confidence:
+          type: number
+    inline_response_200_5_detected_foods:
+      type: object
+      properties:
+        dish_number:
+          type: integer
+          description: Số thứ tự món ăn
+        foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/inline_response_200_4_detected_foods"
+    inline_response_200_6_daily_meals:
+      type: object
+      properties:
+        meal_name:
+          type: string
+          description: "Tên bữa ăn (Sáng, Trưa, Tối)"
+        foods:
+          type: array
+          items:
+            $ref: "#/components/schemas/inline_response_200_4_detected_foods"
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      description: API key để xác thực (tùy chọn cho production)
+      name: X-API-Key
+      in: header

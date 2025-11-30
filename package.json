@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "concurrently \"python3 ./AI_Bot/AI.py\" \"python3 ./AI_Bot/Bot.py\" \"wait-on tcp:5001 tcp:5002 && nodemon src/server.js\"",
     "start": "node src/server.js",
     "test": "jest --detectOpenHandles --passWithNoTests",
     "test:watch": "jest --watch",
@@ -39,6 +39,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^10.1.8",
@@ -51,6 +52,7 @@
     "lint-staged": "^16.2.1",
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
-    "supertest": "^7.1.4"
+    "supertest": "^7.1.4",
+    "wait-on": "^9.0.3"
   }
 }

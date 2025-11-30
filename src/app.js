@@ -53,11 +53,16 @@ app.use((req, res, next) => {
 });
 
 // Swagger UI setup
+const { getSwaggerSpec } = require('./swagger');  
+
 app.use(
   '/api-docs',
   swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, swaggerUiOptions)
+  (req, res, next) => {
+    return swaggerUi.setup(getSwaggerSpec(), swaggerUiOptions)(req, res, next);
+  }
 );
+
 
 // Routes
 app.use('/api/v1/users', userRoute); // Authentication routes
@@ -68,7 +73,7 @@ app.use('/api/v1/reports', reportRoute); // Reports and statistics
 app.use('/api/v1/admin', adminRoute); // Admin utilities
 
 // Home route
-app.use('/', (req, res) => {
+app.get('/', (req, res) => {
   return res.end('Welcome to MealGenie API');
 });
 
