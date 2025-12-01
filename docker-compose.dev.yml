@@ -5,25 +5,27 @@ services:
     image: mongo:7.0
     container_name: mongo_dev
     ports:
-      - "${MONGO_PORT}:27017"
+      - '${MONGO_PORT}:27017'
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo_data_dev:/data/db
 
-  # mongo-express:
-  #   image: mongo-express:latest
-  #   container_name: mongo_express_dev
-  #   restart: always
-  #   ports:
-  #     - "8081:8081"
-  #   environment:
-  #     ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-  #     ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-  #     ME_CONFIG_MONGODB_SERVER: mongo
-  #   depends_on:
-  #     - mongo
+      # mongo-express:
+    #   image: mongo-express:latest
+    #   container_name: mongo_express_dev
+    #   restart: always
+    #   ports:
+    #     - "8081:8081"
+    #   environment:
+    #     ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+    #     ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    #     ME_CONFIG_MONGODB_SERVER: mongo
+    #   depends_on:
+    #     - mongo
+    networks:
+      - app-network
 
   backend:
     build:
@@ -31,15 +33,27 @@ services:
       dockerfile: Dockerfile.dev
     container_name: backend_dev
     ports:
-      - "${BACKEND_PORT}:3000"
+      - '${BACKEND_PORT}:3000'
+      - '5001:5001'
+      - '5002:5002'
     env_file: .env
     environment:
       MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/${MONGO_DB}?authSource=admin
       NODE_ENV: development
+      AI_SERVICE_URL: http://localhost:5001
+      CHATBOT_SERVICE_URL: http://localhost:5002
     volumes:
       - .:/app
+      - /app/node_modules
+      - /app/AI_Bot/__pycache__
     depends_on:
       - mongo
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   mongo_data_dev:

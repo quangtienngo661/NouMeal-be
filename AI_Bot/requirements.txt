@@ -1,7 +1,7 @@
-flask
-flask-cors
+flask==3.0.0
+flask-cors==4.0.0
+flasgger==0.9.7.1
 clarifai-grpc
 openai
 python-dotenv
 pillow
-flasgger
