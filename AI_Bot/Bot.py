@@ -555,16 +555,16 @@ Mỗi món: nguyên liệu, bước làm, calo, chi phí"""
     return {"recipes": result, "days": days}
 
 
-@app.route('/api/agent', methods=['POST'])
+@app.route('/api/v1/agent', methods=['POST'])
 def ai_agent():
     """
-    AI Agent - Tự động phân tích và thực thi
+    AI Agent - Food Image Recognition & Analysis
     ---
     tags:
       - AI Agent
-    summary: AI Agent tự động phân tích ý định và thực thi function
+    summary: Phân tích ảnh món ăn và cung cấp thông tin dinh dưỡng
     description: >
-      AI Agent phân tích intent, chọn function và thực thi tự động.
+      AI Agent tự động nhận diện món ăn từ ảnh, phân tích dinh dưỡng và đưa ra gợi ý sức khỏe phù hợp.
     requestBody:
       required: true
       content:
@@ -584,15 +584,12 @@ def ai_agent():
               auto_execute:
                 type: boolean
                 default: true
-              session_id:
-                type: string
-                example: "uuid-v4"
               user_id:
                 type: string
                 example: "user_123"
     responses:
       200:
-        description: Phân tích và thực thi thành công
+        description: Phân tích thành công
         content:
           application/json:
             schema:
@@ -600,43 +597,139 @@ def ai_agent():
               properties:
                 success:
                   type: boolean
-                session_id:
+                message:
                   type: string
-                intent_analysis:
+                data:
                   type: object
-                result:
-                  type: object
-                suggestions:
-                  type: array
-                  items:
-                    type: string
-                executed:
-                  type: boolean
+                  properties:
+                    recognized_foods:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          category:
+                            type: string
+                          weight:
+                            type: string
+                          confidence:
+                            type: number
+                    nutrition_analysis:
+                      type: object
+                      properties:
+                        calories:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        protein:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        carbs:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fat:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fiber:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sugar:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sodium:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        cholesterol:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                    ai_insights:
+                      type: array
+                      items:
+                        type: string
+                    processing_time:
+                      type: string
             example:
               success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              intent_analysis:
-                intent: "analyze_food"
-                confidence: 0.95
-                explanation: "User muốn phân tích món ăn..."
-                alternative_actions: ["quick_scan", "compare_foods"]
-                missing_info: []
-              result:
-                detected_foods:
-                  - name: "phở bò"
-                    confidence: 98.5
-                  - name: "bánh phở"
-                    confidence: 95.2
-                analysis: "Calo: 350-400..."
-                health_condition: "tiểu đường"
-                dietary_goals: "kiểm soát đường huyết"
-              suggestions:
-                - "💡 So sánh với phở gà?"
-                - "📊 Tính tổng calo?"
-              executed: true
+              message: "Phân tích món ăn thành công"
+              data:
+                recognized_foods:
+                  - name: "Fresh Garden Salad"
+                    category: "Vegetables"
+                    weight: "200g"
+                    confidence: 96
+                  - name: "Avocado"
+                    category: "Healthy Fats"
+                    weight: "80g"
+                    confidence: 93
+                  - name: "Mixed Nuts"
+                    category: "Protein & Fats"
+                    weight: "30g"
+                    confidence: 88
+                nutrition_analysis:
+                  calories:
+                    value: 380
+                    unit: "kcal"
+                  protein:
+                    value: 12
+                    unit: "g"
+                  carbs:
+                    value: 18
+                    unit: "g"
+                  fat:
+                    value: 32
+                    unit: "g"
+                  fiber:
+                    value: 12
+                    unit: "g"
+                  sugar:
+                    value: 4
+                    unit: "g"
+                  sodium:
+                    value: 95
+                    unit: "mg"
+                  cholesterol:
+                    value: 0
+                    unit: "mg"
+                ai_insights:
+                  - "Excellent source of healthy fats from avocado and nuts!"
+                  - "High fiber content will keep you full for longer."
+                  - "Consider adding a protein source like grilled chicken or tofu."
+                processing_time: "1.5s"
 
       400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
+        description: Dữ liệu đầu vào không hợp lệ
         content:
           application/json:
             schema:
@@ -644,16 +737,21 @@ def ai_agent():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Tin nhắn không được để trống"
-              details:
-                field: "message"
-                reason: "required"
+              message: "Yêu cầu không hợp lệ"
+              error:
+                code: "INVALID_INPUT"
+                details: "Ảnh không được để trống hoặc định dạng không được hỗ trợ"
 
       500:
         description: Lỗi server
@@ -664,16 +762,21 @@ def ai_agent():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
+              message: "Lỗi xử lý ảnh"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "Không thể phân tích ảnh, vui lòng thử lại"
     """
     try:
         data = request.json
@@ -772,7 +875,7 @@ def ai_agent():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/agent/suggest', methods=['POST'])
+@app.route('/api/v1/agent/suggest', methods=['POST'])
 def agent_suggest_only():
     """
     AI Agent - Chỉ gợi ý chức năng (không thực thi)
@@ -804,10 +907,10 @@ def agent_suggest_only():
                 items:
                   type: string
                 example: []
-              session_id:
+              user_id:
                 type: string
-                description: ID phiên làm việc để theo dõi lịch sử hội thoại
-                example: "550e8400-e29b-41d4-a716-446655440000"
+                description: ID người dùng
+                example: "user_123"
     responses:
       200:
         description: Phân tích và gợi ý thành công
@@ -819,89 +922,75 @@ def agent_suggest_only():
                 success:
                   type: boolean
                   description: Trạng thái thành công
-                intent_analysis:
-                  type: object
-                  description: Kết quả phân tích ý định
-                  properties:
-                    intent:
-                      type: string
-                      description: Tên chức năng được đề xuất
-                      example: "meal_suggestion"
-                    confidence:
-                      type: number
-                      format: float
-                      description: Độ tin cậy của phân tích (0-1)
-                      example: 0.92
-                    explanation:
-                      type: string
-                      description: Giải thích ý định của người dùng
-                      example: "User muốn được gợi ý bữa ăn nhanh và rẻ."
-                    alternative_actions:
-                      type: array
-                      description: Các chức năng thay thế có thể dùng
-                      items:
-                        type: string
-                      example: ["quick_scan", "weekly_menu"]
-                    missing_info:
-                      type: array
-                      description: Danh sách thông tin còn thiếu
-                      items:
-                        type: string
-                      example: []
-                    suggested_params:
-                      type: object
-                      description: Tham số được đề xuất cho chức năng
-                      example:
-                        meal_type: "trưa"
                 message:
                   type: string
                   description: Tin nhắn tóm tắt gợi ý cho người dùng
-                  example: |
-                    🤖 Tôi hiểu bạn muốn: User muốn được gợi ý bữa ăn nhanh và rẻ.
-
-                    Tôi đề xuất dùng chức năng: meal_suggestion
-                    Độ tự tin: 92%
-
-                    📋 Các bước thực hiện:
-                    - budget: ❌ Cần bổ sung
-                    - time_limit: ❌ Cần bổ sung
-
-                    💡 Hoặc bạn có thể:
-                    - quick_scan: Quét nhanh món ăn bạn đang có
-                    - weekly_menu: Gợi ý thực đơn cả tuần
-                can_execute:
-                  type: boolean
-                  description: Có thể thực thi ngay hay cần thêm thông tin
-                  example: false
+                data:
+                  type: object
+                  description: Dữ liệu phân tích và gợi ý
+                  properties:
+                    intent_analysis:
+                      type: object
+                      description: Kết quả phân tích ý định
+                      properties:
+                        intent:
+                          type: string
+                          description: Tên chức năng được đề xuất
+                        confidence:
+                          type: number
+                          format: float
+                          description: Độ tin cậy của phân tích (0-1)
+                        explanation:
+                          type: string
+                          description: Giải thích ý định của người dùng
+                        alternative_actions:
+                          type: array
+                          description: Các chức năng thay thế có thể dùng
+                          items:
+                            type: string
+                        missing_info:
+                          type: array
+                          description: Danh sách thông tin còn thiếu
+                          items:
+                            type: string
+                        suggested_params:
+                          type: object
+                          description: Tham số được đề xuất cho chức năng
+                    can_execute:
+                      type: boolean
+                      description: Có thể thực thi ngay hay cần thêm thông tin
             example:
               success: true
-              intent_analysis:
-                intent: "meal_suggestion"
-                confidence: 0.92
-                explanation: "User muốn được gợi ý bữa ăn nhanh và rẻ."
-                alternative_actions:
-                  - "quick_scan"
-                  - "weekly_menu"
-                missing_info: ["budget", "time_limit"]
-                suggested_params:
-                  meal_type: "trưa"
               message: |
-                🤖 Tôi hiểu bạn muốn: User muốn được gợi ý bữa ăn nhanh và rẻ.
+                🤖 Tôi hiểu bạn muốn: Gợi ý bữa ăn nhanh và tiết kiệm cho bữa trưa.
 
-                Tôi đề xuất dùng chức năng: meal_suggestion
-                Độ tự tin: 92%
+                💡 Chức năng đề xuất: meal_suggestion
+                📊 Độ tin cậy: 92%
 
-                📋 Các bước thực hiện:
-                - budget: ❌ Cần bổ sung
-                - time_limit: ❌ Cần bổ sung
+                📋 Thông tin cần bổ sung:
+                • Ngân sách dự kiến (VD: 30k-50k)
+                • Thời gian chế biến tối đa (VD: 15-30 phút)
 
-                💡 Hoặc bạn có thể:
-                - quick_scan: Quét nhanh món ăn bạn đang có
-                - weekly_menu: Gợi ý thực đơn cả tuần
-              can_execute: false
+                🔄 Các lựa chọn khác:
+                • quick_scan - Quét nhanh món ăn bạn đang có
+                • weekly_menu - Gợi ý thực đơn cả tuần
+              data:
+                intent_analysis:
+                  intent: "meal_suggestion"
+                  confidence: 0.92
+                  explanation: "Người dùng muốn được gợi ý bữa ăn nhanh và tiết kiệm cho bữa trưa."
+                  alternative_actions:
+                    - "quick_scan"
+                    - "weekly_menu"
+                  missing_info:
+                    - "budget"
+                    - "time_limit"
+                  suggested_params:
+                    meal_type: "trưa"
+                can_execute: false
 
       400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
+        description: Dữ liệu đầu vào không hợp lệ
         content:
           application/json:
             schema:
@@ -909,16 +998,21 @@ def agent_suggest_only():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Tin nhắn không được để trống"
-              details:
-                field: "message"
-                reason: "required"
+              message: "Yêu cầu không hợp lệ"
+              error:
+                code: "INVALID_INPUT"
+                details: "Tin nhắn không được để trống"
 
       500:
         description: Lỗi server
@@ -929,16 +1023,21 @@ def agent_suggest_only():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Internal server error"
-              details:
-                message: "Unexpected error occurred"
-                code: "internal_error"
+              message: "Lỗi phân tích ý định"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "Không thể phân tích tin nhắn, vui lòng thử lại"
     """
     try:
         data = request.json
@@ -981,288 +1080,288 @@ Tôi đề xuất dùng chức năng: **{intent_analysis['intent']}**
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/agent/multi-step', methods=['POST'])
-def agent_multi_step():
-    """
-    AI Agent - Thực thi workflow nhiều bước
-    ---
-    tags:
-      - AI Agent
-    summary: Thực thi chuỗi nhiều chức năng liên tiếp
-    description: |
-      Thực thi tự động các workflow có cấu trúc nhiều bước, phù hợp cho các nhiệm vụ phức tạp.
-      Mỗi workflow được thiết kế để giải quyết một use case cụ thể với chuỗi actions được định nghĩa trước.
+# @app.route('/api/agent/multi-step', methods=['POST'])
+# def agent_multi_step():
+#     """
+#     AI Agent - Thực thi workflow nhiều bước
+#     ---
+#     tags:
+#       - AI Agent
+#     summary: Thực thi chuỗi nhiều chức năng liên tiếp
+#     description: |
+#       Thực thi tự động các workflow có cấu trúc nhiều bước, phù hợp cho các nhiệm vụ phức tạp.
+#       Mỗi workflow được thiết kế để giải quyết một use case cụ thể với chuỗi actions được định nghĩa trước.
 
-      ## 🔥 Workflow hỗ trợ
+#       ## 🔥 Workflow hỗ trợ
 
-      ### 1️⃣ `complete_analysis` (cần **1 ảnh**)
-      Phân tích toàn diện một món ăn từ ảnh:
-      - **Bước 1**: Quick scan nhận diện món ăn  
-      - **Bước 2**: Phân tích chi tiết món (calo, dinh dưỡng, phù hợp sức khỏe)
-      - **Bước 3**: Gợi ý các món tương tự hoặc thay thế
+#       ### 1️⃣ `complete_analysis` (cần **1 ảnh**)
+#       Phân tích toàn diện một món ăn từ ảnh:
+#       - **Bước 1**: Quick scan nhận diện món ăn  
+#       - **Bước 2**: Phân tích chi tiết món (calo, dinh dưỡng, phù hợp sức khỏe)
+#       - **Bước 3**: Gợi ý các món tương tự hoặc thay thế
 
-      ### 2️⃣ `daily_tracking` (cần **nhiều ảnh**)  
-      Theo dõi và cân bằng dinh dưỡng cả ngày:
-      - **Bước 1**: Theo dõi calo toàn bộ các bữa trong ngày từ ảnh
-      - **Bước 2**: Gợi ý bữa tối cân bằng dựa trên tổng calo đã tiêu thụ
+#       ### 2️⃣ `daily_tracking` (cần **nhiều ảnh**)  
+#       Theo dõi và cân bằng dinh dưỡng cả ngày:
+#       - **Bước 1**: Theo dõi calo toàn bộ các bữa trong ngày từ ảnh
+#       - **Bước 2**: Gợi ý bữa tối cân bằng dựa trên tổng calo đã tiêu thụ
 
-      ### 3️⃣ `meal_planning` (không cần ảnh)  
-      Lập kế hoạch bữa ăn dài hạn:
-      - **Bước 1**: Gợi ý một bữa ăn phù hợp
-      - **Bước 2**: Cung cấp công thức chi tiết cho 3 ngày
-      - **Bước 3**: Tạo thực đơn đầy đủ cho cả tuần
+#       ### 3️⃣ `meal_planning` (không cần ảnh)  
+#       Lập kế hoạch bữa ăn dài hạn:
+#       - **Bước 1**: Gợi ý một bữa ăn phù hợp
+#       - **Bước 2**: Cung cấp công thức chi tiết cho 3 ngày
+#       - **Bước 3**: Tạo thực đơn đầy đủ cho cả tuần
 
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - workflow
-            properties:
-              workflow:
-                type: string
-                enum:
-                  - complete_analysis
-                  - daily_tracking
-                  - meal_planning
-                description: Tên workflow cần thực thi
-                example: "complete_analysis"
-              images:
-                type: array
-                description: |
-                  Danh sách ảnh base64 (bắt buộc cho complete_analysis và daily_tracking)
-                  - complete_analysis: cần 1 ảnh
-                  - daily_tracking: cần nhiều ảnh (tùy số bữa)
-                  - meal_planning: không cần ảnh
-                items:
-                  type: string
-                example:
-                  - "data:image/jpeg;base64,/9j/4AAQ..."
-              user_preferences:
-                type: object
-                description: Thông tin và sở thích của người dùng
-                properties:
-                  health_condition:
-                    type: string
-                    description: Tình trạng sức khỏe
-                    example: "tiểu đường"
-                  dietary_goals:
-                    type: string
-                    description: Mục tiêu dinh dưỡng
-                    example: "giảm cân"
-                  target_calories:
-                    type: integer
-                    description: Lượng calo mục tiêu mỗi ngày
-                    example: 1800
-                  budget_range:
-                    type: string
-                    description: Ngân sách cho bữa ăn
-                    example: "100k"
-                  meal_time:
-                    type: string
-                    description: Thời gian bữa ăn (sáng/trưa/tối)
-                    example: "trưa"
-                  dietary_preferences:
-                    type: string
-                    description: Chế độ ăn ưa thích
-                    example: "ăn chay"
+#     requestBody:
+#       required: true
+#       content:
+#         application/json:
+#           schema:
+#             type: object
+#             required:
+#               - workflow
+#             properties:
+#               workflow:
+#                 type: string
+#                 enum:
+#                   - complete_analysis
+#                   - daily_tracking
+#                   - meal_planning
+#                 description: Tên workflow cần thực thi
+#                 example: "complete_analysis"
+#               images:
+#                 type: array
+#                 description: |
+#                   Danh sách ảnh base64 (bắt buộc cho complete_analysis và daily_tracking)
+#                   - complete_analysis: cần 1 ảnh
+#                   - daily_tracking: cần nhiều ảnh (tùy số bữa)
+#                   - meal_planning: không cần ảnh
+#                 items:
+#                   type: string
+#                 example:
+#                   - "data:image/jpeg;base64,/9j/4AAQ..."
+#               user_preferences:
+#                 type: object
+#                 description: Thông tin và sở thích của người dùng
+#                 properties:
+#                   health_condition:
+#                     type: string
+#                     description: Tình trạng sức khỏe
+#                     example: "tiểu đường"
+#                   dietary_goals:
+#                     type: string
+#                     description: Mục tiêu dinh dưỡng
+#                     example: "giảm cân"
+#                   target_calories:
+#                     type: integer
+#                     description: Lượng calo mục tiêu mỗi ngày
+#                     example: 1800
+#                   budget_range:
+#                     type: string
+#                     description: Ngân sách cho bữa ăn
+#                     example: "100k"
+#                   meal_time:
+#                     type: string
+#                     description: Thời gian bữa ăn (sáng/trưa/tối)
+#                     example: "trưa"
+#                   dietary_preferences:
+#                     type: string
+#                     description: Chế độ ăn ưa thích
+#                     example: "ăn chay"
 
-    responses:
-      200:
-        description: Workflow đã hoàn thành thành công
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                  description: Trạng thái thành công
-                workflow:
-                  type: string
-                  description: Tên workflow đã thực thi
-                total_steps:
-                  type: integer
-                  description: Tổng số bước đã thực hiện
-                results:
-                  type: array
-                  description: Kết quả của từng bước trong workflow
-                  items:
-                    type: object
-                    properties:
-                      step:
-                        type: integer
-                        description: Số thứ tự bước
-                      action:
-                        type: string
-                        description: Tên chức năng đã thực thi
-                      result:
-                        type: object
-                        description: Kết quả trả về từ chức năng
-                summary:
-                  type: string
-                  description: Tóm tắt kết quả workflow
-            example:
-              success: true
-              workflow: "complete_analysis"
-              total_steps: 3
-              results:
-                - step: 1
-                  action: "quick_scan"
-                  result:
-                    detected_foods:
-                      - name: "phở bò"
-                        confidence: 98.5
-                      - name: "bánh phở"
-                        confidence: 95.2
-                    status: "success"
-                - step: 2
-                  action: "analyze_food"
-                  result:
-                    food_name: "phở bò"
-                    calories: 350
-                    analysis: "Phở bò khoảng 350 kcal, giàu protein từ thịt bò..."
-                    health_rating: 8
-                    suitable_for_condition: true
-                - step: 3
-                  action: "meal_suggestion"
-                  result:
-                    suggestions:
-                      - name: "bún bò Huế"
-                        calories: 380
-                        reason: "Tương tự về hương vị và dinh dưỡng"
-                      - name: "hủ tiếu"
-                        calories: 320
-                        reason: "Ít calo hơn, vẫn đủ chất"
-              summary: "Đã hoàn thành 3 bước trong workflow 'complete_analysis'"
+#     responses:
+#       200:
+#         description: Workflow đã hoàn thành thành công
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                   description: Trạng thái thành công
+#                 workflow:
+#                   type: string
+#                   description: Tên workflow đã thực thi
+#                 total_steps:
+#                   type: integer
+#                   description: Tổng số bước đã thực hiện
+#                 results:
+#                   type: array
+#                   description: Kết quả của từng bước trong workflow
+#                   items:
+#                     type: object
+#                     properties:
+#                       step:
+#                         type: integer
+#                         description: Số thứ tự bước
+#                       action:
+#                         type: string
+#                         description: Tên chức năng đã thực thi
+#                       result:
+#                         type: object
+#                         description: Kết quả trả về từ chức năng
+#                 summary:
+#                   type: string
+#                   description: Tóm tắt kết quả workflow
+#             example:
+#               success: true
+#               workflow: "complete_analysis"
+#               total_steps: 3
+#               results:
+#                 - step: 1
+#                   action: "quick_scan"
+#                   result:
+#                     detected_foods:
+#                       - name: "phở bò"
+#                         confidence: 98.5
+#                       - name: "bánh phở"
+#                         confidence: 95.2
+#                     status: "success"
+#                 - step: 2
+#                   action: "analyze_food"
+#                   result:
+#                     food_name: "phở bò"
+#                     calories: 350
+#                     analysis: "Phở bò khoảng 350 kcal, giàu protein từ thịt bò..."
+#                     health_rating: 8
+#                     suitable_for_condition: true
+#                 - step: 3
+#                   action: "meal_suggestion"
+#                   result:
+#                     suggestions:
+#                       - name: "bún bò Huế"
+#                         calories: 380
+#                         reason: "Tương tự về hương vị và dinh dưỡng"
+#                       - name: "hủ tiếu"
+#                         calories: 320
+#                         reason: "Ít calo hơn, vẫn đủ chất"
+#               summary: "Đã hoàn thành 3 bước trong workflow 'complete_analysis'"
 
-      400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "Workflow 'complete_analysis' yêu cầu ít nhất 1 ảnh"
-              details:
-                workflow: "complete_analysis"
-                required_images: 1
-                provided_images: 0
+#       400:
+#         description: Thiếu dữ liệu hoặc không hợp lệ
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "Workflow 'complete_analysis' yêu cầu ít nhất 1 ảnh"
+#               details:
+#                 workflow: "complete_analysis"
+#                 required_images: 1
+#                 provided_images: 0
 
-      500:
-        description: Lỗi server
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "Lỗi server nội bộ"
-              details:
-                message: "Unexpected error occurred"
-                code: "internal_error"
-    """
-    try:
-        data = request.json
-        workflow_name = data.get("workflow", "complete_analysis")
-        images = data.get("images", [])
-        user_preferences = data.get("user_preferences", {})
+#       500:
+#         description: Lỗi server
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "Lỗi server nội bộ"
+#               details:
+#                 message: "Unexpected error occurred"
+#                 code: "internal_error"
+#     """
+#     try:
+#         data = request.json
+#         workflow_name = data.get("workflow", "complete_analysis")
+#         images = data.get("images", [])
+#         user_preferences = data.get("user_preferences", {})
         
-        results = []
+#         results = []
         
-        if workflow_name == "complete_analysis" and images:
-            scan_result = internal_quick_scan(images[0])
-            results.append({"step": 1, "action": "quick_scan", "result": scan_result})
+#         if workflow_name == "complete_analysis" and images:
+#             scan_result = internal_quick_scan(images[0])
+#             results.append({"step": 1, "action": "quick_scan", "result": scan_result})
             
-            analysis_result = internal_analyze_food(
-                images[0],
-                user_preferences.get("health_condition", "khỏe mạnh"),
-                user_preferences.get("dietary_goals", "duy trì cân nặng")
-            )
-            results.append({"step": 2, "action": "analyze_food", "result": analysis_result})
+#             analysis_result = internal_analyze_food(
+#                 images[0],
+#                 user_preferences.get("health_condition", "khỏe mạnh"),
+#                 user_preferences.get("dietary_goals", "duy trì cân nặng")
+#             )
+#             results.append({"step": 2, "action": "analyze_food", "result": analysis_result})
             
-            suggestion_result = internal_meal_suggestion(
-                "trưa",
-                user_preferences.get("health_condition", "khỏe mạnh"),
-                "tương tự món vừa phân tích",
-                user_preferences.get("budget_range", "100k"),
-                "30 phút"
-            )
-            results.append({"step": 3, "action": "meal_suggestion", "result": suggestion_result})
+#             suggestion_result = internal_meal_suggestion(
+#                 "trưa",
+#                 user_preferences.get("health_condition", "khỏe mạnh"),
+#                 "tương tự món vừa phân tích",
+#                 user_preferences.get("budget_range", "100k"),
+#                 "30 phút"
+#             )
+#             results.append({"step": 3, "action": "meal_suggestion", "result": suggestion_result})
         
-        elif workflow_name == "daily_tracking" and images:
-            tracking_result = internal_track_calories(
-                images,
-                user_preferences.get("target_calories", 2000),
-                user_preferences.get("health_condition", "khỏe mạnh")
-            )
-            results.append({"step": 1, "action": "track_calories", "result": tracking_result})
+#         elif workflow_name == "daily_tracking" and images:
+#             tracking_result = internal_track_calories(
+#                 images,
+#                 user_preferences.get("target_calories", 2000),
+#                 user_preferences.get("health_condition", "khỏe mạnh")
+#             )
+#             results.append({"step": 1, "action": "track_calories", "result": tracking_result})
             
-            suggestion_result = internal_meal_suggestion(
-                "tối",
-                user_preferences.get("health_condition", "khỏe mạnh"),
-                "cân bằng với các bữa đã ăn",
-                user_preferences.get("budget_range", "100k"),
-                "30 phút"
-            )
-            results.append({"step": 2, "action": "meal_suggestion", "result": suggestion_result})
+#             suggestion_result = internal_meal_suggestion(
+#                 "tối",
+#                 user_preferences.get("health_condition", "khỏe mạnh"),
+#                 "cân bằng với các bữa đã ăn",
+#                 user_preferences.get("budget_range", "100k"),
+#                 "30 phút"
+#             )
+#             results.append({"step": 2, "action": "meal_suggestion", "result": suggestion_result})
         
-        elif workflow_name == "meal_planning":
-            suggestion_result = internal_meal_suggestion(
-                user_preferences.get("meal_time", "trưa"),
-                user_preferences.get("health_condition", "khỏe mạnh"),
-                user_preferences.get("dietary_preferences", "không"),
-                user_preferences.get("budget_range", "100k"),
-                "30 phút"
-            )
-            results.append({"step": 1, "action": "meal_suggestion", "result": suggestion_result})
+#         elif workflow_name == "meal_planning":
+#             suggestion_result = internal_meal_suggestion(
+#                 user_preferences.get("meal_time", "trưa"),
+#                 user_preferences.get("health_condition", "khỏe mạnh"),
+#                 user_preferences.get("dietary_preferences", "không"),
+#                 user_preferences.get("budget_range", "100k"),
+#                 "30 phút"
+#             )
+#             results.append({"step": 1, "action": "meal_suggestion", "result": suggestion_result})
             
-            recipes_result = internal_detailed_recipes(
-                3,
-                user_preferences.get("health_condition", "khỏe mạnh"),
-                user_preferences.get("dietary_preferences", "không"),
-                user_preferences.get("budget_range", "500k")
-            )
-            results.append({"step": 2, "action": "detailed_recipes", "result": recipes_result})
+#             recipes_result = internal_detailed_recipes(
+#                 3,
+#                 user_preferences.get("health_condition", "khỏe mạnh"),
+#                 user_preferences.get("dietary_preferences", "không"),
+#                 user_preferences.get("budget_range", "500k")
+#             )
+#             results.append({"step": 2, "action": "detailed_recipes", "result": recipes_result})
             
-            menu_result = internal_weekly_menu(
-                user_preferences.get("health_condition", "khỏe mạnh"),
-                user_preferences.get("dietary_preferences", "không"),
-                user_preferences.get("budget_range", "500k"),
-                "45 phút"
-            )
-            results.append({"step": 3, "action": "weekly_menu", "result": menu_result})
+#             menu_result = internal_weekly_menu(
+#                 user_preferences.get("health_condition", "khỏe mạnh"),
+#                 user_preferences.get("dietary_preferences", "không"),
+#                 user_preferences.get("budget_range", "500k"),
+#                 "45 phút"
+#             )
+#             results.append({"step": 3, "action": "weekly_menu", "result": menu_result})
         
-        return jsonify({
-            "success": True,
-            "workflow": workflow_name,
-            "total_steps": len(results),
-            "results": results,
-            "summary": f"Đã hoàn thành {len(results)} bước trong workflow '{workflow_name}'"
-        }), 200
+#         return jsonify({
+#             "success": True,
+#             "workflow": workflow_name,
+#             "total_steps": len(results),
+#             "results": results,
+#             "summary": f"Đã hoàn thành {len(results)} bước trong workflow '{workflow_name}'"
+#         }), 200
         
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/api/v1/health', methods=['GET'])
 def health_check():
     return jsonify({
         "status": "OK",
@@ -1289,7 +1388,7 @@ def health_check():
     }), 200
 
 
-@app.route('/api/chat', methods=['POST'])
+@app.route('/api/v1/chat', methods=['POST'])
 def chat():
     """
     Chat với AI (không dùng Agent)
@@ -1328,17 +1427,27 @@ def chat():
               properties:
                 success:
                   type: boolean
-                reply:
+                message:
                   type: string
-                session_id:
-                  type: string
+                data:
+                  type: object
+                  properties:
+                    reply:
+                      type: string
+                    session_id:
+                      type: string
+                    processing_time:
+                      type: string
             example:
               success: true
-              reply: "Xin chào! Tôi là trợ lý AI dinh dưỡng. Tôi có thể giúp bạn phân tích món ăn, tư vấn thực đơn, và theo dõi dinh dưỡng. Bạn cần tôi hỗ trợ gì?"
-              session_id: "session_abc123"
+              message: "Chat thành công"
+              data:
+                reply: "Xin chào! Tôi là trợ lý AI dinh dưỡng. Tôi có thể giúp bạn phân tích món ăn, tư vấn thực đơn, và theo dõi dinh dưỡng. Bạn cần tôi hỗ trợ gì?"
+                session_id: "session_abc123"
+                processing_time: "0.8s"
 
       400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
+        description: Dữ liệu đầu vào không hợp lệ
         content:
           application/json:
             schema:
@@ -1346,16 +1455,21 @@ def chat():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Tin nhắn không được để trống"
-              details:
-                field: "message"
-                reason: "required"
+              message: "Yêu cầu không hợp lệ"
+              error:
+                code: "INVALID_INPUT"
+                details: "Tin nhắn không được để trống"
 
       500:
         description: Lỗi server
@@ -1366,16 +1480,21 @@ def chat():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
+              message: "Lỗi xử lý chat"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "OpenAI API rate limit exceeded"
     """
 
     try:
@@ -1416,7 +1535,7 @@ def chat():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/analyze-food', methods=['POST'])
+@app.route('/api/v1/analyze-food', methods=['POST'])
 def analyze_food():
     """
     Phân tích món ăn từ ảnh
@@ -1468,45 +1587,55 @@ def analyze_food():
               properties:
                 success:
                   type: boolean
-                session_id:
+                message:
                   type: string
-                detected_foods:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name:
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                    detected_foods:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          confidence:
+                            type: number
+                    analysis:
+                      type: string
+                    health_condition:
+                      type: string
+                    dietary_goals:
+                      type: string
+                    recommendations:
+                      type: array
+                      items:
                         type: string
-                      confidence:
-                        type: number
-                analysis:
-                  type: string
-                health_condition:
-                  type: string
-                dietary_goals:
-                  type: string
-                recommendations:
-                  type: array
-                  items:
-                    type: string
+                    processing_time:
+                      type: string
             example:
               success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              detected_foods:
-                - name: "phở bò"
-                  confidence: 98.5
-                - name: "bánh phở"
-                  confidence: 95.2
-              analysis: "Phở bò khoảng 380 kcal, giàu protein từ thịt bò (20-25g), carbohydrate từ bánh phở (50-60g). Chỉ số đường huyết trung bình do bánh phở."
-              health_condition: "tiểu đường"
-              dietary_goals: "giảm cân"
-              recommendations:
-                - "💡 Nên ăn phần nhỏ hơn và bỏ bớt bánh phở"
-                - "🥗 Thêm rau xanh để tăng chất xơ"
-                - "⚠️ Lưu ý: Kiểm tra đường huyết sau 1-2 giờ"
+              message: "Phân tích món ăn thành công"
+              data:
+                session_id: "550e8400-e29b-41d4-a716-446655440000"
+                detected_foods:
+                  - name: "phở bò"
+                    confidence: 98.5
+                  - name: "bánh phở"
+                    confidence: 95.2
+                analysis: "Phở bò khoảng 380 kcal, giàu protein từ thịt bò (20-25g), carbohydrate từ bánh phở (50-60g). Chỉ số đường huyết trung bình do bánh phở."
+                health_condition: "tiểu đường"
+                dietary_goals: "giảm cân"
+                recommendations:
+                  - "💡 Nên ăn phần nhỏ hơn và bỏ bớt bánh phở"
+                  - "🥗 Thêm rau xanh để tăng chất xơ"
+                  - "⚠️ Lưu ý: Kiểm tra đường huyết sau 1-2 giờ"
+                processing_time: "2.3s"
 
       400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
+        description: Dữ liệu đầu vào không hợp lệ
         content:
           application/json:
             schema:
@@ -1514,16 +1643,21 @@ def analyze_food():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Không tìm thấy ảnh món ăn"
-              details:
-                field: "image"
-                reason: "required"
+              message: "Yêu cầu không hợp lệ"
+              error:
+                code: "INVALID_INPUT"
+                details: "Không tìm thấy ảnh món ăn hoặc định dạng không hợp lệ"
 
       500:
         description: Lỗi server
@@ -1534,16 +1668,21 @@ def analyze_food():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
+              message: "Lỗi xử lý ảnh"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "OpenAI API rate limit exceeded"
     """
     try:
         data = request.json
@@ -1561,552 +1700,552 @@ def analyze_food():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/compare-foods', methods=['POST'])
-def compare_foods():
-    """
-    So sánh nhiều món ăn
-    ---
-    tags:
-      - Food Analysis
-    summary: So sánh 2-4 món ăn về dinh dưỡng
-    description: >
-      So sánh các món ăn dựa trên hình ảnh về calo, protein, carb, fat.
-      Xếp hạng theo độ lành mạnh và đưa ra khuyến nghị nên chọn món nào
-      phù hợp với tình trạng sức khỏe và mục tiêu dinh dưỡng.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - images
-            properties:
-              images:
-                type: array
-                description: Mảng 2-4 ảnh món ăn dạng base64
-                minItems: 2
-                maxItems: 4
-                items:
-                  type: string
-                example:
-                  - "data:image/jpeg;base64,/9j/4AAQ..."
-                  - "data:image/jpeg;base64,iVBORw0KGg..."
-              health_condition:
-                type: string
-                description: Tình trạng sức khỏe
-                default: "khỏe mạnh"
-                example: "tiểu đường"
-              dietary_goals:
-                type: string
-                description: Mục tiêu dinh dưỡng
-                default: "duy trì cân nặng"
-                example: "giảm cân"
-              session_id:
-                type: string
-                description: ID phiên làm việc
-                example: "uuid-v4"
-              user_id:
-                type: string
-                description: ID người dùng
-                example: "user_123"
-    responses:
-      200:
-        description: So sánh thành công
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                session_id:
-                  type: string
-                detected_foods:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      dish_number:
-                        type: integer
-                      foods:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            name:
-                              type: string
-                            confidence:
-                              type: number
-                comparison:
-                  type: string
-                  description: Bảng so sánh chi tiết
-                ranking:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      rank:
-                        type: integer
-                      dish_number:
-                        type: integer
-                      reason:
-                        type: string
-                health_condition:
-                  type: string
-                dietary_goals:
-                  type: string
-                recommendations:
-                  type: array
-                  items:
-                    type: string
-                total_foods:
-                  type: integer
-            example:
-              success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              detected_foods:
-                - dish_number: 1
-                  foods:
-                    - name: "phở bò"
-                      confidence: 98.5
-                    - name: "bánh phở"
-                      confidence: 95.2
-                - dish_number: 2
-                  foods:
-                    - name: "cơm gà"
-                      confidence: 97.8
-                    - name: "gạo trắng"
-                      confidence: 94.5
-              comparison: |
-                | Món | Calo | Protein | Carb | Fat |
-                |-----|------|---------|------|-----|
-                | Phở bò | 380 | 25g | 55g | 8g |
-                | Cơm gà | 450 | 30g | 65g | 12g |
-              ranking:
-                - rank: 1
-                  dish_number: 1
-                  reason: "Ít calo hơn, carb thấp hơn, phù hợp với tiểu đường"
-                - rank: 2
-                  dish_number: 2
-                  reason: "Calo và carb cao hơn, có thể làm tăng đường huyết"
-              health_condition: "tiểu đường"
-              dietary_goals: "giảm cân"
-              recommendations:
-                - "🥇 Nên chọn: Phở bò (ít calo và carb hơn)"
-                - "💡 Nếu chọn cơm gà: Giảm lượng cơm đi 1/2"
-                - "🥗 Thêm rau xanh cho cả 2 món"
-              total_foods: 2
+# @app.route('/api/compare-foods', methods=['POST'])
+# def compare_foods():
+#     """
+#     So sánh nhiều món ăn
+#     ---
+#     tags:
+#       - Food Analysis
+#     summary: So sánh 2-4 món ăn về dinh dưỡng
+#     description: >
+#       So sánh các món ăn dựa trên hình ảnh về calo, protein, carb, fat.
+#       Xếp hạng theo độ lành mạnh và đưa ra khuyến nghị nên chọn món nào
+#       phù hợp với tình trạng sức khỏe và mục tiêu dinh dưỡng.
+#     requestBody:
+#       required: true
+#       content:
+#         application/json:
+#           schema:
+#             type: object
+#             required:
+#               - images
+#             properties:
+#               images:
+#                 type: array
+#                 description: Mảng 2-4 ảnh món ăn dạng base64
+#                 minItems: 2
+#                 maxItems: 4
+#                 items:
+#                   type: string
+#                 example:
+#                   - "data:image/jpeg;base64,/9j/4AAQ..."
+#                   - "data:image/jpeg;base64,iVBORw0KGg..."
+#               health_condition:
+#                 type: string
+#                 description: Tình trạng sức khỏe
+#                 default: "khỏe mạnh"
+#                 example: "tiểu đường"
+#               dietary_goals:
+#                 type: string
+#                 description: Mục tiêu dinh dưỡng
+#                 default: "duy trì cân nặng"
+#                 example: "giảm cân"
+#               session_id:
+#                 type: string
+#                 description: ID phiên làm việc
+#                 example: "uuid-v4"
+#               user_id:
+#                 type: string
+#                 description: ID người dùng
+#                 example: "user_123"
+#     responses:
+#       200:
+#         description: So sánh thành công
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 session_id:
+#                   type: string
+#                 detected_foods:
+#                   type: array
+#                   items:
+#                     type: object
+#                     properties:
+#                       dish_number:
+#                         type: integer
+#                       foods:
+#                         type: array
+#                         items:
+#                           type: object
+#                           properties:
+#                             name:
+#                               type: string
+#                             confidence:
+#                               type: number
+#                 comparison:
+#                   type: string
+#                   description: Bảng so sánh chi tiết
+#                 ranking:
+#                   type: array
+#                   items:
+#                     type: object
+#                     properties:
+#                       rank:
+#                         type: integer
+#                       dish_number:
+#                         type: integer
+#                       reason:
+#                         type: string
+#                 health_condition:
+#                   type: string
+#                 dietary_goals:
+#                   type: string
+#                 recommendations:
+#                   type: array
+#                   items:
+#                     type: string
+#                 total_foods:
+#                   type: integer
+#             example:
+#               success: true
+#               session_id: "550e8400-e29b-41d4-a716-446655440000"
+#               detected_foods:
+#                 - dish_number: 1
+#                   foods:
+#                     - name: "phở bò"
+#                       confidence: 98.5
+#                     - name: "bánh phở"
+#                       confidence: 95.2
+#                 - dish_number: 2
+#                   foods:
+#                     - name: "cơm gà"
+#                       confidence: 97.8
+#                     - name: "gạo trắng"
+#                       confidence: 94.5
+#               comparison: |
+#                 | Món | Calo | Protein | Carb | Fat |
+#                 |-----|------|---------|------|-----|
+#                 | Phở bò | 380 | 25g | 55g | 8g |
+#                 | Cơm gà | 450 | 30g | 65g | 12g |
+#               ranking:
+#                 - rank: 1
+#                   dish_number: 1
+#                   reason: "Ít calo hơn, carb thấp hơn, phù hợp với tiểu đường"
+#                 - rank: 2
+#                   dish_number: 2
+#                   reason: "Calo và carb cao hơn, có thể làm tăng đường huyết"
+#               health_condition: "tiểu đường"
+#               dietary_goals: "giảm cân"
+#               recommendations:
+#                 - "🥇 Nên chọn: Phở bò (ít calo và carb hơn)"
+#                 - "💡 Nếu chọn cơm gà: Giảm lượng cơm đi 1/2"
+#                 - "🥗 Thêm rau xanh cho cả 2 món"
+#               total_foods: 2
 
-      400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "Cần ít nhất 2 ảnh để so sánh"
-              details:
-                field: "images"
-                reason: "minItems: 2"
-                received: 1
+#       400:
+#         description: Thiếu dữ liệu hoặc không hợp lệ
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "Cần ít nhất 2 ảnh để so sánh"
+#               details:
+#                 field: "images"
+#                 reason: "minItems: 2"
+#                 received: 1
 
-      500:
-        description: Lỗi server
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
-    """
-    try:
-        data = request.json
-        images = data.get("images", [])
+#       500:
+#         description: Lỗi server
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "OpenAI API error"
+#               details:
+#                 message: "Rate limit exceeded"
+#                 code: "rate_limit_error"
+#     """
+#     try:
+#         data = request.json
+#         images = data.get("images", [])
         
-        if len(images) < 2:
-            return jsonify({"error": "Cần ít nhất 2 ảnh"}), 400
+#         if len(images) < 2:
+#             return jsonify({"error": "Cần ít nhất 2 ảnh"}), 400
         
-        result = internal_compare_foods(images, data.get("health_condition", "khỏe mạnh"))
+#         result = internal_compare_foods(images, data.get("health_condition", "khỏe mạnh"))
         
-        return jsonify({"success": True, **result}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#         return jsonify({"success": True, **result}), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/track-calories', methods=['POST'])
-def track_calories():
-    """
-    Tính tổng calo trong ngày
-    ---
-    tags:
-      - Food Analysis
-    summary: Tính tổng calo và dinh dưỡng từ nhiều bữa ăn
-    description: >
-      Tính tổng calo, protein, carb, fat từ các bữa ăn trong ngày.
-      So sánh với nhu cầu khuyến nghị và đưa ra đánh giá tổng quan
-      về chế độ ăn trong ngày.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - meals
-            properties:
-              meals:
-                type: array
-                description: Danh sách các bữa ăn trong ngày
-                minItems: 1
-                items:
-                  type: object
-                  properties:
-                    meal_type:
-                      type: string
-                      enum: ["sáng", "trưa", "tối", "phụ"]
-                    images:
-                      type: array
-                      items:
-                        type: string
-                    food_names:
-                      type: array
-                      items:
-                        type: string
-                example:
-                  - meal_type: "sáng"
-                    images: ["data:image/jpeg;base64,/9j/4AAQ..."]
-                    food_names: ["phở bò", "bánh mì"]
-                  - meal_type: "trưa"
-                    images: ["data:image/jpeg;base64,iVBORw0KGg..."]
-                    food_names: ["cơm gà"]
-              health_condition:
-                type: string
-                description: Tình trạng sức khỏe
-                default: "khỏe mạnh"
-                example: "tiểu đường"
-              dietary_goals:
-                type: string
-                description: Mục tiêu dinh dưỡng
-                default: "duy trì cân nặng"
-                example: "giảm cân"
-              target_calories:
-                type: integer
-                description: Mục tiêu calo trong ngày
-                default: 2000
-                example: 1500
-              session_id:
-                type: string
-                description: ID phiên làm việc
-                example: "uuid-v4"
-              user_id:
-                type: string
-                description: ID người dùng
-                example: "user_123"
-    responses:
-      200:
-        description: Tính toán thành công
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                session_id:
-                  type: string
-                daily_summary:
-                  type: object
-                  properties:
-                    total_calories:
-                      type: number
-                    total_protein:
-                      type: number
-                    total_carb:
-                      type: number
-                    total_fat:
-                      type: number
-                    target_calories:
-                      type: integer
-                    calories_remaining:
-                      type: number
-                meals_breakdown:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      meal_type:
-                        type: string
-                      foods:
-                        type: array
-                      calories:
-                        type: number
-                      protein:
-                        type: number
-                      carb:
-                        type: number
-                      fat:
-                        type: number
-                nutritional_assessment:
-                  type: object
-                  properties:
-                    calories_status:
-                      type: string
-                    protein_status:
-                      type: string
-                    carb_status:
-                      type: string
-                    fat_status:
-                      type: string
-                health_condition:
-                  type: string
-                dietary_goals:
-                  type: string
-                recommendations:
-                  type: array
-                  items:
-                    type: string
-            example:
-              success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              daily_summary:
-                total_calories: 1350
-                total_protein: 65
-                total_carb: 180
-                total_fat: 28
-                target_calories: 1500
-                calories_remaining: 150
-              meals_breakdown:
-                - meal_type: "sáng"
-                  foods: ["phở bò", "bánh mì"]
-                  calories: 550
-                  protein: 30
-                  carb: 75
-                  fat: 12
-                - meal_type: "trưa"
-                  foods: ["cơm gà"]
-                  calories: 450
-                  protein: 25
-                  carb: 65
-                  fat: 10
-                - meal_type: "tối"
-                  foods: ["salad"]
-                  calories: 350
-                  protein: 10
-                  carb: 40
-                  fat: 6
-              nutritional_assessment:
-                calories_status: "Tốt - Còn 150 calo"
-                protein_status: "Đủ - 65g/60g khuyến nghị"
-                carb_status: "Hơi cao - 180g/150g khuyến nghị"
-                fat_status: "Tốt - 28g/50g khuyến nghị"
-              health_condition: "tiểu đường"
-              dietary_goals: "giảm cân"
-              recommendations:
-                - "✅ Lượng calo trong ngày phù hợp với mục tiêu giảm cân"
-                - "💡 Có thể ăn thêm 1 bữa phụ nhẹ (150 calo)"
-                - "⚠️ Carb hơi cao, nên giảm cơm/bánh mì ở bữa tối"
-                - "🥗 Protein đủ, duy trì lượng này"
+# @app.route('/api/track-calories', methods=['POST'])
+# def track_calories():
+#     """
+#     Tính tổng calo trong ngày
+#     ---
+#     tags:
+#       - Food Analysis
+#     summary: Tính tổng calo và dinh dưỡng từ nhiều bữa ăn
+#     description: >
+#       Tính tổng calo, protein, carb, fat từ các bữa ăn trong ngày.
+#       So sánh với nhu cầu khuyến nghị và đưa ra đánh giá tổng quan
+#       về chế độ ăn trong ngày.
+#     requestBody:
+#       required: true
+#       content:
+#         application/json:
+#           schema:
+#             type: object
+#             required:
+#               - meals
+#             properties:
+#               meals:
+#                 type: array
+#                 description: Danh sách các bữa ăn trong ngày
+#                 minItems: 1
+#                 items:
+#                   type: object
+#                   properties:
+#                     meal_type:
+#                       type: string
+#                       enum: ["sáng", "trưa", "tối", "phụ"]
+#                     images:
+#                       type: array
+#                       items:
+#                         type: string
+#                     food_names:
+#                       type: array
+#                       items:
+#                         type: string
+#                 example:
+#                   - meal_type: "sáng"
+#                     images: ["data:image/jpeg;base64,/9j/4AAQ..."]
+#                     food_names: ["phở bò", "bánh mì"]
+#                   - meal_type: "trưa"
+#                     images: ["data:image/jpeg;base64,iVBORw0KGg..."]
+#                     food_names: ["cơm gà"]
+#               health_condition:
+#                 type: string
+#                 description: Tình trạng sức khỏe
+#                 default: "khỏe mạnh"
+#                 example: "tiểu đường"
+#               dietary_goals:
+#                 type: string
+#                 description: Mục tiêu dinh dưỡng
+#                 default: "duy trì cân nặng"
+#                 example: "giảm cân"
+#               target_calories:
+#                 type: integer
+#                 description: Mục tiêu calo trong ngày
+#                 default: 2000
+#                 example: 1500
+#               session_id:
+#                 type: string
+#                 description: ID phiên làm việc
+#                 example: "uuid-v4"
+#               user_id:
+#                 type: string
+#                 description: ID người dùng
+#                 example: "user_123"
+#     responses:
+#       200:
+#         description: Tính toán thành công
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 session_id:
+#                   type: string
+#                 daily_summary:
+#                   type: object
+#                   properties:
+#                     total_calories:
+#                       type: number
+#                     total_protein:
+#                       type: number
+#                     total_carb:
+#                       type: number
+#                     total_fat:
+#                       type: number
+#                     target_calories:
+#                       type: integer
+#                     calories_remaining:
+#                       type: number
+#                 meals_breakdown:
+#                   type: array
+#                   items:
+#                     type: object
+#                     properties:
+#                       meal_type:
+#                         type: string
+#                       foods:
+#                         type: array
+#                       calories:
+#                         type: number
+#                       protein:
+#                         type: number
+#                       carb:
+#                         type: number
+#                       fat:
+#                         type: number
+#                 nutritional_assessment:
+#                   type: object
+#                   properties:
+#                     calories_status:
+#                       type: string
+#                     protein_status:
+#                       type: string
+#                     carb_status:
+#                       type: string
+#                     fat_status:
+#                       type: string
+#                 health_condition:
+#                   type: string
+#                 dietary_goals:
+#                   type: string
+#                 recommendations:
+#                   type: array
+#                   items:
+#                     type: string
+#             example:
+#               success: true
+#               session_id: "550e8400-e29b-41d4-a716-446655440000"
+#               daily_summary:
+#                 total_calories: 1350
+#                 total_protein: 65
+#                 total_carb: 180
+#                 total_fat: 28
+#                 target_calories: 1500
+#                 calories_remaining: 150
+#               meals_breakdown:
+#                 - meal_type: "sáng"
+#                   foods: ["phở bò", "bánh mì"]
+#                   calories: 550
+#                   protein: 30
+#                   carb: 75
+#                   fat: 12
+#                 - meal_type: "trưa"
+#                   foods: ["cơm gà"]
+#                   calories: 450
+#                   protein: 25
+#                   carb: 65
+#                   fat: 10
+#                 - meal_type: "tối"
+#                   foods: ["salad"]
+#                   calories: 350
+#                   protein: 10
+#                   carb: 40
+#                   fat: 6
+#               nutritional_assessment:
+#                 calories_status: "Tốt - Còn 150 calo"
+#                 protein_status: "Đủ - 65g/60g khuyến nghị"
+#                 carb_status: "Hơi cao - 180g/150g khuyến nghị"
+#                 fat_status: "Tốt - 28g/50g khuyến nghị"
+#               health_condition: "tiểu đường"
+#               dietary_goals: "giảm cân"
+#               recommendations:
+#                 - "✅ Lượng calo trong ngày phù hợp với mục tiêu giảm cân"
+#                 - "💡 Có thể ăn thêm 1 bữa phụ nhẹ (150 calo)"
+#                 - "⚠️ Carb hơi cao, nên giảm cơm/bánh mì ở bữa tối"
+#                 - "🥗 Protein đủ, duy trì lượng này"
 
-      400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "Danh sách bữa ăn không được rỗng"
-              details:
-                field: "meals"
-                reason: "minItems: 1"
-                received: 0
+#       400:
+#         description: Thiếu dữ liệu hoặc không hợp lệ
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "Danh sách bữa ăn không được rỗng"
+#               details:
+#                 field: "meals"
+#                 reason: "minItems: 1"
+#                 received: 0
 
-      500:
-        description: Lỗi server
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
-    """
-    try:
-        data = request.json
-        images = data.get("images", [])
+#       500:
+#         description: Lỗi server
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "OpenAI API error"
+#               details:
+#                 message: "Rate limit exceeded"
+#                 code: "rate_limit_error"
+#     """
+#     try:
+#         data = request.json
+#         images = data.get("images", [])
         
-        if not images:
-            return jsonify({"error": "Chưa có ảnh"}), 400
+#         if not images:
+#             return jsonify({"error": "Chưa có ảnh"}), 400
         
-        result = internal_track_calories(
-            images,
-            data.get("target_calories", 2000),
-            data.get("health_condition", "khỏe mạnh")
-        )
+#         result = internal_track_calories(
+#             images,
+#             data.get("target_calories", 2000),
+#             data.get("health_condition", "khỏe mạnh")
+#         )
         
-        return jsonify({"success": True, **result}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#         return jsonify({"success": True, **result}), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/quick-scan', methods=['POST'])
-def quick_scan():
-    """
-    Quét nhanh nhận diện món ăn
-    ---
-    tags:
-      - Food Analysis
-    summary: Nhận diện nhanh tên món (không phân tích)
-    description: >
-      Khác với /api/analyze-food - Chỉ nhận diện tên món, không phân tích dinh dưỡng.
-      Nhanh hơn, tiết kiệm token hơn, phù hợp khi chỉ cần biết tên món ăn.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - image
-            properties:
-              image:
-                type: string
-                description: Ảnh món ăn dạng base64
-                example: "data:image/jpeg;base64,/9j/4AAQ..."
-              session_id:
-                type: string
-                description: ID phiên làm việc
-                example: "uuid-v4"
-              user_id:
-                type: string
-                description: ID người dùng
-                example: "user_123"
-    responses:
-      200:
-        description: Nhận diện thành công
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                session_id:
-                  type: string
-                detected_foods:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      name:
-                        type: string
-                      confidence:
-                        type: number
-                total:
-                  type: integer
-                  description: Số món nhận diện được
-            example:
-              success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              detected_foods:
-                - name: "phở bò"
-                  confidence: 98.5
-                - name: "bánh phở"
-                  confidence: 95.2
-                - name: "thịt bò"
-                  confidence: 92.8
-              total: 3
+# @app.route('/api/quick-scan', methods=['POST'])
+# def quick_scan():
+#     """
+#     Quét nhanh nhận diện món ăn
+#     ---
+#     tags:
+#       - Food Analysis
+#     summary: Nhận diện nhanh tên món (không phân tích)
+#     description: >
+#       Khác với /api/analyze-food - Chỉ nhận diện tên món, không phân tích dinh dưỡng.
+#       Nhanh hơn, tiết kiệm token hơn, phù hợp khi chỉ cần biết tên món ăn.
+#     requestBody:
+#       required: true
+#       content:
+#         application/json:
+#           schema:
+#             type: object
+#             required:
+#               - image
+#             properties:
+#               image:
+#                 type: string
+#                 description: Ảnh món ăn dạng base64
+#                 example: "data:image/jpeg;base64,/9j/4AAQ..."
+#               session_id:
+#                 type: string
+#                 description: ID phiên làm việc
+#                 example: "uuid-v4"
+#               user_id:
+#                 type: string
+#                 description: ID người dùng
+#                 example: "user_123"
+#     responses:
+#       200:
+#         description: Nhận diện thành công
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 session_id:
+#                   type: string
+#                 detected_foods:
+#                   type: array
+#                   items:
+#                     type: object
+#                     properties:
+#                       name:
+#                         type: string
+#                       confidence:
+#                         type: number
+#                 total:
+#                   type: integer
+#                   description: Số món nhận diện được
+#             example:
+#               success: true
+#               session_id: "550e8400-e29b-41d4-a716-446655440000"
+#               detected_foods:
+#                 - name: "phở bò"
+#                   confidence: 98.5
+#                 - name: "bánh phở"
+#                   confidence: 95.2
+#                 - name: "thịt bò"
+#                   confidence: 92.8
+#               total: 3
 
-      400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "Không nhận diện được món ăn trong ảnh"
-              details:
-                field: "image"
-                reason: "invalid_or_unclear_image"
+#       400:
+#         description: Thiếu dữ liệu hoặc không hợp lệ
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "Không nhận diện được món ăn trong ảnh"
+#               details:
+#                 field: "image"
+#                 reason: "invalid_or_unclear_image"
 
-      500:
-        description: Lỗi server
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
-    """
-    try:
-        data = request.json
-        result = internal_quick_scan(data.get("image"))
+#       500:
+#         description: Lỗi server
+#         content:
+#           application/json:
+#             schema:
+#               type: object
+#               properties:
+#                 success:
+#                   type: boolean
+#                 error:
+#                   type: string
+#                 details:
+#                   type: object
+#             example:
+#               success: false
+#               error: "OpenAI API error"
+#               details:
+#                 message: "Rate limit exceeded"
+#                 code: "rate_limit_error"
+#     """
+#     try:
+#         data = request.json
+#         result = internal_quick_scan(data.get("image"))
         
-        if "error" in result:
-            return jsonify(result), 400
+#         if "error" in result:
+#             return jsonify(result), 400
         
-        return jsonify({"success": True, **result}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#         return jsonify({"success": True, **result}), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/meal-suggestion', methods=['POST'])
+@app.route('/api/v1/meal-suggestion', methods=['POST'])
 def meal_suggestion():
     """
     Gợi ý thực đơn cho 1 bữa
@@ -2278,7 +2417,7 @@ def meal_suggestion():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/weekly-menu', methods=['POST'])
+@app.route('/api/v1/weekly-menu', methods=['POST'])
 def weekly_menu():
     """
     Lập thực đơn cả tuần (7 ngày)
@@ -2498,7 +2637,7 @@ def weekly_menu():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/detailed-recipes', methods=['POST'])
+@app.route('/api/v1/detailed-recipes', methods=['POST'])
 def detailed_recipes():
     """
     Tạo công thức nấu chi tiết
@@ -2749,6 +2888,211 @@ def detailed_recipes():
                 field: "days"
                 reason: "minimum: 1, maximum: 7"
                 received: 10
+
+      500:
+        description: Lỗi server
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                error:
+                  type: string
+                details:
+                  type: object
+            example:
+              success: false
+              error: "OpenAI API error"
+              details:
+                message: "Rate limit exceeded"
+                code: "rate_limit_error"
+    """
+
+    """
+    Lập thực đơn cả tuần (7 ngày)
+    ---
+    tags:
+      - Meal Planning
+    summary: Tạo thực đơn 7 ngày với 3 bữa/ngày
+    description: >
+      Tạo thực đơn đầy đủ cho cả tuần từ Thứ 2 đến Chủ Nhật.
+      Mỗi ngày bao gồm bữa sáng, trưa, tối với tổng calo và chi phí ước tính.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              health_condition:
+                type: string
+                description: Tình trạng sức khỏe
+                default: "khỏe mạnh"
+                example: "giảm cân"
+              dietary_preferences:
+                type: string
+                description: Sở thích ăn uống
+                default: "không"
+                example: "low-carb"
+              budget_range:
+                type: string
+                description: Ngân sách mỗi ngày
+                default: "500k"
+                example: "300k"
+              cooking_time:
+                type: string
+                description: Thời gian nấu trung bình mỗi bữa
+                default: "45 phút"
+                example: "30 phút"
+              session_id:
+                type: string
+                description: ID phiên làm việc
+                example: "uuid-v4"
+              user_id:
+                type: string
+                description: ID người dùng
+                example: "user_123"
+    responses:
+      200:
+        description: Tạo menu thành công
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                session_id:
+                  type: string
+                duration:
+                  type: string
+                weekly_menu:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      day:
+                        type: string
+                      date:
+                        type: string
+                      meals:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            meal_type:
+                              type: string
+                            dishes:
+                              type: array
+                              items:
+                                type: string
+                            estimated_calories:
+                              type: number
+                            estimated_cost:
+                              type: integer
+                      daily_total:
+                        type: object
+                        properties:
+                          calories:
+                            type: number
+                          cost:
+                            type: integer
+                health_condition:
+                  type: string
+                dietary_preferences:
+                  type: string
+                weekly_summary:
+                  type: object
+                  properties:
+                    total_calories:
+                      type: number
+                    avg_daily_calories:
+                      type: number
+                    total_cost:
+                      type: integer
+                    avg_daily_cost:
+                      type: integer
+                recommendations:
+                  type: array
+                  items:
+                    type: string
+            example:
+              success: true
+              session_id: "550e8400-e29b-41d4-a716-446655440000"
+              duration: "7 ngày"
+              weekly_menu:
+                - day: "Thứ 2"
+                  date: "2025-12-02"
+                  meals:
+                    - meal_type: "sáng"
+                      dishes: ["Phở gà không dầu mỡ", "Rau thơm"]
+                      estimated_calories: 320
+                      estimated_cost: 35000
+                    - meal_type: "trưa"
+                      dishes: ["Cơm gạo lứt", "Gà nướng", "Rau luộc"]
+                      estimated_calories: 450
+                      estimated_cost: 45000
+                    - meal_type: "tối"
+                      dishes: ["Canh chua cá", "Rau muống xào"]
+                      estimated_calories: 380
+                      estimated_cost: 40000
+                  daily_total:
+                    calories: 1150
+                    cost: 120000
+                - day: "Thứ 3"
+                  date: "2025-12-03"
+                  meals:
+                    - meal_type: "sáng"
+                      dishes: ["Bánh mì trứng ốp la", "Cà phê đen"]
+                      estimated_calories: 350
+                      estimated_cost: 25000
+                    - meal_type: "trưa"
+                      dishes: ["Bún chả", "Rau sống"]
+                      estimated_calories: 480
+                      estimated_cost: 50000
+                    - meal_type: "tối"
+                      dishes: ["Salad ức gà", "Bánh mì nguyên cám"]
+                      estimated_calories: 400
+                      estimated_cost: 40000
+                  daily_total:
+                    calories: 1230
+                    cost: 115000
+              health_condition: "giảm cân"
+              dietary_preferences: "low-carb"
+              weekly_summary:
+                total_calories: 8190
+                avg_daily_calories: 1170
+                total_cost: 840000
+                avg_daily_cost: 120000
+              recommendations:
+                - "✅ Thực đơn phù hợp với mục tiêu giảm cân (1170 calo/ngày)"
+                - "💡 Protein đủ, carb được kiểm soát tốt"
+                - "💰 Chi phí trung bình: 120,000 VNĐ/ngày"
+                - "🥗 Đã cân đối đủ rau xanh trong tuần"
+                - "⚠️ Nhớ uống đủ nước và tập thể dục 30 phút/ngày"
+
+      400:
+        description: Thiếu dữ liệu hoặc không hợp lệ
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                error:
+                  type: string
+                details:
+                  type: object
+            example:
+              success: false
+              error: "Ngân sách không hợp lệ"
+              details:
+                field: "budget_range"
+                reason: "invalid_format"
+                expected: "số + k (vd: 300k)"
 
       500:
         description: Lỗi server
