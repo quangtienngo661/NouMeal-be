@@ -2307,59 +2307,66 @@ def meal_suggestion():
               properties:
                 success:
                   type: boolean
-                session_id:
+                message:
                   type: string
-                meal_time:
-                  type: string
-                suggestions:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      dish_name:
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                    meal_time:
+                      type: string
+                    suggestions:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          dish_name:
+                            type: string
+                          reason:
+                            type: string
+                          cooking_method:
+                            type: string
+                          estimated_calories:
+                            type: number
+                          estimated_cost:
+                            type: integer
+                    health_condition:
+                      type: string
+                    dietary_preferences:
+                      type: string
+                    recommendations:
+                      type: array
+                      items:
                         type: string
-                      reason:
-                        type: string
-                      cooking_method:
-                        type: string
-                      estimated_calories:
-                        type: number
-                      estimated_cost:
-                        type: integer
-                health_condition:
-                  type: string
-                dietary_preferences:
-                  type: string
-                recommendations:
-                  type: array
-                  items:
-                    type: string
             example:
               success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              meal_time: "trưa"
-              suggestions:
-                - dish_name: "Phở gà"
-                  reason: "Ít calo, dễ làm, giàu protein từ gà, phù hợp người tiểu đường"
-                  cooking_method: "Luộc gà, nấu nước dùng với xương, chan nước dùng vào bánh phở"
-                  estimated_calories: 350
-                  estimated_cost: 40000
-                - dish_name: "Cơm gạo lứt với cá hồi nướng"
-                  reason: "Gạo lứt giúp kiểm soát đường huyết, cá hồi giàu omega-3"
-                  cooking_method: "Ướp cá với muối tiêu, nướng 15 phút, ăn kèm cơm gạo lứt"
-                  estimated_calories: 420
-                  estimated_cost: 55000
-                - dish_name: "Salad ức gà"
-                  reason: "Ít carb, nhiều rau xanh và protein, cực kỳ phù hợp giảm cân"
-                  cooking_method: "Luộc ức gà, trộn với rau xanh, cà chua, dưa leo"
-                  estimated_calories: 280
-                  estimated_cost: 35000
-              health_condition: "tiểu đường"
-              dietary_preferences: "không"
-              recommendations:
-                - "💡 Nên chọn phở gà hoặc salad ức gà (ít carb hơn)"
-                - "🥗 Thêm rau xanh vào bất kỳ món nào"
-                - "⚠️ Tránh nước ngọt và tráng miệng ngọt"
+              message: "Gợi ý thực đơn thành công"
+              data:
+                session_id: "550e8400-e29b-41d4-a716-446655440000"
+                meal_time: "trưa"
+                suggestions:
+                  - dish_name: "Phở gà"
+                    reason: "Ít calo, dễ làm, giàu protein từ gà, phù hợp người tiểu đường"
+                    cooking_method: "Luộc gà, nấu nước dùng với xương, chan nước dùng vào bánh phở"
+                    estimated_calories: 350
+                    estimated_cost: 40000
+                  - dish_name: "Cơm gạo lứt với cá hồi nướng"
+                    reason: "Gạo lứt giúp kiểm soát đường huyết, cá hồi giàu omega-3"
+                    cooking_method: "Ướp cá với muối tiêu, nướng 15 phút, ăn kèm cơm gạo lứt"
+                    estimated_calories: 420
+                    estimated_cost: 55000
+                  - dish_name: "Salad ức gà"
+                    reason: "Ít carb, nhiều rau xanh và protein, cực kỳ phù hợp giảm cân"
+                    cooking_method: "Luộc ức gà, trộn với rau xanh, cà chua, dưa leo"
+                    estimated_calories: 280
+                    estimated_cost: 35000
+                health_condition: "tiểu đường"
+                dietary_preferences: "không"
+                recommendations:
+                  - "💡 Nên chọn phở gà hoặc salad ức gà (ít carb hơn)"
+                  - "🥗 Thêm rau xanh vào bất kỳ món nào"
+                  - "⚠️ Tránh nước ngọt và tráng miệng ngọt"
 
       400:
         description: Thiếu dữ liệu hoặc không hợp lệ
@@ -2370,17 +2377,21 @@ def meal_suggestion():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Bữa ăn không hợp lệ"
-              details:
-                field: "meal_time"
-                reason: "must be one of: sáng, trưa, tối, phụ"
-                received: "sáng sớm"
+              message: "Bữa ăn không hợp lệ"
+              error:
+                code: "INVALID_MEAL_TIME"
+                details: "meal_time must be one of: sáng, trưa, tối, phụ"
 
       500:
         description: Lỗi server
@@ -2391,16 +2402,21 @@ def meal_suggestion():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
+              message: "Lỗi xử lý gợi ý thực đơn"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "OpenAI API rate limit exceeded"
     """
     try:
         data = request.json
@@ -2473,114 +2489,121 @@ def weekly_menu():
               properties:
                 success:
                   type: boolean
-                session_id:
+                message:
                   type: string
-                duration:
-                  type: string
-                weekly_menu:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      day:
-                        type: string
-                      date:
-                        type: string
-                      meals:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            meal_type:
-                              type: string
-                            dishes:
-                              type: array
-                              items:
-                                type: string
-                            estimated_calories:
-                              type: number
-                            estimated_cost:
-                              type: integer
-                      daily_total:
-                        type: object
-                        properties:
-                          calories:
-                            type: number
-                          cost:
-                            type: integer
-                health_condition:
-                  type: string
-                dietary_preferences:
-                  type: string
-                weekly_summary:
+                data:
                   type: object
                   properties:
-                    total_calories:
-                      type: number
-                    avg_daily_calories:
-                      type: number
-                    total_cost:
-                      type: integer
-                    avg_daily_cost:
-                      type: integer
-                recommendations:
-                  type: array
-                  items:
-                    type: string
+                    session_id:
+                      type: string
+                    duration:
+                      type: string
+                    weekly_menu:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          day:
+                            type: string
+                          date:
+                            type: string
+                          meals:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                meal_type:
+                                  type: string
+                                dishes:
+                                  type: array
+                                  items:
+                                    type: string
+                                estimated_calories:
+                                  type: number
+                                estimated_cost:
+                                  type: integer
+                          daily_total:
+                            type: object
+                            properties:
+                              calories:
+                                type: number
+                              cost:
+                                type: integer
+                    health_condition:
+                      type: string
+                    dietary_preferences:
+                      type: string
+                    weekly_summary:
+                      type: object
+                      properties:
+                        total_calories:
+                          type: number
+                        avg_daily_calories:
+                          type: number
+                        total_cost:
+                          type: integer
+                        avg_daily_cost:
+                          type: integer
+                    recommendations:
+                      type: array
+                      items:
+                        type: string
             example:
               success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              duration: "7 ngày"
-              weekly_menu:
-                - day: "Thứ 2"
-                  date: "2025-12-02"
-                  meals:
-                    - meal_type: "sáng"
-                      dishes: ["Phở gà không dầu mỡ", "Rau thơm"]
-                      estimated_calories: 320
-                      estimated_cost: 35000
-                    - meal_type: "trưa"
-                      dishes: ["Cơm gạo lứt", "Gà nướng", "Rau luộc"]
-                      estimated_calories: 450
-                      estimated_cost: 45000
-                    - meal_type: "tối"
-                      dishes: ["Canh chua cá", "Rau muống xào"]
-                      estimated_calories: 380
-                      estimated_cost: 40000
-                  daily_total:
-                    calories: 1150
-                    cost: 120000
-                - day: "Thứ 3"
-                  date: "2025-12-03"
-                  meals:
-                    - meal_type: "sáng"
-                      dishes: ["Bánh mì trứng ốp la", "Cà phê đen"]
-                      estimated_calories: 350
-                      estimated_cost: 25000
-                    - meal_type: "trưa"
-                      dishes: ["Bún chả", "Rau sống"]
-                      estimated_calories: 480
-                      estimated_cost: 50000
-                    - meal_type: "tối"
-                      dishes: ["Salad ức gà", "Bánh mì nguyên cám"]
-                      estimated_calories: 400
-                      estimated_cost: 40000
-                  daily_total:
-                    calories: 1230
-                    cost: 115000
-              health_condition: "giảm cân"
-              dietary_preferences: "low-carb"
-              weekly_summary:
-                total_calories: 8190
-                avg_daily_calories: 1170
-                total_cost: 840000
-                avg_daily_cost: 120000
-              recommendations:
-                - "✅ Thực đơn phù hợp với mục tiêu giảm cân (1170 calo/ngày)"
-                - "💡 Protein đủ, carb được kiểm soát tốt"
-                - "💰 Chi phí trung bình: 120,000 VNĐ/ngày"
-                - "🥗 Đã cân đối đủ rau xanh trong tuần"
-                - "⚠️ Nhớ uống đủ nước và tập thể dục 30 phút/ngày"
+              message: "Tạo thực đơn tuần thành công"
+              data:
+                session_id: "550e8400-e29b-41d4-a716-446655440000"
+                duration: "7 ngày"
+                weekly_menu:
+                  - day: "Thứ 2"
+                    date: "2025-12-02"
+                    meals:
+                      - meal_type: "sáng"
+                        dishes: ["Phở gà không dầu mỡ", "Rau thơm"]
+                        estimated_calories: 320
+                        estimated_cost: 35000
+                      - meal_type: "trưa"
+                        dishes: ["Cơm gạo lứt", "Gà nướng", "Rau luộc"]
+                        estimated_calories: 450
+                        estimated_cost: 45000
+                      - meal_type: "tối"
+                        dishes: ["Canh chua cá", "Rau muống xào"]
+                        estimated_calories: 380
+                        estimated_cost: 40000
+                    daily_total:
+                      calories: 1150
+                      cost: 120000
+                  - day: "Thứ 3"
+                    date: "2025-12-03"
+                    meals:
+                      - meal_type: "sáng"
+                        dishes: ["Bánh mì trứng ốp la", "Cà phê đen"]
+                        estimated_calories: 350
+                        estimated_cost: 25000
+                      - meal_type: "trưa"
+                        dishes: ["Bún chả", "Rau sống"]
+                        estimated_calories: 480
+                        estimated_cost: 50000
+                      - meal_type: "tối"
+                        dishes: ["Salad ức gà", "Bánh mì nguyên cám"]
+                        estimated_calories: 400
+                        estimated_cost: 40000
+                    daily_total:
+                      calories: 1230
+                      cost: 115000
+                health_condition: "giảm cân"
+                dietary_preferences: "low-carb"
+                weekly_summary:
+                  total_calories: 8190
+                  avg_daily_calories: 1170
+                  total_cost: 840000
+                  avg_daily_cost: 120000
+                recommendations:
+                  - "✅ Thực đơn phù hợp với mục tiêu giảm cân (1170 calo/ngày)"
+                  - "💡 Protein đủ, carb được kiểm soát tốt"
+                  - "💰 Chi phí trung bình: 120,000 VNĐ/ngày"
+                  - "🥗 Đã cân đối đủ rau xanh trong tuần"
+                  - "⚠️ Nhớ uống đủ nước và tập thể dục 30 phút/ngày"
 
       400:
         description: Thiếu dữ liệu hoặc không hợp lệ
@@ -2591,17 +2614,21 @@ def weekly_menu():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Ngân sách không hợp lệ"
-              details:
-                field: "budget_range"
-                reason: "invalid_format"
-                expected: "số + k (vd: 300k)"
+              message: "Ngân sách không hợp lệ"
+              error:
+                code: "INVALID_BUDGET"
+                details: "budget_range must be in format: số + k (e.g., 300k)"
 
       500:
         description: Lỗi server
@@ -2612,16 +2639,21 @@ def weekly_menu():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
+              message: "Lỗi tạo thực đơn tuần"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "OpenAI API rate limit exceeded"
     """
     try:
         data = request.json
@@ -2695,383 +2727,185 @@ def detailed_recipes():
               properties:
                 success:
                   type: boolean
-                session_id:
+                message:
                   type: string
-                days:
-                  type: integer
-                recipes:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      day:
-                        type: integer
-                      date:
-                        type: string
-                      meals:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            meal_type:
-                              type: string
-                            dish_name:
-                              type: string
-                            ingredients:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  name:
-                                    type: string
-                                  quantity:
-                                    type: string
-                                  unit:
-                                    type: string
-                            cooking_steps:
-                              type: array
-                              items:
-                                type: string
-                            prep_time:
-                              type: string
-                            cook_time:
-                              type: string
-                            total_time:
-                              type: string
-                            estimated_calories:
-                              type: number
-                            estimated_cost:
-                              type: integer
-                health_condition:
-                  type: string
-                dietary_preferences:
-                  type: string
-                total_summary:
+                data:
                   type: object
                   properties:
-                    total_recipes:
+                    session_id:
+                      type: string
+                    days:
                       type: integer
-                    total_cost:
-                      type: integer
-                    avg_calories_per_meal:
-                      type: number
-                recommendations:
-                  type: array
-                  items:
-                    type: string
-            example:
-              success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              days: 5
-              recipes:
-                - day: 1
-                  date: "2025-12-03"
-                  meals:
-                    - meal_type: "sáng"
-                      dish_name: "Phở gà"
-                      ingredients:
-                        - name: "Gà ta"
-                          quantity: "300"
-                          unit: "g"
-                        - name: "Bánh phở"
-                          quantity: "200"
-                          unit: "g"
-                        - name: "Hành lá"
-                          quantity: "50"
-                          unit: "g"
-                        - name: "Gừng"
-                          quantity: "20"
-                          unit: "g"
-                        - name: "Nước mắm"
-                          quantity: "2"
-                          unit: "muống canh"
-                      cooking_steps:
-                        - "Rửa sạch gà, chần qua nước sôi để loại bỏ tạp chất"
-                        - "Nấu nước dùng: Cho gà, gừng, hành vào nồi, đổ 2 lít nước"
-                        - "Ninh 45 phút lửa vừa, vớt bọt thường xuyên"
-                        - "Luộc bánh phở trong 1 phút, vớt ra tô"
-                        - "Xé gà, cho lên bánh phở, chan nước dùng nóng"
-                        - "Rắc hành lá, ngò gai, tiêu"
-                      prep_time: "15 phút"
-                      cook_time: "45 phút"
-                      total_time: "60 phút"
-                      estimated_calories: 350
-                      estimated_cost: 40000
-                    - meal_type: "trưa"
-                      dish_name: "Cơm gạo lứt với cá hồi nướng"
-                      ingredients:
-                        - name: "Gạo lứt"
-                          quantity: "150"
-                          unit: "g"
-                        - name: "Cá hồi"
-                          quantity: "200"
-                          unit: "g"
-                        - name: "Muối"
-                          quantity: "1"
-                          unit: "thìa cà phê"
-                        - name: "Tiêu"
-                          quantity: "1/2"
-                          unit: "thìa cà phê"
-                        - name: "Rau củ luộc"
-                          quantity: "150"
-                          unit: "g"
-                      cooking_steps:
-                        - "Vo gạo lứt, ngâm 30 phút, nấu cơm"
-                        - "Rửa cá hồi, thấm khô"
-                        - "Ướp cá với muối, tiêu 10 phút"
-                        - "Nướng lò 180°C trong 15 phút hoặc chiên chảo không dầu"
-                        - "Luộc rau củ (cà rốt, bông cải)"
-                        - "Bày cơm, cá, rau ra đĩa"
-                      prep_time: "40 phút"
-                      cook_time: "20 phút"
-                      total_time: "60 phút"
-                      estimated_calories: 480
-                      estimated_cost: 70000
-                - day: 2
-                  date: "2025-12-04"
-                  meals:
-                    - meal_type: "sáng"
-                      dish_name: "Bánh mì trứng"
-                      ingredients:
-                        - name: "Bánh mì"
-                          quantity: "1"
-                          unit: "ổ"
-                        - name: "Trứng gà"
-                          quantity: "2"
-                          unit: "quả"
-                        - name: "Dưa leo"
-                          quantity: "50"
-                          unit: "g"
-                        - name: "Cà chua"
-                          quantity: "50"
-                          unit: "g"
-                      cooking_steps:
-                        - "Đập trứng vào bát, đánh tan"
-                        - "Chiên trứng ốp la hoặc tráng"
-                        - "Nướng bánh mì giòn"
-                        - "Kẹp trứng, dưa leo, cà chua vào bánh mì"
-                      prep_time: "5 phút"
-                      cook_time: "10 phút"
-                      total_time: "15 phút"
-                      estimated_calories: 320
-                      estimated_cost: 15000
-              health_condition: "tim mạch"
-              dietary_preferences: "không ăn hải sản"
-              total_summary:
-                total_recipes: 15
-                total_cost: 625000
-                avg_calories_per_meal: 385
-              recommendations:
-                - "✅ Công thức phù hợp với người tim mạch (ít muối, ít dầu mỡ)"
-                - "💡 Tổng chi phí 5 ngày: 625,000 VNĐ (125,000 VNĐ/ngày)"
-                - "🥗 Đã tránh hải sản theo yêu cầu"
-                - "⚠️ Nhớ rửa sạch rau củ và nấu chín kỹ"
-                - "📊 Trung bình 385 calo/bữa, phù hợp giảm cân nhẹ"
-
-      400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "Số ngày phải từ 1-7"
-              details:
-                field: "days"
-                reason: "minimum: 1, maximum: 7"
-                received: 10
-
-      500:
-        description: Lỗi server
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                details:
-                  type: object
-            example:
-              success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
-    """
-
-    """
-    Lập thực đơn cả tuần (7 ngày)
-    ---
-    tags:
-      - Meal Planning
-    summary: Tạo thực đơn 7 ngày với 3 bữa/ngày
-    description: >
-      Tạo thực đơn đầy đủ cho cả tuần từ Thứ 2 đến Chủ Nhật.
-      Mỗi ngày bao gồm bữa sáng, trưa, tối với tổng calo và chi phí ước tính.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              health_condition:
-                type: string
-                description: Tình trạng sức khỏe
-                default: "khỏe mạnh"
-                example: "giảm cân"
-              dietary_preferences:
-                type: string
-                description: Sở thích ăn uống
-                default: "không"
-                example: "low-carb"
-              budget_range:
-                type: string
-                description: Ngân sách mỗi ngày
-                default: "500k"
-                example: "300k"
-              cooking_time:
-                type: string
-                description: Thời gian nấu trung bình mỗi bữa
-                default: "45 phút"
-                example: "30 phút"
-              session_id:
-                type: string
-                description: ID phiên làm việc
-                example: "uuid-v4"
-              user_id:
-                type: string
-                description: ID người dùng
-                example: "user_123"
-    responses:
-      200:
-        description: Tạo menu thành công
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                session_id:
-                  type: string
-                duration:
-                  type: string
-                weekly_menu:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      day:
-                        type: string
-                      date:
-                        type: string
-                      meals:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            meal_type:
-                              type: string
-                            dishes:
-                              type: array
-                              items:
-                                type: string
-                            estimated_calories:
-                              type: number
-                            estimated_cost:
-                              type: integer
-                      daily_total:
+                    recipes:
+                      type: array
+                      items:
                         type: object
                         properties:
-                          calories:
-                            type: number
-                          cost:
+                          day:
                             type: integer
-                health_condition:
-                  type: string
-                dietary_preferences:
-                  type: string
-                weekly_summary:
-                  type: object
-                  properties:
-                    total_calories:
-                      type: number
-                    avg_daily_calories:
-                      type: number
-                    total_cost:
-                      type: integer
-                    avg_daily_cost:
-                      type: integer
-                recommendations:
-                  type: array
-                  items:
-                    type: string
+                          date:
+                            type: string
+                          meals:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                meal_type:
+                                  type: string
+                                dish_name:
+                                  type: string
+                                ingredients:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      name:
+                                        type: string
+                                      quantity:
+                                        type: string
+                                      unit:
+                                        type: string
+                                cooking_steps:
+                                  type: array
+                                  items:
+                                    type: string
+                                prep_time:
+                                  type: string
+                                cook_time:
+                                  type: string
+                                total_time:
+                                  type: string
+                                estimated_calories:
+                                  type: number
+                                estimated_cost:
+                                  type: integer
+                    health_condition:
+                      type: string
+                    dietary_preferences:
+                      type: string
+                    total_summary:
+                      type: object
+                      properties:
+                        total_recipes:
+                          type: integer
+                        total_cost:
+                          type: integer
+                        avg_calories_per_meal:
+                          type: number
+                    recommendations:
+                      type: array
+                      items:
+                        type: string
             example:
               success: true
-              session_id: "550e8400-e29b-41d4-a716-446655440000"
-              duration: "7 ngày"
-              weekly_menu:
-                - day: "Thứ 2"
-                  date: "2025-12-02"
-                  meals:
-                    - meal_type: "sáng"
-                      dishes: ["Phở gà không dầu mỡ", "Rau thơm"]
-                      estimated_calories: 320
-                      estimated_cost: 35000
-                    - meal_type: "trưa"
-                      dishes: ["Cơm gạo lứt", "Gà nướng", "Rau luộc"]
-                      estimated_calories: 450
-                      estimated_cost: 45000
-                    - meal_type: "tối"
-                      dishes: ["Canh chua cá", "Rau muống xào"]
-                      estimated_calories: 380
-                      estimated_cost: 40000
-                  daily_total:
-                    calories: 1150
-                    cost: 120000
-                - day: "Thứ 3"
-                  date: "2025-12-03"
-                  meals:
-                    - meal_type: "sáng"
-                      dishes: ["Bánh mì trứng ốp la", "Cà phê đen"]
-                      estimated_calories: 350
-                      estimated_cost: 25000
-                    - meal_type: "trưa"
-                      dishes: ["Bún chả", "Rau sống"]
-                      estimated_calories: 480
-                      estimated_cost: 50000
-                    - meal_type: "tối"
-                      dishes: ["Salad ức gà", "Bánh mì nguyên cám"]
-                      estimated_calories: 400
-                      estimated_cost: 40000
-                  daily_total:
-                    calories: 1230
-                    cost: 115000
-              health_condition: "giảm cân"
-              dietary_preferences: "low-carb"
-              weekly_summary:
-                total_calories: 8190
-                avg_daily_calories: 1170
-                total_cost: 840000
-                avg_daily_cost: 120000
-              recommendations:
-                - "✅ Thực đơn phù hợp với mục tiêu giảm cân (1170 calo/ngày)"
-                - "💡 Protein đủ, carb được kiểm soát tốt"
-                - "💰 Chi phí trung bình: 120,000 VNĐ/ngày"
-                - "🥗 Đã cân đối đủ rau xanh trong tuần"
-                - "⚠️ Nhớ uống đủ nước và tập thể dục 30 phút/ngày"
+              message: "Tạo công thức nấu thành công"
+              data:
+                session_id: "550e8400-e29b-41d4-a716-446655440000"
+                days: 5
+                recipes:
+                  - day: 1
+                    date: "2025-12-03"
+                    meals:
+                      - meal_type: "sáng"
+                        dish_name: "Phở gà"
+                        ingredients:
+                          - name: "Gà ta"
+                            quantity: "300"
+                            unit: "g"
+                          - name: "Bánh phở"
+                            quantity: "200"
+                            unit: "g"
+                          - name: "Hành lá"
+                            quantity: "50"
+                            unit: "g"
+                          - name: "Gừng"
+                            quantity: "20"
+                            unit: "g"
+                          - name: "Nước mắm"
+                            quantity: "2"
+                            unit: "muống canh"
+                        cooking_steps:
+                          - "Rửa sạch gà, chần qua nước sôi để loại bỏ tạp chất"
+                          - "Nấu nước dùng: Cho gà, gừng, hành vào nồi, đổ 2 lít nước"
+                          - "Ninh 45 phút lửa vừa, vớt bọt thường xuyên"
+                          - "Luộc bánh phở trong 1 phút, vớt ra tô"
+                          - "Xé gà, cho lên bánh phở, chan nước dùng nóng"
+                          - "Rắc hành lá, ngò gai, tiêu"
+                        prep_time: "15 phút"
+                        cook_time: "45 phút"
+                        total_time: "60 phút"
+                        estimated_calories: 350
+                        estimated_cost: 40000
+                      - meal_type: "trưa"
+                        dish_name: "Cơm gạo lứt với cá hồi nướng"
+                        ingredients:
+                          - name: "Gạo lứt"
+                            quantity: "150"
+                            unit: "g"
+                          - name: "Cá hồi"
+                            quantity: "200"
+                            unit: "g"
+                          - name: "Muối"
+                            quantity: "1"
+                            unit: "thìa cà phê"
+                          - name: "Tiêu"
+                            quantity: "1/2"
+                            unit: "thìa cà phê"
+                          - name: "Rau củ luộc"
+                            quantity: "150"
+                            unit: "g"
+                        cooking_steps:
+                          - "Vo gạo lứt, ngâm 30 phút, nấu cơm"
+                          - "Rửa cá hồi, thấm khô"
+                          - "Ướp cá với muối, tiêu 10 phút"
+                          - "Nướng lò 180°C trong 15 phút hoặc chiên chảo không dầu"
+                          - "Luộc rau củ (cà rốt, bông cải)"
+                          - "Bày cơm, cá, rau ra đĩa"
+                        prep_time: "40 phút"
+                        cook_time: "20 phút"
+                        total_time: "60 phút"
+                        estimated_calories: 480
+                        estimated_cost: 70000
+                  - day: 2
+                    date: "2025-12-04"
+                    meals:
+                      - meal_type: "sáng"
+                        dish_name: "Bánh mì trứng"
+                        ingredients:
+                          - name: "Bánh mì"
+                            quantity: "1"
+                            unit: "ổ"
+                          - name: "Trứng gà"
+                            quantity: "2"
+                            unit: "quả"
+                          - name: "Dưa leo"
+                            quantity: "50"
+                            unit: "g"
+                          - name: "Cà chua"
+                            quantity: "50"
+                            unit: "g"
+                        cooking_steps:
+                          - "Đập trứng vào bát, đánh tan"
+                          - "Chiên trứng ốp la hoặc tráng"
+                          - "Nướng bánh mì giòn"
+                          - "Kẹp trứng, dưa leo, cà chua vào bánh mì"
+                        prep_time: "5 phút"
+                        cook_time: "10 phút"
+                        total_time: "15 phút"
+                        estimated_calories: 320
+                        estimated_cost: 15000
+                health_condition: "tim mạch"
+                dietary_preferences: "không ăn hải sản"
+                total_summary:
+                  total_recipes: 15
+                  total_cost: 625000
+                  avg_calories_per_meal: 385
+                recommendations:
+                  - "✅ Công thức phù hợp với người tim mạch (ít muối, ít dầu mỡ)"
+                  - "💡 Tổng chi phí 5 ngày: 625,000 VNĐ (125,000 VNĐ/ngày)"
+                  - "🥗 Đã tránh hải sản theo yêu cầu"
+                  - "⚠️ Nhớ rửa sạch rau củ và nấu chín kỹ"
+                  - "📊 Trung bình 385 calo/bữa, phù hợp giảm cân nhẹ"
 
       400:
         description: Thiếu dữ liệu hoặc không hợp lệ
@@ -3082,17 +2916,21 @@ def detailed_recipes():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "Ngân sách không hợp lệ"
-              details:
-                field: "budget_range"
-                reason: "invalid_format"
-                expected: "số + k (vd: 300k)"
+              message: "Số ngày phải từ 1-7"
+              error:
+                code: "INVALID_DAYS"
+                details: "days must be between 1 and 7"
 
       500:
         description: Lỗi server
@@ -3103,16 +2941,21 @@ def detailed_recipes():
               properties:
                 success:
                   type: boolean
-                error:
+                message:
                   type: string
-                details:
+                error:
                   type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
             example:
               success: false
-              error: "OpenAI API error"
-              details:
-                message: "Rate limit exceeded"
-                code: "rate_limit_error"
+              message: "Lỗi tạo công thức"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "OpenAI API rate limit exceeded"
     """
     try:
         data = request.json
