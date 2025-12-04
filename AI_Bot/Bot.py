@@ -5,6 +5,7 @@ from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
 from clarifai_grpc.grpc.api.status import status_code_pb2
 from openai import OpenAI
 import base64
+import time
 import uuid
 import os
 import json
@@ -422,30 +423,128 @@ def execute_function(function_name, params):
 
 
 def internal_analyze_food(image, health_condition, dietary_goals):
+    """
+    Phân tích món ăn và trả về cấu trúc dữ liệu mới phù hợp với UI
+    """
+    import time
+    start_time = time.time()
+    
+    # Bước 1: Nhận diện món ăn bằng Clarifai
     detected_foods = recognize_food_with_clarifai(image)
     if not detected_foods:
         return {"error": "Không nhận diện được món ăn"}
     
+    # Bước 2: Tạo prompt để phân tích chi tiết
     food_list = ", ".join([f"{f['name']} ({f['confidence']}%)" for f in detected_foods])
     
-    prompt = f"""Phân tích món ăn cho người {health_condition}, mục tiêu {dietary_goals}.
-Món đã nhận diện: {food_list}
+    prompt = f"""Bạn là chuyên gia dinh dưỡng. Phân tích món ăn sau cho người {health_condition}, mục tiêu {dietary_goals}.
 
-Trả lời ngắn gọn:
-1. Xác nhận món ăn
-2. Calo và dinh dưỡng chính
-3. Đánh giá phù hợp (⭐ 1-5)
-4. Ưu/nhược điểm
-5. Gợi ý cải thiện"""
+Các món đã nhận diện: {food_list}
+
+Yêu cầu trả về JSON với cấu trúc SAU (KHÔNG thêm markdown, KHÔNG thêm text ngoài JSON):
+{{
+    "recognized_foods": [
+        {{
+            "name": "tên món bằng tiếng Anh hoặc tiếng Việt",
+            "category": "loại (VD: Carbohydrates, Proteins, Vegetables, Fruits, Healthy Fats, Sweetener)",
+            "weight": "khối lượng ước tính (VD: 150g, 200ml)",
+            "confidence": 95
+        }}
+    ],
+    "nutrition_analysis": {{
+        "calories": {{"value": 450, "unit": "kcal"}},
+        "protein": {{"value": 8, "unit": "g"}},
+        "carbs": {{"value": 78, "unit": "g"}},
+        "fat": {{"value": 12, "unit": "g"}},
+        "fiber": {{"value": 5, "unit": "g"}},
+        "sugar": {{"value": 35, "unit": "g"}},
+        "sodium": {{"value": 520, "unit": "mg"}},
+        "cholesterol": {{"value": 45, "unit": "mg"}}
+    }},
+    "ai_insights": [
+        "Insight 1 về món ăn",
+        "Insight 2 về dinh dưỡng",
+        "Insight 3 - khuyến nghị"
+    ]
+}}
+
+Lưu ý:
+- recognized_foods: Danh sách món ăn thực tế trong ảnh, không phải từ Clarifai
+- category: Phân loại theo nhóm dinh dưỡng chính
+- weight: Ước tính khối lượng hợp lý
+- nutrition_analysis: Tính toán TỔNG dinh dưỡng của TẤT CẢ món trong ảnh
+- ai_insights: 3-4 câu ngắn gọn, súc tích, có emoji phù hợp"""
     
-    analysis = call_openai_vision(prompt, [image], max_tokens=1500)
-    
-    return {
-        "detected_foods": detected_foods,
-        "analysis": analysis,
-        "health_condition": health_condition,
-        "dietary_goals": dietary_goals
-    }
+    # Bước 3: Gọi OpenAI Vision để phân tích
+    try:
+        response_text = call_openai_vision(prompt, [image], max_tokens=1500)
+        
+        # Xử lý response để lấy JSON
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        # Parse JSON
+        analysis_data = json.loads(response_text)
+        
+        # Tính thời gian xử lý
+        processing_time = round(time.time() - start_time, 1)
+        
+        # Trả về kết quả theo format mới
+        return {
+            "message": "Phân tích món ăn thành công",
+            "data": {
+                "session_id": str(uuid.uuid4()),
+                "status": "complete",
+                "processing_time": f"{processing_time}s",
+                "recognized_foods": analysis_data.get("recognized_foods", []),
+                "nutrition_analysis": analysis_data.get("nutrition_analysis", {}),
+                "health_condition": health_condition,
+                "dietary_goals": dietary_goals,
+                "recommendations": analysis_data.get("ai_insights", [])
+            }
+        }
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON Parse Error: {str(e)}")
+        print(f"Response text: {response_text}")
+        
+        # Fallback: Trả về dữ liệu mẫu nếu parse lỗi
+        return {
+            "message": "Phân tích món ăn thành công (fallback mode)",
+            "data": {
+                "session_id": str(uuid.uuid4()),
+                "status": "complete",
+                "processing_time": "1.5s",
+                "recognized_foods": [
+                    {
+                        "name": detected_foods[0]["name"],
+                        "category": "Unknown",
+                        "weight": "200g",
+                        "confidence": detected_foods[0]["confidence"]
+                    }
+                ],
+                "nutrition_analysis": {
+                    "calories": {"value": 0, "unit": "kcal"},
+                    "protein": {"value": 0, "unit": "g"},
+                    "carbs": {"value": 0, "unit": "g"},
+                    "fat": {"value": 0, "unit": "g"},
+                    "fiber": {"value": 0, "unit": "g"},
+                    "sugar": {"value": 0, "unit": "g"},
+                    "sodium": {"value": 0, "unit": "mg"},
+                    "cholesterol": {"value": 0, "unit": "mg"}
+                },
+                "health_condition": health_condition,
+                "dietary_goals": dietary_goals,
+                "recommendations": [
+                    "⚠️ Có lỗi khi phân tích chi tiết, vui lòng thử lại"
+                ]
+            }
+        }
+    except Exception as e:
+        print(f"❌ Analysis Error: {str(e)}")
+        return {"error": f"Lỗi phân tích: {str(e)}"}
 
 
 def internal_compare_foods(images, health_condition):
@@ -517,17 +616,306 @@ def internal_quick_scan(image):
     return {"detected_foods": detected_foods, "total": len(detected_foods)}
 
 
-def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, budget_range, cooking_time):
-    prompt = f"""Gợi ý thực đơn bữa {meal_time}:
+def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, budget_range, cooking_time, user_query=None):
+    """
+    Gợi ý món ăn dựa trên mô tả của người dùng
+    Trả về danh sách món với nutrition facts, ingredients, instructions
+    """
+    
+    # Tạo prompt cho AI
+    if user_query:
+        # Nếu có query từ người dùng (VD: "High protein lunch")
+        prompt = f"""Bạn là chuyên gia dinh dưỡng. Người dùng muốn: "{user_query}"
+
+Hãy gợi ý 1-3 món ăn phù hợp nhất. Trả về JSON với cấu trúc SAU (KHÔNG thêm markdown):
+
+{{
+    "suggested_meals": [
+        {{
+            "name": "Tên món (tiếng Anh hoặc Việt)",
+            "description": "Mô tả ngắn về món, tại sao phù hợp",
+            "difficulty": "EASY/MEDIUM/HARD",
+            "match_percentage": 98,
+            "prep_time": "15 minutes",
+            "servings": 2,
+            "tags": ["HIGH-PROTEIN", "LOW-CARB", "GLUTEN-FREE OPTION"],
+            "nutrition_facts": {{
+                "calories": {{"value": 420, "unit": "cal"}},
+                "protein": {{"value": 38, "unit": "g"}},
+                "carbs": {{"value": 18, "unit": "g"}},
+                "fat": {{"value": 22, "unit": "g"}},
+                "fiber": {{"value": 4, "unit": "g"}},
+                "sugar": {{"value": 3, "unit": "g"}},
+                "sodium": {{"value": 680, "unit": "mg"}},
+                "cholesterol": {{"value": 85, "unit": "mg"}}
+            }},
+            "ingredients": [
+                "2 chicken breasts",
+                "4 cups romaine lettuce",
+                "1/2 cup Caesar dressing",
+                "1/4 cup parmesan cheese",
+                "1 cup croutons",
+                "Lemon wedges",
+                "Olive oil for grilling",
+                "Salt and pepper"
+            ],
+            "instructions": [
+                "Season chicken breasts with salt, pepper, and olive oil.",
+                "Grill chicken for 6-7 minutes per side until fully cooked.",
+                "Let chicken rest for 5 minutes, then slice.",
+                "Wash and chop romaine lettuce.",
+                "In a large bowl, toss lettuce with Caesar dressing.",
+                "Add croutons and parmesan cheese.",
+                "Top with grilled chicken slices.",
+                "Serve with lemon wedges."
+            ]
+        }}
+    ]
+}}
+
+Lưu ý:
+- match_percentage: Độ phù hợp với yêu cầu (0-100%)
+- tags: Các đặc điểm nổi bật (HIGH-PROTEIN, LOW-CARB, VEGETARIAN, GLUTEN-FREE, QUICK, etc.)
+- nutrition_facts: Dinh dưỡng chi tiết cho 1 khẩu phần
+- ingredients: Danh sách nguyên liệu với số lượng cụ thể
+- instructions: Các bước làm rõ ràng, dễ hiểu
+- Ưu tiên món ăn phổ biến, dễ làm, có thể tìm nguyên liệu ở Việt Nam"""
+    else:
+        # Fallback: Dùng thông tin cũ
+        prompt = f"""Gợi ý món ăn cho bữa {meal_time}:
 - Sức khỏe: {health_condition}
 - Sở thích: {dietary_preferences}
 - Ngân sách: {budget_range}
 - Thời gian: {cooking_time}
 
-Trả về: 2-3 món Việt phù hợp, lý do chọn, cách làm đơn giản, ước tính calo"""
+Trả về JSON format như trên với 2-3 món Việt phù hợp."""
     
-    result = call_openai_text(prompt, max_tokens=1200)
-    return {"suggestion": result, "meal_time": meal_time}
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "Bạn là chuyên gia dinh dưỡng và đầu bếp chuyên nghiệp."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2500,
+            temperature=0.7
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        
+        # Parse JSON
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        suggestion_data = json.loads(response_text)
+        
+        return {
+            "message": "Gợi ý món ăn thành công",
+            "data": {
+                "query": user_query or f"Bữa {meal_time}",
+                "total_suggestions": len(suggestion_data.get("suggested_meals", [])),
+                "meals": suggestion_data.get("suggested_meals", []),
+                "filters": {
+                    "meal_time": meal_time,
+                    "health_condition": health_condition,
+                    "dietary_preferences": dietary_preferences,
+                    "budget_range": budget_range,
+                    "cooking_time": cooking_time
+                }
+            }
+        }
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON Parse Error: {str(e)}")
+        print(f"Response: {response_text}")
+        
+        # Fallback
+        return {
+            "message": "Gợi ý món ăn thành công (text mode)",
+            "data": {
+                "query": user_query or f"Bữa {meal_time}",
+                "total_suggestions": 0,
+                "meals": [],
+                "text_suggestion": response_text,
+                "filters": {
+                    "meal_time": meal_time,
+                    "health_condition": health_condition,
+                    "dietary_preferences": dietary_preferences
+                }
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Meal Suggestion Error: {str(e)}")
+        return {"error": f"Lỗi gợi ý món ăn: {str(e)}"}
+
+@app.route('/api/v1/meal-suggestion', methods=['POST'])
+def meal_suggestion():
+    """
+    Gợi ý món ăn dựa trên mô tả người dùng
+    ---
+    tags:
+      - Meal Planning
+    summary: AI gợi ý món ăn từ mô tả
+    description: >
+      Người dùng nhập mô tả (VD: "High protein lunch", "Quick vegan dinner"),
+      AI sẽ gợi ý các món phù hợp kèm nutrition facts, ingredients, instructions.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              query:
+                type: string
+                description: Mô tả món ăn mong muốn
+                example: "High protein lunch"
+              meal_time:
+                type: string
+                description: Bữa ăn (sáng/trưa/tối/phụ)
+                default: "trưa"
+              health_condition:
+                type: string
+                default: "khỏe mạnh"
+              dietary_preferences:
+                type: string
+                default: "không"
+              budget_range:
+                type: string
+                default: "100k"
+              cooking_time:
+                type: string
+                default: "30 phút"
+    responses:
+      200:
+        description: Gợi ý thành công
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                data:
+                  type: object
+                  properties:
+                    query:
+                      type: string
+                    total_suggestions:
+                      type: integer
+                    meals:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          description:
+                            type: string
+                          difficulty:
+                            type: string
+                          match_percentage:
+                            type: integer
+                          prep_time:
+                            type: string
+                          servings:
+                            type: integer
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                          nutrition_facts:
+                            type: object
+                          ingredients:
+                            type: array
+                            items:
+                              type: string
+                          instructions:
+                            type: array
+                            items:
+                              type: string
+            example:
+              success: true
+              message: "Gợi ý món ăn thành công"
+              data:
+                query: "High protein lunch"
+                total_suggestions: 1
+                meals:
+                  - name: "Grilled Chicken Caesar Salad"
+                    description: "Outstanding protein content (38g) with balanced macros. Perfect for muscle building and satiety."
+                    difficulty: "MEDIUM"
+                    match_percentage: 98
+                    prep_time: "25 minutes"
+                    servings: 2
+                    tags: ["HIGH-PROTEIN", "LOW-CARB", "GLUTEN-FREE OPTION"]
+                    nutrition_facts:
+                      calories: {"value": 420, "unit": "cal"}
+                      protein: {"value": 38, "unit": "g"}
+                      carbs: {"value": 18, "unit": "g"}
+                      fat: {"value": 22, "unit": "g"}
+                      fiber: {"value": 4, "unit": "g"}
+                      sugar: {"value": 3, "unit": "g"}
+                      sodium: {"value": 680, "unit": "mg"}
+                      cholesterol: {"value": 85, "unit": "mg"}
+                    ingredients:
+                      - "2 chicken breasts"
+                      - "4 cups romaine lettuce"
+                      - "1/2 cup Caesar dressing"
+                      - "1/4 cup parmesan cheese"
+                      - "1 cup croutons"
+                      - "Lemon wedges"
+                      - "Olive oil for grilling"
+                      - "Salt and pepper"
+                    instructions:
+                      - "Season chicken breasts with salt, pepper, and olive oil."
+                      - "Grill chicken for 6-7 minutes per side until fully cooked."
+                      - "Let chicken rest for 5 minutes, then slice."
+                      - "Wash and chop romaine lettuce."
+                      - "In a large bowl, toss lettuce with Caesar dressing."
+                      - "Add croutons and parmesan cheese."
+                      - "Top with grilled chicken slices."
+                      - "Serve with lemon wedges."
+      400:
+        description: Thiếu thông tin
+      500:
+        description: Lỗi server
+    """
+    try:
+        data = request.json
+        
+        # Lấy query từ user (VD: "High protein lunch")
+        user_query = data.get("query", "").strip()
+        
+        if not user_query:
+            return jsonify({
+                "success": False,
+                "error": "Query không được để trống"
+            }), 400
+        
+        result = internal_meal_suggestion(
+            data.get("meal_time", "trưa"),
+            data.get("health_condition", "khỏe mạnh"),
+            data.get("dietary_preferences", "không"),
+            data.get("budget_range", "100k"),
+            data.get("cooking_time", "30 phút"),  # ✅ Thêm dòng này
+            user_query=user_query
+        )
+        
+        if "error" in result:
+            return jsonify({"success": False, **result}), 500
+        
+        return jsonify({"success": True, **result}), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 def internal_weekly_menu(health_condition, dietary_preferences, budget_range, cooking_time):
@@ -1594,17 +1982,94 @@ def analyze_food():
                   properties:
                     session_id:
                       type: string
-                    detected_foods:
+                    status:
+                      type: string
+                      description: Trạng thái phân tích
+                      example: "complete"
+                    processing_time:
+                      type: string
+                      description: Thời gian xử lý
+                      example: "1.0s"
+                    recognized_foods:
                       type: array
+                      description: Danh sách món ăn được nhận diện
                       items:
                         type: object
                         properties:
                           name:
                             type: string
+                            description: Tên món ăn
+                          category:
+                            type: string
+                            description: Loại thực phẩm
+                          weight:
+                            type: string
+                            description: Khối lượng ước tính
                           confidence:
                             type: number
-                    analysis:
-                      type: string
+                            description: Độ tin cậy (%)
+                            minimum: 0
+                            maximum: 100
+                    nutrition_analysis:
+                      type: object
+                      description: Phân tích dinh dưỡng chi tiết
+                      properties:
+                        calories:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        protein:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        carbs:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fat:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fiber:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sugar:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sodium:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        cholesterol:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
                     health_condition:
                       type: string
                     dietary_goals:
@@ -1613,26 +2078,57 @@ def analyze_food():
                       type: array
                       items:
                         type: string
-                    processing_time:
-                      type: string
             example:
               success: true
               message: "Phân tích món ăn thành công"
               data:
                 session_id: "550e8400-e29b-41d4-a716-446655440000"
-                detected_foods:
-                  - name: "phở bò"
-                    confidence: 98.5
-                  - name: "bánh phở"
-                    confidence: 95.2
-                analysis: "Phở bò khoảng 380 kcal, giàu protein từ thịt bò (20-25g), carbohydrate từ bánh phở (50-60g). Chỉ số đường huyết trung bình do bánh phở."
-                health_condition: "tiểu đường"
-                dietary_goals: "giảm cân"
+                status: "complete"
+                processing_time: "1.0s"
+                recognized_foods:
+                  - name: "Pancakes"
+                    category: "Carbohydrates"
+                    weight: "150g"
+                    confidence: 97
+                  - name: "Fresh Berries"
+                    category: "Fruits"
+                    weight: "100g"
+                    confidence: 95
+                  - name: "Maple Syrup"
+                    category: "Sweetener"
+                    weight: "30ml"
+                    confidence: 91
+                nutrition_analysis:
+                  calories:
+                    value: 450
+                    unit: "kcal"
+                  protein:
+                    value: 8
+                    unit: "g"
+                  carbs:
+                    value: 78
+                    unit: "g"
+                  fat:
+                    value: 12
+                    unit: "g"
+                  fiber:
+                    value: 5
+                    unit: "g"
+                  sugar:
+                    value: 35
+                    unit: "g"
+                  sodium:
+                    value: 520
+                    unit: "mg"
+                  cholesterol:
+                    value: 45
+                    unit: "mg"
+                health_condition: "khỏe mạnh"
+                dietary_goals: "duy trì cân nặng"
                 recommendations:
-                  - "💡 Nên ăn phần nhỏ hơn và bỏ bớt bánh phở"
-                  - "🥗 Thêm rau xanh để tăng chất xơ"
-                  - "⚠️ Lưu ý: Kiểm tra đường huyết sau 1-2 giờ"
-                processing_time: "2.3s"
+                  - "💡 Bữa sáng cân đối với nguồn năng lượng tốt từ carbohydrate"
+                  - "🥗 Nên thêm protein để tăng cảm giác no lâu hơn"
+                  - "⚠️ Lưu ý: Lượng đường khá cao, hạn chế nếu muốn giảm cân"
 
       400:
         description: Dữ liệu đầu vào không hợp lệ
@@ -2243,194 +2739,6 @@ def analyze_food():
 #         return jsonify({"success": True, **result}), 200
 #     except Exception as e:
 #         return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/v1/meal-suggestion', methods=['POST'])
-def meal_suggestion():
-    """
-    Gợi ý thực đơn cho 1 bữa
-    ---
-    tags:
-      - Meal Planning
-    summary: Gợi ý món ăn cho 1 bữa ăn
-    description: >
-      AI sẽ gợi ý 2-3 món Việt phù hợp với bữa ăn, kèm lý do chọn món,
-      cách làm đơn giản và ước tính calo cho từng món.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              meal_time:
-                type: string
-                description: Bữa ăn trong ngày
-                enum: ["sáng", "trưa", "tối", "phụ"]
-                default: "trưa"
-                example: "trưa"
-              health_condition:
-                type: string
-                description: Tình trạng sức khỏe
-                default: "khỏe mạnh"
-                example: "tiểu đường"
-              dietary_preferences:
-                type: string
-                description: Sở thích ăn uống
-                default: "không"
-                example: "ăn chay"
-              budget_range:
-                type: string
-                description: Ngân sách cho bữa ăn
-                default: "100k"
-                example: "50k"
-              cooking_time:
-                type: string
-                description: Thời gian nấu mong muốn
-                default: "30 phút"
-                example: "15 phút"
-              session_id:
-                type: string
-                description: ID phiên làm việc
-                example: "uuid-v4"
-              user_id:
-                type: string
-                description: ID người dùng
-                example: "user_123"
-    responses:
-      200:
-        description: Gợi ý thành công
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                message:
-                  type: string
-                data:
-                  type: object
-                  properties:
-                    session_id:
-                      type: string
-                    meal_time:
-                      type: string
-                    suggestions:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          dish_name:
-                            type: string
-                          reason:
-                            type: string
-                          cooking_method:
-                            type: string
-                          estimated_calories:
-                            type: number
-                          estimated_cost:
-                            type: integer
-                    health_condition:
-                      type: string
-                    dietary_preferences:
-                      type: string
-                    recommendations:
-                      type: array
-                      items:
-                        type: string
-            example:
-              success: true
-              message: "Gợi ý thực đơn thành công"
-              data:
-                session_id: "550e8400-e29b-41d4-a716-446655440000"
-                meal_time: "trưa"
-                suggestions:
-                  - dish_name: "Phở gà"
-                    reason: "Ít calo, dễ làm, giàu protein từ gà, phù hợp người tiểu đường"
-                    cooking_method: "Luộc gà, nấu nước dùng với xương, chan nước dùng vào bánh phở"
-                    estimated_calories: 350
-                    estimated_cost: 40000
-                  - dish_name: "Cơm gạo lứt với cá hồi nướng"
-                    reason: "Gạo lứt giúp kiểm soát đường huyết, cá hồi giàu omega-3"
-                    cooking_method: "Ướp cá với muối tiêu, nướng 15 phút, ăn kèm cơm gạo lứt"
-                    estimated_calories: 420
-                    estimated_cost: 55000
-                  - dish_name: "Salad ức gà"
-                    reason: "Ít carb, nhiều rau xanh và protein, cực kỳ phù hợp giảm cân"
-                    cooking_method: "Luộc ức gà, trộn với rau xanh, cà chua, dưa leo"
-                    estimated_calories: 280
-                    estimated_cost: 35000
-                health_condition: "tiểu đường"
-                dietary_preferences: "không"
-                recommendations:
-                  - "💡 Nên chọn phở gà hoặc salad ức gà (ít carb hơn)"
-                  - "🥗 Thêm rau xanh vào bất kỳ món nào"
-                  - "⚠️ Tránh nước ngọt và tráng miệng ngọt"
-
-      400:
-        description: Thiếu dữ liệu hoặc không hợp lệ
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                message:
-                  type: string
-                error:
-                  type: object
-                  properties:
-                    code:
-                      type: string
-                    details:
-                      type: string
-            example:
-              success: false
-              message: "Bữa ăn không hợp lệ"
-              error:
-                code: "INVALID_MEAL_TIME"
-                details: "meal_time must be one of: sáng, trưa, tối, phụ"
-
-      500:
-        description: Lỗi server
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                message:
-                  type: string
-                error:
-                  type: object
-                  properties:
-                    code:
-                      type: string
-                    details:
-                      type: string
-            example:
-              success: false
-              message: "Lỗi xử lý gợi ý thực đơn"
-              error:
-                code: "PROCESSING_ERROR"
-                details: "OpenAI API rate limit exceeded"
-    """
-    try:
-        data = request.json
-        result = internal_meal_suggestion(
-            data.get("meal_time", "trưa"),
-            data.get("health_condition", "khỏe mạnh"),
-            data.get("dietary_preferences", "không"),
-            data.get("budget_range", "100k"),
-            data.get("cooking_time", "30 phút")
-        )
-        
-        return jsonify(result), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/v1/weekly-menu', methods=['POST'])
