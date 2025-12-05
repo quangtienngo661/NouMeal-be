@@ -27,27 +27,20 @@ class FoodService {
         const allergensCondition = {
             allergens: { $nin: user.allergies || [] },
             isActive: true,
-            // _id: { $nin: Array.from(usedIds) }
         };
 
         const todayLogs = await FoodLog.find({ user, date: today }).populate('food');
         let remainingMeals = {};
 
-        const latestLog = todayLogs[todayLogs.length - 1];
-        if (latestLog) {
-            // return todayMeals?.meals;
-            //  || await this.generateDailyFallback(userId);
-
-            switch (latestLog.meal) { // dev   
+        if (todayLogs.length > 0) {
+            const latestLog = todayLogs[todayLogs.length - 1];
+            const isNonRecommended = todayLogs.some(log => log.source !== 'recommended');
+            switch (latestLog.meal) { 
                 case "breakfast": {
-                    const breakfasts = todayMeals.meals.breakfast.filter((food, index) => {
-                        return food._id.toString() === latestLog.food._id.toString()
-                    });
-                    // console.log(breakfasts.map(b => {
-                    //     return b._id.toString()
-                    // }));
-
-                    if (breakfasts.length > 0) {
+                    // const breakfasts = todayMeals.meals.breakfast.filter((food, index) => {
+                    //     return food._id.toString() === latestLog.food._id.toString()
+                    // });
+                    if (!isNonRecommended) {
                         remainingMeals = { lunch: [...todayMeals.meals.lunch], dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack] };
                     } else {
                         const lunch = await Food.aggregate(
@@ -61,36 +54,38 @@ class FoodService {
                         const snack = await Food.find({
                             meal: 'snack',
 
-                        }).limit(5);
+                        }).limit(1);
 
                         remainingMeals.lunch = lunch;
                         remainingMeals.dinner = dinner;
                         remainingMeals.snack = snack;
+
+                        const remaingMealsCacheKey = `remainingMeals:${userId}:${this.getCurrentWeekKey()}:${today}:remaining`;
+                        weeklyCache.set(remaingMealsCacheKey, JSON.stringify(remainingMeals), this.getSecondsUntilMidnight());
                     }
                     break;
                 }
                 case "lunch":
-                    const lunchs = todayMeals.meals.lunch.filter((food, index) => {
-                        return food._id.toString() === latestLog.food._id.toString()
-                    });
-                    console.log(lunchs.map(b => b._id.toString()));
-
-                    if (lunchs.length > 0) {
+                    if (!isNonRecommended) {
                         todayMeals.meals.lunch = undefined;
                         remainingMeals = { dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack]  };
                     } else {
-                        // const loggedFood = todayLogs.find(l => l.meal === "lunch");
-                        // todayMeals.meals.lunch = [loggedFood.food];
-
-                        const dinner = await Food.aggregate(
-                            await aggregateConditions(user, 'dinner', allergensCondition, true)
-                        );
-
+                        const remaingMealsCacheKey = `remainingMeals:${userId}:${this.getCurrentWeekKey()}:${today}:remaining`;
+                        const cached = weeklyCache.get(remaingMealsCacheKey);
+                        if (cached) {
+                            const dinner = JSON.parse(cached).dinner;
+                            remainingMeals.dinner = dinner;
+                        } else {
+                            const dinner = await Food.aggregate(
+                                await aggregateConditions(user, 'dinner', allergensCondition, true)
+                            );
+                            
+                            remainingMeals.dinner = dinner;
+                        }
                         const snack = await Food.find({
                             meal: 'snack',
 
-                        }).limit(5);
-                        remainingMeals.dinner = dinner;
+                        }).limit(1);
                         remainingMeals.snack = snack;
                     }
                     break;
@@ -105,18 +100,24 @@ class FoodService {
         return remainingMeals;
     }
 
+    getCachedWeeklyPlan(userId) {
+        const cacheKey = `weekly:${userId}:${this.getCurrentWeekKey()}`;
+        const cached = weeklyCache.get(cacheKey);
+        return cached ? JSON.parse(cached) : null;
+    }
+
     async weeklyFoodRecommendation(userId, options = {}) {
         const cacheKey = `weekly:${userId}:${this.getCurrentWeekKey()}`;
-
+        
         const cached = weeklyCache.get(cacheKey);
         if (cached) {
             console.log("Cache hit for weekly recommendation");
             return JSON.parse(cached);
         }
-
-        const weeklyPlan = await this.generateWeeklyPlan(userId);
+        
+        const weeklyPlan = await this.generateWeeklyPlan(userId, false);
         const ttl = this.getSecondsUntilMidnight();
-
+        
         weeklyCache.set(cacheKey, JSON.stringify(weeklyPlan), ttl);
         return weeklyPlan;
     }
@@ -215,7 +216,7 @@ class FoodService {
         };
     }
 
-    async getDayWithExclusions(user, usedIds, isDiff = false) {
+    async getDayWithExclusions(user, usedIds, isDiff = false, isCached = true) {
         const allergensCondition = {
             allergens: { $nin: user.allergies || [] },
             isActive: true,
@@ -223,30 +224,24 @@ class FoodService {
         };
 
         const breakfast = await Food.aggregate(
-            await aggregateConditions(user, 'breakfast', allergensCondition, isDiff)
+            await aggregateConditions(user, 'breakfast', allergensCondition, isDiff, isCached)
         );
-
-        // if (isDiff)
-        //     console.log("Breakfast:", breakfast);
 
         const lunch = await Food.aggregate(
-            await aggregateConditions(user, 'lunch', allergensCondition, isDiff)
+            await aggregateConditions(user, 'lunch', allergensCondition, isDiff, isCached)
         );
 
-        // if (isDiff)
-        //     console.log("Lunch:", lunch);
-
         const dinner = await Food.aggregate(
-            await aggregateConditions(user, 'dinner', allergensCondition, isDiff)
+            await aggregateConditions(user, 'dinner', allergensCondition, isDiff, isCached)
         );
 
         const snack = await Food.find({
             meal: 'snack',
             _id: { $nin: Array.from(usedIds) }
-        }).limit(5);
+        }).limit(1);
 
         return {
-            breakfast: breakfast,
+            breakfast: breakfast.toObjects(),
             lunch: lunch,
             dinner: dinner,
             snack: snack
@@ -268,7 +263,7 @@ class FoodService {
         const breakfastFoods = await Food.aggregate(await aggregateConditions(user, 'breakfast', allergensCondition));
         const lunchFoods = await Food.aggregate(await aggregateConditions(user, 'lunch', allergensCondition));
         const dinnerFoods = await Food.aggregate(await aggregateConditions(user, 'dinner', allergensCondition));
-        const snacks = await Food.find({ meal: 'snack' }).limit(5);
+        const snacks = await Food.find({ meal: 'snack' }).limit(1);
 
         return {
             breakfast: breakfastFoods,
@@ -278,7 +273,7 @@ class FoodService {
         }
     }
 
-    async generateWeeklyPlan(userId) {
+    async generateWeeklyPlan(userId, isCached) {
         const usedIds = new Set();
         const days = [];
 
@@ -290,7 +285,7 @@ class FoodService {
 
 
         for (let i = 0; i < 7; i++) {
-            const dayMeals = await this.getDayWithExclusions(user, usedIds);
+            const dayMeals = await this.getDayWithExclusions(user, usedIds, false, isCached);
             days.push({
                 date: this.getWeekDate(i).weekDate.date,
                 dayName: this.getWeekDate(i).weekDate.dayName,

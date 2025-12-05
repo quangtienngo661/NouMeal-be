@@ -68,7 +68,7 @@ exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
 
 /**
  * @swagger
- * /api/v1/foods/weekly:
+ * /api/v1/foods/weekly-recommended:
  *   get:
  *     summary: Get weekly food recommendations for current user
  *     description: Returns 7 days of recommended foods (breakfast, lunch, dinner, snacks) based on the authenticated user's profile with diversity across days.
@@ -94,58 +94,164 @@ exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: number
+ *                   example: 200
  *                 data:
- *                   type: object
- *                   properties:
- *                     week:
- *                       type: array
- *                       items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       date:
+ *                         type: string
+ *                         format: date
+ *                         example: "2025-12-01"
+ *                       dayName:
+ *                         type: string
+ *                         example: "Monday"
+ *                       meals:
  *                         type: object
  *                         properties:
- *                           date:
- *                             type: string
- *                             format: date
- *                             example: "2025-11-25"
- *                           dayOfWeek:
- *                             type: string
- *                             example: "Monday"
- *                           meals:
- *                             type: object
- *                             properties:
- *                               breakfast:
- *                                 type: array
- *                                 items:
- *                                   $ref: '#/components/schemas/Food'
- *                               lunch:
- *                                 type: array
- *                                 items:
- *                                   $ref: '#/components/schemas/Food'
- *                               dinner:
- *                                 type: array
- *                                 items:
- *                                   $ref: '#/components/schemas/Food'
- *                               snacks:
- *                                 type: array
- *                                 items:
- *                                   $ref: '#/components/schemas/Food'
- *                     nutritionTarget:
- *                       type: object
- *                       properties:
- *                         dailyCalories:
- *                           type: number
- *                           example: 2000
- *                         protein:
- *                           type: number
- *                           example: 150
- *                         carbs:
- *                           type: number
- *                           example: 200
- *                         fat:
- *                           type: number
- *                           example: 67
- *                     cached:
- *                       type: boolean
- *                       example: false
+ *                           breakfast:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/FoodWithDiff'
+ *                           lunch:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/FoodWithDiff'
+ *                           dinner:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/FoodWithDiff'
+ *                           snack:
+ *                             type: array
+ *                             items:
+ *                               $ref: '#/components/schemas/FoodWithDiff'
+ *             example:
+ *               success: true
+ *               message: 200
+ *               data:
+ *                 - date: "2025-12-01"
+ *                   dayName: "Monday"
+ *                   meals:
+ *                     breakfast:
+ *                       - _id: "692ebe81e68471451b81aa09"
+ *                         name: "Bánh Mì Thịt (Vietnamese Sandwich)"
+ *                         description: "Crispy baguette with grilled pork, pâté, pickled vegetables, and cilantro."
+ *                         category: "grains"
+ *                         meal: "breakfast"
+ *                         nutritionalInfo:
+ *                           calories: 720
+ *                           protein: 38
+ *                           carbohydrates: 78
+ *                           fat: 26
+ *                         calorieDiff: 6.375
+ *                         proteinDiff: 15.4
+ *                         carbDiff: 6.6
+ *                         fatDiff: 2.3
+ *                         totalDiff: 56.175
+ *                     lunch:
+ *                       - _id: "692ebe81e68471451b81aa0e"
+ *                         name: "Mì Quảng (Quang Noodles)"
+ *                         description: "Turmeric noodles with shrimp, pork, peanuts, and rich broth."
+ *                         category: "grains"
+ *                         meal: "lunch"
+ *                         nutritionalInfo:
+ *                           calories: 920
+ *                           protein: 56
+ *                           carbohydrates: 110
+ *                           fat: 28
+ *                         calorieDiff: 31.5
+ *                         proteinDiff: 15.2
+ *                         carbDiff: 14.8
+ *                         fatDiff: 3.6
+ *                         totalDiff: 191.1
+ *                     dinner:
+ *                       - _id: "692ebe81e68471451b81aa0f"
+ *                         name: "Cá Kho Tộ (Caramelized Fish in Clay Pot)"
+ *                         description: "Catfish caramelized in clay pot with coconut water and served with rice."
+ *                         category: "protein"
+ *                         meal: "dinner"
+ *                         nutritionalInfo:
+ *                           calories: 720
+ *                           protein: 48
+ *                           carbohydrates: 82
+ *                           fat: 20
+ *                         calorieDiff: 6.375
+ *                         proteinDiff: 5.4
+ *                         carbDiff: 10.6
+ *                         fatDiff: 3.7
+ *                         totalDiff: 51.575
+ *                     snack:
+ *                       - _id: "692ebe81e68471451b81a9d2"
+ *                         name: "Greek Yogurt"
+ *                         description: "Plain low-fat Greek yogurt."
+ *                         category: "dairy"
+ *                         meal: "snack"
+ *                         nutritionalInfo:
+ *                           calories: 190
+ *                           protein: 19
+ *                           carbohydrates: 14
+ *                           fat: 4
+ *                 - date: "2025-12-02"
+ *                   dayName: "Tuesday"
+ *                   meals:
+ *                     breakfast:
+ *                       - _id: "692ebe81e68471451b81aa09"
+ *                         name: "Bánh Mì Thịt (Vietnamese Sandwich)"
+ *                         category: "grains"
+ *                         meal: "breakfast"
+ *                         nutritionalInfo:
+ *                           calories: 720
+ *                           protein: 38
+ *                           carbohydrates: 78
+ *                           fat: 26
+ *                         calorieDiff: 6.375
+ *                         proteinDiff: 15.4
+ *                         carbDiff: 6.6
+ *                         fatDiff: 2.3
+ *                         totalDiff: 56.175
+ *                     lunch:
+ *                       - _id: "692ebe81e68471451b81aa0e"
+ *                         name: "Mì Quảng (Quang Noodles)"
+ *                         category: "grains"
+ *                         meal: "lunch"
+ *                         nutritionalInfo:
+ *                           calories: 920
+ *                           protein: 56
+ *                           carbohydrates: 110
+ *                           fat: 28
+ *                         calorieDiff: 31.5
+ *                         proteinDiff: 15.2
+ *                         carbDiff: 14.8
+ *                         fatDiff: 3.6
+ *                         totalDiff: 191.1
+ *                     dinner:
+ *                       - _id: "692ebe81e68471451b81aa0f"
+ *                         name: "Cá Kho Tộ (Caramelized Fish in Clay Pot)"
+ *                         category: "protein"
+ *                         meal: "dinner"
+ *                         nutritionalInfo:
+ *                           calories: 720
+ *                           protein: 48
+ *                           carbohydrates: 82
+ *                           fat: 20
+ *                         calorieDiff: 6.375
+ *                         proteinDiff: 5.4
+ *                         carbDiff: 10.6
+ *                         fatDiff: 3.7
+ *                         totalDiff: 51.575
+ *                     snack:
+ *                       - _id: "692ebe81e68471451b81a9d5"
+ *                         name: "Apple"
+ *                         category: "fruits"
+ *                         meal: "snack"
+ *                         nutritionalInfo:
+ *                           calories: 130
+ *                           protein: 0
+ *                           carbohydrates: 34
+ *                           fat: 0
  *       404:
  *         description: User not found
  *         content:

@@ -87,7 +87,7 @@ exports.nutritiousFoodConditions = (user) => {
 
 
 
-exports.aggregateConditions = async (user, meal, allergensCondition, isDiff) => {
+exports.aggregateConditions = async (user, meal, allergensCondition, isDiff, isCached) => {
   let ratio;
   switch (meal) {
     case 'breakfast':
@@ -105,13 +105,12 @@ exports.aggregateConditions = async (user, meal, allergensCondition, isDiff) => 
 
   // console.log(user)
 
-  // const { totalCalories, macroProfile } = await FoodLogService.getTodayProgress(user);
   const { totalCalories, macroProfile, remaining } = await FoodLogService.getTodayProgress(user._id);
-  // console.log(remaining)
 
+  
   let idealCalories, idealProtein, idealCarb, idealFat;
 
-  if(meal !== "snack") {
+  if(meal !== "snack" && isCached) {
     idealCalories = remaining.calories * ratio;
     idealProtein = remaining.protein * ratio;
     idealCarb = remaining.carbs * ratio;
@@ -155,7 +154,7 @@ exports.aggregateConditions = async (user, meal, allergensCondition, isDiff) => 
       $sort: { totalDiff: 1 }
     },
     {
-      $limit: 5
+      $limit: 1
     }
   ]
 }
