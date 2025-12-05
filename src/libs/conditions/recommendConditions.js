@@ -1,3 +1,5 @@
+const FoodLogService = require("../../service/foodLogService");
+
 const nutritionalProfilePercentages = {
   lose_weight: {
     protein: 0.4, // 40%
@@ -45,7 +47,7 @@ exports.nutritiousFoodConditions = (user) => {
   };
 
   const tdee = bmr * activityMultipliers[user.activity];
-
+  
   let totalCalories;
 
   switch (user.goal) {
@@ -85,30 +87,42 @@ exports.nutritiousFoodConditions = (user) => {
 
 
 
-exports.aggregateConditions = (user, meal, allergensCondition) => {
+exports.aggregateConditions = async (user, meal, allergensCondition, isDiff) => {
   let ratio;
   switch (meal) {
     case 'breakfast':
       ratio = 0.3;
       break;
     case 'lunch':
-      ratio = 0.4;
+      ratio = isDiff ? 0.4 / 0.7 : 0.4;
       break;
     case 'dinner':
-      ratio = 0.3;
+      ratio = isDiff ? 1 : 0.3;
       break;
     default:
-      ratio = 0.2;
+      ratio = 0.2;  
   }
 
   // console.log(user)
 
-  const { totalCalories, macroProfile } = this.nutritiousFoodConditions(user);
+  // const { totalCalories, macroProfile } = await FoodLogService.getTodayProgress(user);
+  const { totalCalories, macroProfile, remaining } = await FoodLogService.getTodayProgress(user._id);
+  // console.log(remaining)
 
-  const idealCalories = totalCalories * ratio;
-  const idealProtein = macroProfile.protein * ratio;
-  const idealCarb = macroProfile.carb * ratio;
-  const idealFat = macroProfile.fat * ratio;
+  let idealCalories, idealProtein, idealCarb, idealFat;
+
+  if(meal !== "snack") {
+    idealCalories = remaining.calories * ratio;
+    idealProtein = remaining.protein * ratio;
+    idealCarb = remaining.carbs * ratio;
+    idealFat = remaining.fat * ratio;
+  } else {
+    idealCalories = totalCalories * ratio;
+    idealProtein = macroProfile.protein * ratio;
+    idealCarb = macroProfile.carb * ratio;
+    idealFat = macroProfile.fat * ratio;
+  }
+
 
   return [
     {
@@ -117,7 +131,7 @@ exports.aggregateConditions = (user, meal, allergensCondition) => {
         ...allergensCondition,
       }
     },
-    {
+    {   
       $addFields: {
         calorieDiff: { $abs: { $subtract: ["$nutritionalInfo.calories", idealCalories] } },
         proteinDiff: { $abs: { $subtract: ["$nutritionalInfo.protein", idealProtein] } },
@@ -129,17 +143,17 @@ exports.aggregateConditions = (user, meal, allergensCondition) => {
       $addFields: {
         totalDiff: {
           $add: [
-            { $multiply: ["$calorieDiff", 2] }, // Calo x2
+            { $multiply: ["$calorieDiff", 5] }, // Calories x5 (prioritize calorie accuracy)
             "$proteinDiff",
             "$carbDiff",
             "$fatDiff"
           ]
         }
       }
-    }, 
+    },
     {
       $sort: { totalDiff: 1 }
-    }, 
+    },
     {
       $limit: 5
     }

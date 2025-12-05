@@ -1,4 +1,5 @@
 const FoodService = require("../service/foodService");
+const FoodLogService = require("../service/foodLogService");
 const { catchAsync } = require("../libs/util/catchAsync")
 
 // 📦 READ operations
@@ -58,10 +59,10 @@ exports.getFoods = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-exports.foodsRecommendation = catchAsync(async (req, res, next) => {
+exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
 
-    const result = await FoodService.foodsRecommendation(userId);
+    const result = await FoodService.getAdaptiveRecommendation(userId);
     return res.ok(result, 200);
 });
 
@@ -162,7 +163,7 @@ exports.weeklyFoodsRecommendation = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
     const refresh = req.query.refresh === 'true';
 
-    const result = await FoodService.weeklyFoodRecommendation(userId, refresh);
+    const result = await FoodService.weeklyFoodRecommendation(userId, { refresh });
     return res.ok(result, 200);
 });
 
@@ -340,5 +341,224 @@ exports.updateFood = catchAsync(async (req, res, next) => {
 exports.deleteFood = catchAsync(async (req, res, next) => {
     const { foodId } = req.params;
     const result = await FoodService.deleteFood(foodId, req.user._id);
+    return res.ok(result, 200);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/cache/clear:
+ *   delete:
+ *     summary: Clear all recommendation caches
+ *     description: Admin endpoint to clear all weekly recommendation caches
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Cache cleared successfully
+ */
+exports.clearCache = catchAsync(async (req, res, next) => {
+    const result = await FoodService.clearAllCache();
+    return res.ok(result, 200);
+});
+
+// 📝 FOOD LOGGING
+/**
+ * @swagger
+ * /api/v1/foods/log:
+ *   post:
+ *     summary: Log a consumed meal
+ *     description: Log any food (from recommendations or user-posted) as consumed for tracking daily nutrition
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [foodId]
+ *             properties:
+ *               foodId:
+ *                 type: string
+ *                 description: ID of the food to log
+ *                 example: "674a123bcf86cd7994390456"
+ *     responses:
+ *       201:
+ *         description: Meal logged successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Validation error or food already logged for this meal today
+ *       404:
+ *         description: Food not found
+ */
+exports.logMeal = catchAsync(async (req, res, next) => {
+    const { foodId } = req.body;
+    const result = await FoodLogService.logMeal(req.user._id, foodId);
+    return res.ok(result, 201);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/progress/today:
+ *   get:
+ *     summary: Get today's nutrition progress
+ *     description: Returns consumed vs target calories and macros, plus logged and remaining meals
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Today's progress retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     totalCalories:
+ *                       type: number
+ *                       example: 2000
+ *                     macroProfile:
+ *                       type: object
+ *                       properties:
+ *                         protein:
+ *                           type: number
+ *                           example: 150
+ *                         carb:
+ *                           type: number
+ *                           example: 200
+ *                         fat:
+ *                           type: number
+ *                           example: 67
+ *                     consumed:
+ *                       type: object
+ *                       properties:
+ *                         calories:
+ *                           type: number
+ *                           example: 650
+ *                         protein:
+ *                           type: number
+ *                           example: 35
+ *                         carbs:
+ *                           type: number
+ *                           example: 80
+ *                         fat:
+ *                           type: number
+ *                           example: 20
+ *                     remaining:
+ *                       type: object
+ *                       properties:
+ *                         calories:
+ *                           type: number
+ *                           example: 1350
+ *                         protein:
+ *                           type: number
+ *                           example: 115
+ *                         carbs:
+ *                           type: number
+ *                           example: 120
+ *                         fat:
+ *                           type: number
+ *                           example: 47
+ *                     remainingMeals:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["lunch", "dinner", "snack"]
+ *       404:
+ *         description: User not found
+ */
+exports.getTodayProgress = catchAsync(async (req, res, next) => {
+    const result = await FoodLogService.getTodayProgress(req.user._id);
+    return res.ok(result, 200);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/logs:
+ *   get:
+ *     summary: Get all food logs for current user
+ *     description: Returns all logged meals for the authenticated user, sorted by date (most recent first)
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Food logs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       404:
+ *         description: User not found
+ */
+exports.getAllFoodLogs = catchAsync(async (req, res, next) => {
+    const result = await FoodLogService.getAllFoodLogs(req.user._id);
+    return res.ok(result, 200);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/logs/{date}:
+ *   get:
+ *     summary: Get food logs for a specific date
+ *     description: Returns all logged meals for the authenticated user on a specific date
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2025-12-03"
+ *         description: Date in YYYY-MM-DD format
+ *     responses:
+ *       200:
+ *         description: Food logs retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       404:
+ *         description: User not found
+ */
+exports.getFoodLog = catchAsync(async (req, res, next) => {
+    const { date } = req.params;
+    const result = await FoodLogService.getFoodLog(req.user._id, date);
     return res.ok(result, 200);
 });

@@ -2,6 +2,10 @@ const Food = require("../model/foodModel");
 const User = require("../model/userModel");
 const AppError = require("../libs/util/AppError");
 const { aggregateConditions } = require("../libs/conditions/recommendConditions");
+const NodeCache = require("node-cache");
+const weeklyCache = new NodeCache({ checkperiod: 3600 });
+const FoodLog = require("../model/foodLogModel");
+const FoodLogService = require("./foodLogService");
 
 class FoodService {
     // 📦 READ operations
@@ -9,7 +13,247 @@ class FoodService {
         return await Food.find();
     }
 
-    async foodsRecommendation(userId) {
+    async getAdaptiveRecommendation(userId) {
+        const weeklyPlan = await this.weeklyFoodRecommendation(userId);
+        const today = new Date().toISOString().split('T')[0];
+        const todayMeals = weeklyPlan.find(day => day.date === today);
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+
+        const allergensCondition = {
+            allergens: { $nin: user.allergies || [] },
+            isActive: true,
+            // _id: { $nin: Array.from(usedIds) }
+        };
+
+        const todayLogs = await FoodLog.find({ user, date: today }).populate('food');
+        let remainingMeals = {};
+
+        const latestLog = todayLogs[todayLogs.length - 1];
+        if (latestLog) {
+            // return todayMeals?.meals;
+            //  || await this.generateDailyFallback(userId);
+
+            switch (latestLog.meal) { // dev   
+                case "breakfast": {
+                    const breakfasts = todayMeals.meals.breakfast.filter((food, index) => {
+                        return food._id.toString() === latestLog.food._id.toString()
+                    });
+                    // console.log(breakfasts.map(b => {
+                    //     return b._id.toString()
+                    // }));
+
+                    if (breakfasts.length > 0) {
+                        remainingMeals = { lunch: [...todayMeals.meals.lunch], dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack] };
+                    } else {
+                        const lunch = await Food.aggregate(
+                            await aggregateConditions(user, 'lunch', allergensCondition, true)
+                        );
+
+                        const dinner = await Food.aggregate(
+                            await aggregateConditions(user, 'dinner', allergensCondition, true)
+                        );
+
+                        const snack = await Food.find({
+                            meal: 'snack',
+
+                        }).limit(5);
+
+                        remainingMeals.lunch = lunch;
+                        remainingMeals.dinner = dinner;
+                        remainingMeals.snack = snack;
+                    }
+                    break;
+                }
+                case "lunch":
+                    const lunchs = todayMeals.meals.lunch.filter((food, index) => {
+                        return food._id.toString() === latestLog.food._id.toString()
+                    });
+                    console.log(lunchs.map(b => b._id.toString()));
+
+                    if (lunchs.length > 0) {
+                        todayMeals.meals.lunch = undefined;
+                        remainingMeals = { dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack]  };
+                    } else {
+                        // const loggedFood = todayLogs.find(l => l.meal === "lunch");
+                        // todayMeals.meals.lunch = [loggedFood.food];
+
+                        const dinner = await Food.aggregate(
+                            await aggregateConditions(user, 'dinner', allergensCondition, true)
+                        );
+
+                        const snack = await Food.find({
+                            meal: 'snack',
+
+                        }).limit(5);
+                        remainingMeals.dinner = dinner;
+                        remainingMeals.snack = snack;
+                    }
+                    break;
+                // Note: no need to handle dinner and snack cases because the remaining calories will be for these 2 meals
+                default:
+                    break;
+            }
+        } else {
+            remainingMeals = { ...todayMeals.meals };
+        }
+        // return todayMeals?.meals || await this.generateDailyFallback(userId);
+        return remainingMeals;
+    }
+
+    async weeklyFoodRecommendation(userId, options = {}) {
+        const cacheKey = `weekly:${userId}:${this.getCurrentWeekKey()}`;
+
+        const cached = weeklyCache.get(cacheKey);
+        if (cached) {
+            console.log("Cache hit for weekly recommendation");
+            return JSON.parse(cached);
+        }
+
+        const weeklyPlan = await this.generateWeeklyPlan(userId);
+        const ttl = this.getSecondsUntilMidnight();
+
+        weeklyCache.set(cacheKey, JSON.stringify(weeklyPlan), ttl);
+        return weeklyPlan;
+    }
+
+    async getFoodById(foodId) {
+        const food = await Food.findById(foodId);
+
+        if (!food) {
+            throw new AppError('Food not found', 404);
+        }
+
+        return food;
+    }
+
+    // ✏️ CREATE / UPDATE / DELETE
+    async createFood(foodInfo, userId) {
+        const newFood = await Food.create({ ...foodInfo, postedBy: userId });
+        weeklyCache.flushAll(); // Clear all caches when food data changes
+        return newFood;
+    };
+    async updateFood(foodId, foodInfo, userId) {
+        const existingFood = await Food.findById(foodId);
+
+        if (!existingFood) {
+            throw new AppError('Food not found', 404);
+        }
+
+        if (existingFood.postedBy && existingFood.postedBy.toString() !== userId.toString()) {
+            throw new AppError('You are not authorized to update this food', 403);
+        }
+
+        const updatedFood = await Food.findByIdAndUpdate(
+            foodId,
+            { ...foodInfo },
+            {
+                runValidators: true,
+                new: true
+            }
+        );
+
+        weeklyCache.flushAll(); // Clear all caches when food data changes
+        return updatedFood;
+    }
+    async deleteFood(foodId, userId) {
+        const existingFood = await Food.findById(foodId);
+
+        if (!existingFood) {
+            throw new AppError('Food not found', 404);
+        }
+
+        if (existingFood.postedBy && existingFood.postedBy.toString() !== userId.toString()) {
+            throw new AppError('You are not authorized to delete this food', 403);
+        }
+
+        const deletedFood = await Food.findByIdAndDelete(foodId);
+
+        weeklyCache.flushAll(); // Clear all caches when food data changes
+        return deletedFood;
+    }
+
+
+    // Internal methods
+    getWeekDate(offset) {
+        const now = new Date();
+        const dayOfWeek = now.getDay();
+
+        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+
+        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+        const start = new Date(now);
+        start.setDate(now.getDate() - diffToMonday);
+
+        const weekDate = new Date(start);
+        weekDate.setDate(start.getDate() + offset);
+
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+
+
+        const formatDate = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        return {
+            startDate: formatDate(start),
+            weekDate: {
+                date: formatDate(weekDate),
+                dayName: dayName[weekDate.getDay()]
+            },
+            endDate: formatDate(end),
+        };
+    }
+
+    async getDayWithExclusions(user, usedIds, isDiff = false) {
+        const allergensCondition = {
+            allergens: { $nin: user.allergies || [] },
+            isActive: true,
+            _id: { $nin: Array.from(usedIds) }
+        };
+
+        const breakfast = await Food.aggregate(
+            await aggregateConditions(user, 'breakfast', allergensCondition, isDiff)
+        );
+
+        // if (isDiff)
+        //     console.log("Breakfast:", breakfast);
+
+        const lunch = await Food.aggregate(
+            await aggregateConditions(user, 'lunch', allergensCondition, isDiff)
+        );
+
+        // if (isDiff)
+        //     console.log("Lunch:", lunch);
+
+        const dinner = await Food.aggregate(
+            await aggregateConditions(user, 'dinner', allergensCondition, isDiff)
+        );
+
+        const snack = await Food.find({
+            meal: 'snack',
+            _id: { $nin: Array.from(usedIds) }
+        }).limit(5);
+
+        return {
+            breakfast: breakfast,
+            lunch: lunch,
+            dinner: dinner,
+            snack: snack
+        };
+    }
+
+    async generateDailyFallback(userId) {
         const user = await User.findById(userId);
 
         if (!user) {
@@ -21,9 +265,9 @@ class FoodService {
             isActive: true
         };
 
-        const breakfastFoods = await Food.aggregate(aggregateConditions(user, 'breakfast', allergensCondition));
-        const lunchFoods = await Food.aggregate(aggregateConditions(user, 'lunch', allergensCondition));
-        const dinnerFoods = await Food.aggregate(aggregateConditions(user, 'dinner', allergensCondition));
+        const breakfastFoods = await Food.aggregate(await aggregateConditions(user, 'breakfast', allergensCondition));
+        const lunchFoods = await Food.aggregate(await aggregateConditions(user, 'lunch', allergensCondition));
+        const dinnerFoods = await Food.aggregate(await aggregateConditions(user, 'dinner', allergensCondition));
         const snacks = await Food.find({ meal: 'snack' }).limit(5);
 
         return {
@@ -34,7 +278,7 @@ class FoodService {
         }
     }
 
-    async weeklyFoodRecommendation(userId) {
+    async generateWeeklyPlan(userId) {
         const usedIds = new Set();
         const days = [];
 
@@ -53,129 +297,39 @@ class FoodService {
                 meals: dayMeals
             });
 
-            Object.values(dayMeals).forEach(food => usedIds.add(food._id));
+            // Track all food IDs from arrays (each meal now has multiple foods)
+            Object.values(dayMeals).forEach(foodArray => {
+                if (Array.isArray(foodArray)) {
+                    foodArray.forEach(food => {
+                        if (food && food._id) {
+                            usedIds.add(food._id.toString());
+                        }
+                    });
+                }
+            });
 
+            // Reset diversity tracker every 3 days
             if (i > 0 && i % 3 === 0) usedIds.clear();
         }
 
         return days;
     }
 
-    async getFoodById(foodId) {
-        const food = await Food.findById(foodId);
-
-        if (!food) {
-            throw new AppError('Food not found', 404);
-        }
-
-        return food;
+    getCurrentWeekKey() {
+        const { startDate, endDate } = this.getWeekDate(0);
+        return `${startDate}_to_${endDate}`;
     }
 
-    // ✏️ CREATE / UPDATE / DELETE
-    async createFood(foodInfo, userId) {
-        const newFood = await Food.create({ ...foodInfo, postedBy: userId });
-        return newFood;
-    };
-    async updateFood(foodId, foodInfo, userId) {
-        if (updatedFood.postedBy.toString() !== userId.toString()) {
-            throw new AppError('You are not authorized to update this food', 403);
-        }
-
-        const updatedFood = await Food.findByIdAndUpdate(
-            foodId,
-            { ...foodInfo },
-            {
-                runValidators: true,
-                new: true
-            }
-        );
-
-        if (!updatedFood) {
-            throw new AppError('Food not found', 404);
-        }
-
-        return updatedFood;
-    }
-    async deleteFood(foodId, userId) {
-        if (deletedFood.postedBy.toString() !== userId.toString()) {
-            throw new AppError('You are not authorized to update this food', 403);
-        }
-
-        const deletedFood = await Food.findByIdAndDelete(foodId);
-
-        if (!deletedFood) {
-            throw new AppError('Food not found', 404);
-        }
-
-        return deletedFood;
-    }
-
-    getWeekDate(offset) {
+    getSecondsUntilMidnight() {
         const now = new Date();
-        const dayOfWeek = now.getDay();
-
-        const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-     
-        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-        const start = new Date(now);
-        start.setDate(now.getDate() - diffToMonday); 
-
-        const weekDate = new Date(start);
-        weekDate.setDate(start.getDate() + offset); 
-
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-
-        
-        const formatDate = (date) => {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0'); 
-            const d = String(date.getDate()).padStart(2, '0');      
-            return `${y}-${m}-${d}`;
-        };
-
-        return {
-            startDate: formatDate(start),
-            weekDate: {
-                date: formatDate(weekDate),
-                dayName: dayName[weekDate.getDay()]
-            },
-            endDate: formatDate(end),
-        };
+        const midnight = new Date(now);
+        midnight.setHours(24, 0, 0, 0);
+        return Math.floor((midnight - now) / 1000);
     }
 
-    async getDayWithExclusions(user, usedIds) {
-        const allergensCondition = {
-            allergens: { $nin: user.allergies || [] }, 
-            isActive: true,                             
-            _id: { $nin: Array.from(usedIds) }         
-        };
-
-        const breakfast = await Food.aggregate(
-            aggregateConditions(user, 'breakfast', allergensCondition)
-        );
-
-        const lunch = await Food.aggregate(
-            aggregateConditions(user, 'lunch', allergensCondition)
-        );
-
-        const dinner = await Food.aggregate(
-            aggregateConditions(user, 'dinner', allergensCondition)
-        );
-
-        const snack = await Food.find({
-            meal: 'snack',
-            _id: { $nin: Array.from(usedIds) }
-        }).limit(5);
-
-        return {
-            breakfast: breakfast[0],  
-            lunch: lunch[0],
-            dinner: dinner[0],
-            snack: snack[0]
-        };
+    async clearAllCache() {
+        weeklyCache.flushAll();
+        return { message: 'All weekly recommendation caches cleared' };
     }
 }
 

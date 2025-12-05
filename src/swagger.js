@@ -115,6 +115,7 @@ const swaggerOptions = {
             },
             isActive: { type: 'boolean', example: true },
             tags: { type: 'array', items: { type: 'string' }, example: ['high_protein','low_carb'] },
+            postedBy: { type: 'string', example: '507f1f77bcf86cd799439011', description: 'User ID who created this food (optional)' },
             createdAt: { type: 'string', format: 'date-time', example: '2024-10-07T10:30:00.000Z' },
             updatedAt: { type: 'string', format: 'date-time', example: '2024-10-07T10:30:00.000Z' }
           }
