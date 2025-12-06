@@ -426,7 +426,7 @@ exports.updateFood = catchAsync(async (req, res, next) => {
  *         description: The ID of the food to delete
  *     responses:
  *       200:
- *         description: Food deleted successfully
+ *         description: 200
  *         content:
  *           application/json:
  *             schema:
@@ -501,8 +501,63 @@ exports.clearCache = catchAsync(async (req, res, next) => {
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: number
+ *                   example: 201
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "6933899ead3ca3ce89445d23"
+ *                     user:
+ *                       type: string
+ *                       example: "692d24c28e5236c6f9ba3aa8"
+ *                     food:
+ *                       type: string
+ *                       example: "692ebe81e68471451b81a9d0"
+ *                     meal:
+ *                       type: string
+ *                       enum: [breakfast, lunch, dinner, snack]
+ *                       example: "breakfast"
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                       example: "2025-12-06"
+ *                     servings:
+ *                       type: number
+ *                       example: 1
+ *                     source:
+ *                       type: string
+ *                       enum: [recommended, non_recommended]
+ *                       example: "non_recommended"
+ *                     nutritionSnapshot:
+ *                       type: object
+ *                       properties:
+ *                         calories:
+ *                           type: number
+ *                           example: 380
+ *                         protein:
+ *                           type: number
+ *                           example: 10
+ *                         carbs:
+ *                           type: number
+ *                           example: 62
+ *                         fat:
+ *                           type: number
+ *                           example: 8
+ *                     loggedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-12-06T01:40:46.787Z"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-12-06T01:40:46.791Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-12-06T01:40:46.791Z"
  *       400:
  *         description: Validation error or food already logged for this meal today
  *       404:
@@ -615,10 +670,118 @@ exports.getTodayProgress = catchAsync(async (req, res, next) => {
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: number
+ *                   example: 200
  *                 data:
  *                   type: array
  *                   items:
  *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "69338a75026f40a1ce9b5acd"
+ *                       user:
+ *                         type: string
+ *                         example: "692d24c28e5236c6f9ba3aa8"
+ *                       food:
+ *                         $ref: '#/components/schemas/Food'
+ *                       meal:
+ *                         type: string
+ *                         enum: [breakfast, lunch, dinner, snack]
+ *                         example: "lunch"
+ *                       date:
+ *                         type: string
+ *                         format: date
+ *                         example: "2025-12-06"
+ *                       servings:
+ *                         type: number
+ *                         example: 1
+ *                       source:
+ *                         type: string
+ *                         enum: [recommended, non_recommended]
+ *                         example: "recommended"
+ *                       nutritionSnapshot:
+ *                         type: object
+ *                         properties:
+ *                           calories:
+ *                             type: number
+ *                             example: 920
+ *                           protein:
+ *                             type: number
+ *                             example: 56
+ *                           carbs:
+ *                             type: number
+ *                             example: 110
+ *                           fat:
+ *                             type: number
+ *                             example: 28
+ *                       loggedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-12-06T01:44:21.412Z"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-12-06T01:44:21.417Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-12-06T01:44:21.417Z"
+ *             example:
+ *               success: true
+ *               message: 200
+ *               data:
+ *                 - _id: "69338a75026f40a1ce9b5acd"
+ *                   user: "692d24c28e5236c6f9ba3aa8"
+ *                   food:
+ *                     _id: "692ebe81e68471451b81aa0e"
+ *                     name: "Mì Quảng (Quang Noodles)"
+ *                     description: "Turmeric noodles with shrimp, pork, peanuts, and rich broth."
+ *                     category: "grains"
+ *                     meal: "lunch"
+ *                     nutritionalInfo:
+ *                       calories: 920
+ *                       protein: 56
+ *                       carbohydrates: 110
+ *                       fat: 28
+ *                   meal: "lunch"
+ *                   date: "2025-12-06"
+ *                   servings: 1
+ *                   source: "recommended"
+ *                   nutritionSnapshot:
+ *                     calories: 920
+ *                     protein: 56
+ *                     carbs: 110
+ *                     fat: 28
+ *                   loggedAt: "2025-12-06T01:44:21.412Z"
+ *                   createdAt: "2025-12-06T01:44:21.417Z"
+ *                   updatedAt: "2025-12-06T01:44:21.417Z"
+ *                 - _id: "6933899ead3ca3ce89445d23"
+ *                   user: "692d24c28e5236c6f9ba3aa8"
+ *                   food:
+ *                     _id: "692ebe81e68471451b81a9d0"
+ *                     name: "Oatmeal with Banana"
+ *                     description: "Warm rolled oats topped with sliced banana and a drizzle of honey."
+ *                     category: "grains"
+ *                     meal: "breakfast"
+ *                     nutritionalInfo:
+ *                       calories: 380
+ *                       protein: 10
+ *                       carbohydrates: 62
+ *                       fat: 8
+ *                   meal: "breakfast"
+ *                   date: "2025-12-06"
+ *                   servings: 1
+ *                   source: "non_recommended"
+ *                   nutritionSnapshot:
+ *                     calories: 380
+ *                     protein: 10
+ *                     carbs: 62
+ *                     fat: 8
+ *                   loggedAt: "2025-12-06T01:40:46.787Z"
+ *                   createdAt: "2025-12-06T01:40:46.791Z"
+ *                   updatedAt: "2025-12-06T01:40:46.791Z"
  *       404:
  *         description: User not found
  */
@@ -643,7 +806,7 @@ exports.getAllFoodLogs = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *           format: date
- *           example: "2025-12-03"
+ *           example: "2025-12-06"
  *         description: Date in YYYY-MM-DD format
  *     responses:
  *       200:
@@ -656,10 +819,118 @@ exports.getAllFoodLogs = catchAsync(async (req, res, next) => {
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 message:
+ *                   type: number
+ *                   example: 200
  *                 data:
  *                   type: array
  *                   items:
  *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                         example: "6933899ead3ca3ce89445d23"
+ *                       user:
+ *                         type: string
+ *                         example: "692d24c28e5236c6f9ba3aa8"
+ *                       food:
+ *                         $ref: '#/components/schemas/Food'
+ *                       meal:
+ *                         type: string
+ *                         enum: [breakfast, lunch, dinner, snack]
+ *                         example: "breakfast"
+ *                       date:
+ *                         type: string
+ *                         format: date
+ *                         example: "2025-12-06"
+ *                       servings:
+ *                         type: number
+ *                         example: 1
+ *                       source:
+ *                         type: string
+ *                         enum: [recommended, non_recommended]
+ *                         example: "non_recommended"
+ *                       nutritionSnapshot:
+ *                         type: object
+ *                         properties:
+ *                           calories:
+ *                             type: number
+ *                             example: 380
+ *                           protein:
+ *                             type: number
+ *                             example: 10
+ *                           carbs:
+ *                             type: number
+ *                             example: 62
+ *                           fat:
+ *                             type: number
+ *                             example: 8
+ *                       loggedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-12-06T01:40:46.787Z"
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-12-06T01:40:46.791Z"
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                         example: "2025-12-06T01:40:46.791Z"
+ *             example:
+ *               success: true
+ *               message: 200
+ *               data:
+ *                 - _id: "6933899ead3ca3ce89445d23"
+ *                   user: "692d24c28e5236c6f9ba3aa8"
+ *                   food:
+ *                     _id: "692ebe81e68471451b81a9d0"
+ *                     name: "Oatmeal with Banana"
+ *                     description: "Warm rolled oats topped with sliced banana and a drizzle of honey."
+ *                     category: "grains"
+ *                     meal: "breakfast"
+ *                     nutritionalInfo:
+ *                       calories: 380
+ *                       protein: 10
+ *                       carbohydrates: 62
+ *                       fat: 8
+ *                   meal: "breakfast"
+ *                   date: "2025-12-06"
+ *                   servings: 1
+ *                   source: "non_recommended"
+ *                   nutritionSnapshot:
+ *                     calories: 380
+ *                     protein: 10
+ *                     carbs: 62
+ *                     fat: 8
+ *                   loggedAt: "2025-12-06T01:40:46.787Z"
+ *                   createdAt: "2025-12-06T01:40:46.791Z"
+ *                   updatedAt: "2025-12-06T01:40:46.791Z"
+ *                 - _id: "69338a75026f40a1ce9b5acd"
+ *                   user: "692d24c28e5236c6f9ba3aa8"
+ *                   food:
+ *                     _id: "692ebe81e68471451b81aa0e"
+ *                     name: "Mì Quảng (Quang Noodles)"
+ *                     description: "Turmeric noodles with shrimp, pork, peanuts, and rich broth."
+ *                     category: "grains"
+ *                     meal: "lunch"
+ *                     nutritionalInfo:
+ *                       calories: 920
+ *                       protein: 56
+ *                       carbohydrates: 110
+ *                       fat: 28
+ *                   meal: "lunch"
+ *                   date: "2025-12-06"
+ *                   servings: 1
+ *                   source: "recommended"
+ *                   nutritionSnapshot:
+ *                     calories: 920
+ *                     protein: 56
+ *                     carbs: 110
+ *                     fat: 28
+ *                   loggedAt: "2025-12-06T01:44:21.412Z"
+ *                   createdAt: "2025-12-06T01:44:21.417Z"
+ *                   updatedAt: "2025-12-06T01:44:21.417Z"
  *       404:
  *         description: User not found
  */

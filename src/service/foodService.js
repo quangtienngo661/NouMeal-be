@@ -241,7 +241,7 @@ class FoodService {
         }).limit(1);
 
         return {
-            breakfast: breakfast.toObjects(),
+            breakfast: breakfast,
             lunch: lunch,
             dinner: dinner,
             snack: snack
