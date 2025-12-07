@@ -115,6 +115,7 @@ const swaggerOptions = {
             },
             isActive: { type: 'boolean', example: true },
             tags: { type: 'array', items: { type: 'string' }, example: ['high_protein','low_carb'] },
+            postedBy: { type: 'string', example: '507f1f77bcf86cd799439011', description: 'User ID who created this food (optional)' },
             createdAt: { type: 'string', format: 'date-time', example: '2024-10-07T10:30:00.000Z' },
             updatedAt: { type: 'string', format: 'date-time', example: '2024-10-07T10:30:00.000Z' }
           }
@@ -196,13 +197,48 @@ const swaggerOptions = {
             tags: { type: 'array', items: { type: 'string' } }
           }
         },
+        FoodWithDiff: {
+          allOf: [
+            { $ref: '#/components/schemas/Food' },
+            {
+              type: 'object',
+              properties: {
+                calorieDiff: { 
+                  type: 'number', 
+                  example: 50.5,
+                  description: 'Absolute difference between food calories and ideal calories for this meal'
+                },
+                proteinDiff: { 
+                  type: 'number', 
+                  example: 10.2,
+                  description: 'Absolute difference between food protein and ideal protein for this meal'
+                },
+                carbDiff: { 
+                  type: 'number', 
+                  example: 5.8,
+                  description: 'Absolute difference between food carbohydrates and ideal carbohydrates for this meal'
+                },
+                fatDiff: { 
+                  type: 'number', 
+                  example: 3.1,
+                  description: 'Absolute difference between food fat and ideal fat for this meal'
+                },
+                totalDiff: { 
+                  type: 'number', 
+                  example: 69.6,
+                  description: 'Weighted sum of all nutritional differences (calorieDiff × 5 + proteinDiff + carbDiff + fatDiff) used for ranking'
+                }
+              }
+            }
+          ]
+        },
         FoodRecommendationResponse: {
           type: 'object',
           properties: {
-            breakfast: { type: 'array', items: { $ref: '#/components/schemas/Food' } },
-            lunch: { type: 'array', items: { $ref: '#/components/schemas/Food' } },
-            dinner: { type: 'array', items: { $ref: '#/components/schemas/Food' } },
-            snack: { type: 'array', items: { $ref: '#/components/schemas/Food' } }
+            breakfast: { $ref: '#/components/schemas/FoodWithDiff' },
+            lunch: { $ref: '#/components/schemas/FoodWithDiff' },
+            dinner: { $ref: '#/components/schemas/FoodWithDiff' },
+            snack: { $ref: '#/components/schemas/FoodWithDiff' }
           }
         },
         FoodListResponse: {
