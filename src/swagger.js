@@ -374,7 +374,7 @@ const swaggerOptions = {
                 type: 'string',
               },
               description: 'User food allergies',
-              example: ['nuts', 'dairy'],
+              example: ['peanuts', 'dairy'],
             },
             favoriteFoods: {
               type: 'array',
@@ -407,6 +407,12 @@ const swaggerOptions = {
               description: 'Last update timestamp',
               example: '2024-10-07T10:30:00.000Z',
             },
+            role: {
+              type: 'string',
+              description: 'User role in the system',
+              enum: ['user', 'admin'],
+              example: 'user'
+            },
           },
         },
         UserRegistrationRequest: {
@@ -419,6 +425,7 @@ const swaggerOptions = {
             'gender',
             'height',
             'weight',
+            'activity',
             'goal',
           ],
           properties: {
@@ -454,6 +461,18 @@ const swaggerOptions = {
               enum: ['male', 'female', 'other'],
               description: 'Gender',
               example: 'male',
+            },
+            activity: {
+              type: 'string',
+              description: 'User activity level',
+              enum: [
+                'sedentary',
+                'lightly_active',
+                'moderately_active',
+                'very_active',
+                'extra_active',
+              ],
+              example: 'moderately_active',
             },
             height: {
               type: 'number',
@@ -495,7 +514,7 @@ const swaggerOptions = {
                 type: 'string',
               },
               description: 'Food allergies (optional)',
-              example: ['nuts', 'dairy'],
+              example: ['peanuts', 'dairy'],
             },
           },
         },
@@ -579,7 +598,7 @@ const swaggerOptions = {
                 type: 'string',
               },
               description: 'Food allergies',
-              example: ['nuts', 'dairy'],
+              example: ['peanuts', 'dairy'],
             },
           },
         },

@@ -42,9 +42,12 @@ const handleValidationErrors = (req, res, next) => {
  *                 gender: "male"
  *                 height: 175
  *                 weight: 70
+ *                 activity: "moderately_active"
  *                 goal: "build_muscle"
  *                 preferences: ["vegetarian", "high_protein"]
  *                 allergies: ["nuts"]
+ *                 role: "user"
+ *                 favoriteFoods: []
  *     responses:
  *       201:
  *         description: User registered successfully
