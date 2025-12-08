@@ -6,6 +6,8 @@ const NodeCache = require("node-cache");
 const weeklyCache = new NodeCache({ checkperiod: 3600 });
 const FoodLog = require("../model/foodLogModel");
 const FoodLogService = require("./foodLogService");
+const mongoose = require("mongoose");
+const { all } = require("axios");
 
 class FoodService {
     // 📦 READ operations
@@ -223,6 +225,8 @@ class FoodService {
             _id: { $nin: Array.from(usedIds) }
         };
 
+        console.log(allergensCondition);
+
         const breakfast = await Food.aggregate(
             await aggregateConditions(user, 'breakfast', allergensCondition, isDiff, isCached)
         );
@@ -297,7 +301,7 @@ class FoodService {
                 if (Array.isArray(foodArray)) {
                     foodArray.forEach(food => {
                         if (food && food._id) {
-                            usedIds.add(food._id.toString());
+                            usedIds.add(food._id);
                         }
                     });
                 }
