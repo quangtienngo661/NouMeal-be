@@ -89,6 +89,27 @@ const userSchema = new mongoose.Schema(
       {
         type: String,
         trim: true,
+        enum: {
+          values: [
+            'vegetarian',
+            'vegan',
+            'pescatarian',
+            'keto',
+            'paleo',
+            'low_carb',
+            'low_fat',
+            'high_protein',
+            'gluten_free',
+            'dairy_free',
+            'halal',
+            'kosher',
+            'organic',
+            'low_sodium',
+            'diabetic_friendly',
+            'heart_healthy',
+          ],
+          message: 'Invalid dietary preference',
+        },
       },
     ],
     allergies: [
