@@ -225,7 +225,7 @@ class FoodService {
             _id: { $nin: Array.from(usedIds) }
         };
 
-        console.log(allergensCondition);
+        // console.log(allergensCondition);
 
         const breakfast = await Food.aggregate(
             await aggregateConditions(user, 'breakfast', allergensCondition, isDiff, isCached)
