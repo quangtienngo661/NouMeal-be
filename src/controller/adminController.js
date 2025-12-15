@@ -73,7 +73,43 @@ async function promoteToAdmin(req, res, next) {
   }
 }
 
+// Activate or deactivate a user by userId (admin-only)
+async function toggleUserStatus(req, res, next) {
+  try {
+    const { userId } = req.params;
+    const { isActive } = req.body;
+
+    if (!userId) return next(new AppError('User ID is required', 400));
+    if (typeof isActive !== 'boolean') return next(new AppError('isActive must be a boolean value', 400));
+
+    const user = await User.findById(userId);
+    if (!user) return next(new AppError('User not found', 404));
+
+    // Prevent admin from deactivating themselves
+    if (req.user && req.user.id === userId && !isActive) {
+      return next(new AppError('You cannot deactivate your own account', 400));
+    }
+
+    user.isActive = isActive;
+    await user.save({ validateBeforeSave: false });
+
+    const action = isActive ? 'activated' : 'deactivated';
+    res.json({
+      success: true,
+      message: `User ${action} successfully`,
+      data: {
+        userId: user._id,
+        email: user.email,
+        isActive: user.isActive
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getAllUsers,
   promoteToAdmin,
+  toggleUserStatus,
 };
