@@ -31,7 +31,8 @@ const authRoute = require('./route/authRoute');
 const foodRoute = require('./route/foodRoute');
 const reportRoute = require('./route/reportRoute');
 const adminRoute = require('./route/adminRoute');
-
+const postRoute = require('./route/postRoute');
+const commentRoute = require('./route/commentRoute');
 // ========= MIDDLEWARE SECTION =========
 const app = express();
 connectDb();
@@ -53,25 +54,21 @@ app.use((req, res, next) => {
 });
 
 // Swagger UI setup
-const { getSwaggerSpec } = require('./swagger');  
+const { getSwaggerSpec } = require('./swagger');
 
-app.use(
-  '/api-docs',
-  swaggerUi.serve,
-  (req, res, next) => {
-    return swaggerUi.setup(getSwaggerSpec(), swaggerUiOptions)(req, res, next);
-  }
-);
-
+app.use('/api-docs', swaggerUi.serve, (req, res, next) => {
+  return swaggerUi.setup(getSwaggerSpec(), swaggerUiOptions)(req, res, next);
+});
 
 // Routes
 app.use('/api/v1/users', userRoute); // Authentication routes
 app.use('/api/v1/profile', profileRoute); // Profile management routes
 app.use('/api/v1/auth', authRoute); // Enhanced authentication routes
-app.use('/api/v1/foods', foodRoute) // Food information
+app.use('/api/v1/foods', foodRoute); // Food information
 app.use('/api/v1/reports', reportRoute); // Reports and statistics
 app.use('/api/v1/admin', adminRoute); // Admin utilities
-
+app.use('/api/v1/posts', postRoute); // Posts and social features
+app.use('/api/v1/comments', commentRoute); // Comments on posts
 // Home route
 app.get('/', (req, res) => {
   return res.end('Welcome to MealGenie API');
