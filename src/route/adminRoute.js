@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, restrictTo } = require('../middleware/authMiddleware');
-const { getAllUsers, promoteToAdmin, toggleUserStatus } = require('../controller/adminController');
+const { getAllUsers, promoteToAdmin, demoteToUser, toggleUserStatus } = require('../controller/adminController');
 
 /**
  * @swagger
@@ -147,6 +147,62 @@ router.get('/users', authenticate, restrictTo('admin'), getAllUsers);
  *         description: User not found
  */
 router.post('/promote', authenticate, restrictTo('admin'), promoteToAdmin);
+
+/**
+ * @swagger
+ * /api/v1/admin/demote:
+ *   post:
+ *     summary: Demote an admin to user
+ *     description: Demote an existing admin to regular user role by email or userId. Admin only. Admins cannot demote themselves.
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email of the admin to demote
+ *                 example: admin@example.com
+ *               userId:
+ *                 type: string
+ *                 description: ID of the admin to demote
+ *                 example: 507f1f77bcf86cd799439011
+ *     responses:
+ *       200:
+ *         description: Admin demoted to user successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Admin demoted to user
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     email:
+ *                       type: string
+ *                       example: admin@example.com
+ *       400:
+ *         description: Bad request - Provide email or userId, or cannot demote yourself
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       403:
+ *         description: Forbidden - Admin access required
+ *       404:
+ *         description: User not found
+ */
+router.post('/demote', authenticate, restrictTo('admin'), demoteToUser);
 
 /**
  * @swagger

@@ -73,6 +73,39 @@ async function promoteToAdmin(req, res, next) {
   }
 }
 
+// Demote an admin to user by email or id
+async function demoteToUser(req, res, next) {
+  try {
+    const { email, userId } = req.body;
+    if (!email && !userId) return next(new AppError('Provide email or userId to demote', 400));
+
+    const filter = email ? { email } : { _id: userId };
+    const user = await User.findOne(filter).select('+password');
+    if (!user) return next(new AppError('User not found', 404));
+
+    if (user.role === 'user') {
+      return res.json({ success: true, message: 'User is already a regular user', data: { email: user.email } });
+    }
+
+    // Prevent demoting root admin
+    if (user.email === 'admin@example.com') {
+      return next(new AppError('Root admin account cannot be demoted', 403));
+    }
+
+    // Prevent admin from demoting themselves
+    if (req.user && (req.user.id === user._id.toString() || req.user.email === user.email)) {
+      return next(new AppError('You cannot demote yourself', 400));
+    }
+
+    user.role = 'user';
+    await user.save({ validateBeforeSave: false });
+
+    res.json({ success: true, message: 'Admin demoted to user', data: { email: user.email } });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Activate or deactivate a user by userId (admin-only)
 async function toggleUserStatus(req, res, next) {
   try {
@@ -111,5 +144,6 @@ async function toggleUserStatus(req, res, next) {
 module.exports = {
   getAllUsers,
   promoteToAdmin,
+  demoteToUser,
   toggleUserStatus,
 };
