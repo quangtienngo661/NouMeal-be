@@ -196,29 +196,6 @@ class UserService {
       throw error;
     }
   }
-
-  async getDailyCalorieNeeds(userId) {
-    try {
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-
-      const { totalCalories, macroProfile } = nutritiousFoodConditions(user);
-
-      return {
-        totalCalories,
-        macroDistribution: {
-          protein: Math.round(macroProfile.protein),
-          carbohydrates: Math.round(macroProfile.carb),
-          fat: Math.round(macroProfile.fat),
-        },
-      };
-    }
-    catch (error) {
-      throw error;
-    }
-  }
 }
 
 module.exports = new UserService();
