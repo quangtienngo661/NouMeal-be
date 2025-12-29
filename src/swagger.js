@@ -63,7 +63,7 @@ const swaggerOptions = {
                   step: { type: 'integer', minimum: 1, example: 1 },
                   description: { type: 'string', example: 'Season chicken with salt and pepper.' }
                 },
-                required: ['step','description']
+                required: ['step', 'description']
               },
               example: [
                 { step: 1, description: 'Season chicken with salt and pepper.' },
@@ -75,11 +75,11 @@ const swaggerOptions = {
             category: {
               type: 'string',
               enum: [
-                'fruits','vegetables','grains','protein','dairy','fats','beverages','snacks','desserts','spices'
+                'fruits', 'vegetables', 'grains', 'protein', 'dairy', 'fats', 'beverages', 'snacks', 'desserts', 'spices'
               ],
               example: 'protein'
             },
-            meal: { type: 'string', enum: ['breakfast','lunch','dinner','snack'], example: 'lunch' },
+            meal: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'], example: 'lunch' },
             ingredients: {
               type: 'array',
               items: {
@@ -108,13 +108,13 @@ const swaggerOptions = {
               items: {
                 type: 'string',
                 enum: [
-                  'peanuts','tree_nuts','milk','eggs','wheat_gluten','fish','shellfish','soy','corn','sesame','pineapple','strawberry','banana','tomato','apple','chocolate','honey','mustard','other'
+                  'peanuts', 'tree_nuts', 'milk', 'eggs', 'wheat_gluten', 'fish', 'shellfish', 'soy', 'corn', 'sesame', 'pineapple', 'strawberry', 'banana', 'tomato', 'apple', 'chocolate', 'honey', 'mustard', 'other'
                 ]
               },
               example: ['milk']
             },
             isActive: { type: 'boolean', example: true },
-            tags: { type: 'array', items: { type: 'string' }, example: ['high_protein','low_carb'] },
+            tags: { type: 'array', items: { type: 'string' }, example: ['high_protein', 'low_carb'] },
             postedBy: { type: 'string', example: '507f1f77bcf86cd799439011', description: 'User ID who created this food (optional)' },
             createdAt: { type: 'string', format: 'date-time', example: '2024-10-07T10:30:00.000Z' },
             updatedAt: { type: 'string', format: 'date-time', example: '2024-10-07T10:30:00.000Z' }
@@ -122,7 +122,7 @@ const swaggerOptions = {
         },
         FoodCreateRequest: {
           type: 'object',
-          required: ['name','category'],
+          required: ['name', 'category'],
           properties: {
             name: { type: 'string', example: 'Oatmeal with Berries' },
             description: { type: 'string', example: 'Healthy oatmeal topped with fresh berries.' },
@@ -134,7 +134,7 @@ const swaggerOptions = {
                   step: { type: 'integer', minimum: 1 },
                   description: { type: 'string' }
                 },
-                required: ['step','description']
+                required: ['step', 'description']
               },
               example: [
                 { step: 1, description: 'Boil oats with milk for 5 minutes.' },
@@ -142,10 +142,12 @@ const swaggerOptions = {
               ]
             },
             imageUrl: { type: 'string', format: 'uri', example: 'https://cdn.example.com/images/oatmeal-berries.jpg' },
-            category: { type: 'string', enum: [
-              'fruits','vegetables','grains','protein','dairy','fats','beverages','snacks','desserts','spices'
-            ], example: 'grains' },
-            meal: { type: 'string', enum: ['breakfast','lunch','dinner','snack'], example: 'breakfast' },
+            category: {
+              type: 'string', enum: [
+                'fruits', 'vegetables', 'grains', 'protein', 'dairy', 'fats', 'beverages', 'snacks', 'desserts', 'spices'
+              ], example: 'grains'
+            },
+            meal: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'], example: 'breakfast' },
             ingredients: {
               type: 'array',
               items: { type: 'object', properties: { name: { type: 'string', example: 'Oats' }, amount: { type: 'string', example: '1 cup' } } }
@@ -171,10 +173,12 @@ const swaggerOptions = {
               }
             },
             imageUrl: { type: 'string', format: 'uri' },
-            category: { type: 'string', enum: [
-              'fruits','vegetables','grains','protein','dairy','fats','beverages','snacks','desserts','spices'
-            ] },
-            meal: { type: 'string', enum: ['breakfast','lunch','dinner','snack'] },
+            category: {
+              type: 'string', enum: [
+                'fruits', 'vegetables', 'grains', 'protein', 'dairy', 'fats', 'beverages', 'snacks', 'desserts', 'spices'
+              ]
+            },
+            meal: { type: 'string', enum: ['breakfast', 'lunch', 'dinner', 'snack'] },
             ingredients: {
               type: 'array',
               items: { type: 'object', properties: { name: { type: 'string' }, amount: { type: 'string' } } }
@@ -203,28 +207,28 @@ const swaggerOptions = {
             {
               type: 'object',
               properties: {
-                calorieDiff: { 
-                  type: 'number', 
+                calorieDiff: {
+                  type: 'number',
                   example: 50.5,
                   description: 'Absolute difference between food calories and ideal calories for this meal'
                 },
-                proteinDiff: { 
-                  type: 'number', 
+                proteinDiff: {
+                  type: 'number',
                   example: 10.2,
                   description: 'Absolute difference between food protein and ideal protein for this meal'
                 },
-                carbDiff: { 
-                  type: 'number', 
+                carbDiff: {
+                  type: 'number',
                   example: 5.8,
                   description: 'Absolute difference between food carbohydrates and ideal carbohydrates for this meal'
                 },
-                fatDiff: { 
-                  type: 'number', 
+                fatDiff: {
+                  type: 'number',
                   example: 3.1,
                   description: 'Absolute difference between food fat and ideal fat for this meal'
                 },
-                totalDiff: { 
-                  type: 'number', 
+                totalDiff: {
+                  type: 'number',
                   example: 69.6,
                   description: 'Weighted sum of all nutritional differences (calorieDiff × 5 + proteinDiff + carbDiff + fatDiff) used for ranking'
                 }
@@ -249,6 +253,16 @@ const swaggerOptions = {
             data: {
               type: 'array',
               items: { $ref: '#/components/schemas/Food' }
+            },
+            meta: {
+              type: 'object',
+              additionalProperties: true,
+              example: {
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: 1,
+                itemsPerPage: 10
+              }
             }
           }
         },
@@ -848,7 +862,7 @@ function isObject(item) {
 async function mergePythonSpecs() {
   try {
     console.log('🔄 Attempting to merge Python Swagger specifications...');
-    
+
     const fetchPromises = [
       axios.get('http://localhost:5001/api-docs/apispec.json', { timeout: 3000 })
         .catch(err => {
@@ -867,7 +881,7 @@ async function mergePythonSpecs() {
     // Merge AI Service specs
     if (aiSpecResponse && aiSpecResponse.data) {
       const aiSpec = aiSpecResponse.data;
-      
+
       // Merge paths
       swaggerSpec.paths = {
         ...(swaggerSpec.paths || {}),
@@ -895,7 +909,7 @@ async function mergePythonSpecs() {
     // Merge Chatbot Service specs
     if (botSpecResponse && botSpecResponse.data) {
       const botSpec = botSpecResponse.data;
-      
+
       // Merge paths
       swaggerSpec.paths = {
         ...(swaggerSpec.paths || {}),
@@ -974,8 +988,8 @@ const refreshPythonSpecs = mergePythonSpecs;
 module.exports = {
   swaggerSpec,
   getSwaggerSpec,
-  refreshPythonSpecs: mergePythonSpecs, 
-  mergePythonSpecs,                     
+  refreshPythonSpecs: mergePythonSpecs,
+  mergePythonSpecs,
   swaggerUi,
   swaggerUiOptions,
 };
