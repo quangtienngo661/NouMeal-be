@@ -239,7 +239,15 @@ class FoodService {
             throw new AppError('User not found', 404);
         }
 
-        if (!existingFood.postedBy || user.role != "admin" && existingFood.postedBy.toString() !== userId.toString()) {
+
+        const isAdmin = user.role === "admin";
+        
+        let isOwner = false;
+        if (!isAdmin) {
+            isOwner = existingFood.postedBy.toString() === userId.toString();
+        }
+
+        if (!isAdmin && !isOwner) {
             throw new AppError('You are not authorized to update this food', 403);
         }
 
