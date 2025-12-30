@@ -233,13 +233,19 @@ class FoodService {
             throw new AppError('Food not found', 404);
         }
 
-        if (!existingFood.postedBy || existingFood.postedBy.toString() !== userId.toString()) {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+
+        if (!existingFood.postedBy || user.role != "admin" && existingFood.postedBy.toString() !== userId.toString()) {
             throw new AppError('You are not authorized to update this food', 403);
         }
 
         const updatedFood = await Food.findByIdAndUpdate(
             foodId,
-            { ...foodInfo, postedBy: userId },
+            { ...foodInfo },
             {
                 runValidators: true,
                 new: true
