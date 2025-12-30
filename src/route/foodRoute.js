@@ -15,7 +15,8 @@ const {
     getFoodLog,
     createFoodByUser,
     getAdminFoods,
-    getUserFoods,
+    getOwnFoods,
+    getFoodsByUserId,
     deleteFoodByAdmin,
     deleteFoodByUser
 } = require('../controller/foodController');
@@ -35,7 +36,8 @@ router.get('/recommended', authenticate, getAdaptiveRecommendation);
 router.get('/weekly-recommended', authenticate, weeklyFoodsRecommendation);
 
 // Get foods by source (must come before /:foodId)
-router.get('/user', authenticate, getUserFoods);
+router.get('/user', authenticate, getOwnFoods);
+router.get('/user/:userId', authenticate, getFoodsByUserId);
 router.get('/admin', authenticate, restrictTo('admin'), getAdminFoods);
 
 // 📝 FOOD LOGGING - Must come before /:foodId to avoid conflicts

@@ -394,11 +394,13 @@ exports.getFoodById = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-exports.getUserFoods = catchAsync(async (req, res, next) => {
+exports.getOwnFoods = catchAsync(async (req, res, next) => {
     const { page, limit } = req.query;
     const userId = req.user._id;
-    
-    const { result, meta } = await FoodService.getUserFoods(userId, page, limit);
+
+    console.log("userId:", userId);
+
+    const { result, meta } = await FoodService.getFoodsByUserId(userId, page, limit);
     return res.ok(result, 200, "Success", meta);
 });
 
@@ -444,8 +446,69 @@ exports.getUserFoods = catchAsync(async (req, res, next) => {
  */
 exports.getAdminFoods = catchAsync(async (req, res, next) => {
     const { page, limit } = req.query;
-    
+
     const { result, meta } = await FoodService.getAdminFoods(page, limit);
+    return res.ok(result, 200, "Success", meta);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/user/{userId}:
+ *   get:
+ *     summary: Get foods created by other user
+ *     description: Retrieve all foods posted by the specified user with pagination support.
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user whose foods to retrieve
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: User foods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FoodListResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.query;
+    const userId = req.params.userId;
+
+    const { result, meta } = await FoodService.getFoodsByUserId(userId, page, limit);
     return res.ok(result, 200, "Success", meta);
 });
 
@@ -665,7 +728,7 @@ exports.updateFood = catchAsync(async (req, res, next) => {
  */
 exports.deleteFoodByAdmin = catchAsync(async (req, res, next) => {
     const { foodId } = req.params;
-    
+
     const result = await FoodService.deleteFoodByAdmin(foodId);
     return res.ok(result, 200, "Food deleted successfully");
 });
@@ -730,7 +793,7 @@ exports.deleteFoodByAdmin = catchAsync(async (req, res, next) => {
 exports.deleteFoodByUser = catchAsync(async (req, res, next) => {
     const { foodId } = req.params;
     const userId = req.user._id;
-    
+
     const result = await FoodService.deleteFoodByUser(foodId, userId);
     return res.ok(result, 200, "Food deleted successfully");
 });
