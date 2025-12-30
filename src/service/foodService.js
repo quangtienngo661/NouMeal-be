@@ -166,10 +166,12 @@ class FoodService {
             throw new AppError('Food not found', 404);
         }
 
+        console.log("food:", food);
+
         return food;
     }
 
-    async getUserFoods(userId, page = 1, limit = 10) {
+    async getFoodsByUserId(userId, page = 1, limit = 10) {
         const skip = (page - 1) * limit;
         const parsedLimit = parseInt(limit);
 
