@@ -48,8 +48,8 @@ router.get('/progress/today', authenticate, getTodayProgress);
 router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById);
 
 // ✏️ CREATE / UPDATE / DELETE
-router.post('/admin/create', authenticate, restrictTo('admin'), validateCreateFood, handleValidationErrors, createFoodByAdmin);
-router.post('/user/create', authenticate, validateCreateFood, handleValidationErrors, createFoodByUser);
+router.post('/admin', authenticate, restrictTo('admin'), validateCreateFood, handleValidationErrors, createFoodByAdmin);
+router.post('/user', authenticate, validateCreateFood, handleValidationErrors, createFoodByUser);
 router.patch(
     '/:foodId',
     authenticate,
