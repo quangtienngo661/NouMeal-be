@@ -17,51 +17,75 @@ const postService = require('../service/postService');
  *           schema:
  *             type: object
  *             required:
- *               - type
- *               - content
+ *               - post_type
+ *               - text
  *             properties:
- *               type:
+ *               post_type:
  *                 type: string
  *                 enum: [food_review, recipe, general]
  *                 description: Type of post
- *               content:
+ *               text:
+ *                 type: string
+ *                 maxLength: 5000
+ *                 description: Post content text
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Array of image URLs
+ *               food_review:
  *                 type: object
- *                 required:
- *                   - text
+ *                 description: Required when post_type is food_review
  *                 properties:
- *                   text:
+ *                   dish_name:
  *                     type: string
- *                     maxLength: 5000
- *                   media:
+ *                   calories:
+ *                     type: number
+ *                   protein:
+ *                     type: number
+ *                   carbohydrates:
+ *                     type: number
+ *                   fat:
+ *                     type: number
+ *                   fiber:
+ *                     type: number
+ *                   rating:
+ *                     type: number
+ *                     minimum: 1
+ *                     maximum: 5
+ *                   tags:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *               recipe:
+ *                 type: object
+ *                 description: Required when post_type is recipe
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                   ingredients:
  *                     type: array
  *                     items:
  *                       type: object
  *                       properties:
- *                         type:
+ *                         name:
  *                           type: string
- *                           enum: [image, video]
- *                         url:
+ *                         amount:
  *                           type: string
- *                         thumbnailUrl:
+ *                         unit:
  *                           type: string
- *               location:
- *                 type: object
- *                 properties:
- *                   name:
+ *                   steps:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   cooking_time:
+ *                     type: number
+ *                     description: Cooking time in minutes
+ *                   servings:
+ *                     type: number
+ *                   difficulty:
  *                     type: string
- *                   address:
- *                     type: string
- *                   coordinates:
- *                     type: object
- *                     properties:
- *                       lat:
- *                         type: number
- *                       lng:
- *                         type: number
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
+ *                     enum: [easy, medium, hard]
  *               visibility:
  *                 type: string
  *                 enum: [public, followers, private]
@@ -70,29 +94,57 @@ const postService = require('../service/postService');
  *             foodReview:
  *               summary: Create food review
  *               value:
- *                 type: "food_review"
- *                 content:
- *                   text: "Amazing pho! The broth is so flavorful."
- *                   media:
- *                     - type: "image"
- *                       url: "https://example.com/photo.jpg"
- *                       thumbnailUrl: "https://example.com/photo_thumb.jpg"
- *                 location:
- *                   name: "Pho 24"
- *                   address: "123 Nguyen Hue St, District 1"
- *                   coordinates:
- *                     lat: 10.7769
- *                     lng: 106.7009
- *                 tags: ["vietnamese", "pho", "breakfast"]
+ *                 post_type: "food_review"
+ *                 text: "Amazing pho! The broth is so flavorful and the meat is tender."
+ *                 images:
+ *                   - "https://example.com/pho1.jpg"
+ *                   - "https://example.com/pho2.jpg"
+ *                 food_review:
+ *                   dish_name: "Phở Bò"
+ *                   calories: 450
+ *                   protein: 25
+ *                   carbohydrates: 60
+ *                   fat: 10
+ *                   fiber: 3
+ *                   rating: 5
+ *                   tags: ["vietnamese", "pho", "breakfast", "beef"]
  *                 visibility: "public"
  *             recipe:
  *               summary: Create recipe post
  *               value:
- *                 type: "recipe"
- *                 content:
- *                   text: "My secret pho recipe..."
- *                   media: []
- *                 tags: ["recipe", "vietnamese"]
+ *                 post_type: "recipe"
+ *                 text: "My secret pho recipe that's been in my family for generations!"
+ *                 images:
+ *                   - "https://example.com/recipe-cover.jpg"
+ *                 recipe:
+ *                   title: "Authentic Vietnamese Pho"
+ *                   ingredients:
+ *                     - name: "Beef bones"
+ *                       amount: "2"
+ *                       unit: "kg"
+ *                     - name: "Rice noodles"
+ *                       amount: "500"
+ *                       unit: "g"
+ *                     - name: "Star anise"
+ *                       amount: "3"
+ *                       unit: "pieces"
+ *                   steps:
+ *                     - "Blanch beef bones in boiling water for 5 minutes"
+ *                     - "Roast star anise and spices until fragrant"
+ *                     - "Simmer bones with spices for 8-10 hours"
+ *                     - "Cook rice noodles according to package"
+ *                     - "Assemble and serve hot"
+ *                   cooking_time: 600
+ *                   servings: 4
+ *                   difficulty: "medium"
+ *                 visibility: "public"
+ *             general:
+ *               summary: Create general post
+ *               value:
+ *                 post_type: "general"
+ *                 text: "Had an amazing dinner with friends tonight! 🍜"
+ *                 images:
+ *                   - "https://example.com/dinner.jpg"
  *                 visibility: "public"
  *     responses:
  *       201:
@@ -110,6 +162,31 @@ const postService = require('../service/postService');
  *                   example: "Post created successfully"
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     post_type:
+ *                       type: string
+ *                     author:
+ *                       type: object
+ *                     text:
+ *                       type: string
+ *                     images:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     food_review:
+ *                       type: object
+ *                     recipe:
+ *                       type: object
+ *                     engagement:
+ *                       type: object
+ *                     visibility:
+ *                       type: string
+ *                     createdAt:
+ *                       type: string
+ *                     updatedAt:
+ *                       type: string
  *       400:
  *         description: Validation error
  *         content:
@@ -128,7 +205,7 @@ const postService = require('../service/postService');
  *                   properties:
  *                     details:
  *                       type: string
- *                       example: "Post type is required"
+ *                       example: "Post text is required"
  *       401:
  *         description: Authentication required
  *         content:
@@ -183,26 +260,26 @@ const postService = require('../service/postService');
  *           type: array
  *           items:
  *             type: string
- *         description: Filter by tags (can be multiple)
+ *         description: Filter by food review tags (can be multiple)
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
- *         description: Search in post content and title
+ *         description: Search in post text, recipe title, ingredients, and dish names
  *       - in: query
  *         name: minRating
  *         schema:
  *           type: number
- *           minimum: 0
+ *           minimum: 1
  *           maximum: 5
- *         description: Minimum rating filter
+ *         description: Minimum rating filter (for food reviews)
  *       - in: query
  *         name: maxRating
  *         schema:
  *           type: number
- *           minimum: 0
+ *           minimum: 1
  *           maximum: 5
- *         description: Maximum rating filter
+ *         description: Maximum rating filter (for food reviews)
  *       - in: query
  *         name: difficulty
  *         schema:
@@ -252,6 +329,31 @@ const postService = require('../service/postService');
  *                       type: array
  *                       items:
  *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           post_type:
+ *                             type: string
+ *                           author:
+ *                             type: object
+ *                           text:
+ *                             type: string
+ *                           images:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           food_review:
+ *                             type: object
+ *                           recipe:
+ *                             type: object
+ *                           engagement:
+ *                             type: object
+ *                           visibility:
+ *                             type: string
+ *                           createdAt:
+ *                             type: string
+ *                           updatedAt:
+ *                             type: string
  *                     pagination:
  *                       type: object
  *                       properties:
@@ -261,7 +363,7 @@ const postService = require('../service/postService');
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
  *       500:
  *         description: Internal server error
@@ -364,6 +466,84 @@ const getPosts = catchAsync(async (req, res, next) => {
  *                   example: true
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     post_type:
+ *                       type: string
+ *                       enum: [food_review, recipe, general]
+ *                     author:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         username:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                     text:
+ *                       type: string
+ *                     images:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     food_review:
+ *                       type: object
+ *                       properties:
+ *                         dish_name:
+ *                           type: string
+ *                         calories:
+ *                           type: number
+ *                         protein:
+ *                           type: number
+ *                         carbohydrates:
+ *                           type: number
+ *                         fat:
+ *                           type: number
+ *                         fiber:
+ *                           type: number
+ *                         rating:
+ *                           type: number
+ *                         tags:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                     recipe:
+ *                       type: object
+ *                       properties:
+ *                         title:
+ *                           type: string
+ *                         ingredients:
+ *                           type: array
+ *                           items:
+ *                             type: object
+ *                         steps:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                         cooking_time:
+ *                           type: number
+ *                         servings:
+ *                           type: number
+ *                         difficulty:
+ *                           type: string
+ *                     engagement:
+ *                       type: object
+ *                       properties:
+ *                         likes_count:
+ *                           type: number
+ *                         comments_count:
+ *                           type: number
+ *                         shares_count:
+ *                           type: number
+ *                     visibility:
+ *                       type: string
+ *                     createdAt:
+ *                       type: string
+ *                     updatedAt:
+ *                       type: string
  *       404:
  *         description: Post not found
  *         content:
@@ -410,55 +590,98 @@ const getPosts = catchAsync(async (req, res, next) => {
  *           schema:
  *             type: object
  *             properties:
- *               content:
+ *               text:
+ *                 type: string
+ *                 maxLength: 5000
+ *                 description: Updated post text
+ *               images:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Updated array of image URLs
+ *               food_review:
  *                 type: object
+ *                 description: Update food review data
  *                 properties:
- *                   text:
+ *                   dish_name:
  *                     type: string
- *                     maxLength: 5000
- *                   media:
+ *                   calories:
+ *                     type: number
+ *                   protein:
+ *                     type: number
+ *                   carbohydrates:
+ *                     type: number
+ *                   fat:
+ *                     type: number
+ *                   fiber:
+ *                     type: number
+ *                   rating:
+ *                     type: number
+ *                     minimum: 1
+ *                     maximum: 5
+ *                   tags:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *               recipe:
+ *                 type: object
+ *                 description: Update recipe data
+ *                 properties:
+ *                   title:
+ *                     type: string
+ *                   ingredients:
  *                     type: array
  *                     items:
  *                       type: object
  *                       properties:
- *                         type:
+ *                         name:
  *                           type: string
- *                           enum: [image, video]
- *                         url:
+ *                         amount:
  *                           type: string
- *                         thumbnailUrl:
+ *                         unit:
  *                           type: string
- *               location:
- *                 type: object
- *                 properties:
- *                   name:
+ *                   steps:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                   cooking_time:
+ *                     type: number
+ *                   servings:
+ *                     type: number
+ *                   difficulty:
  *                     type: string
- *                   address:
- *                     type: string
- *                   coordinates:
- *                     type: object
- *                     properties:
- *                       lat:
- *                         type: number
- *                       lng:
- *                         type: number
- *               tags:
- *                 type: array
- *                 items:
- *                   type: string
+ *                     enum: [easy, medium, hard]
  *               visibility:
  *                 type: string
  *                 enum: [public, followers, private]
  *           examples:
- *             updatePost:
- *               summary: Update post content
+ *             updateText:
+ *               summary: Update post text and images
  *               value:
- *                 content:
- *                   text: "Updated post text with new information"
- *                   media:
- *                     - type: "image"
- *                       url: "https://example.com/new_photo.jpg"
- *                 tags: ["updated", "food"]
+ *                 text: "Updated: This pho is even better than I remembered!"
+ *                 images:
+ *                   - "https://example.com/new_photo1.jpg"
+ *                   - "https://example.com/new_photo2.jpg"
+ *             updateFoodReview:
+ *               summary: Update food review
+ *               value:
+ *                 text: "Corrected review after recalculating nutrition"
+ *                 food_review:
+ *                   dish_name: "Phở Bò Đặc Biệt"
+ *                   calories: 480
+ *                   rating: 4.5
+ *                   tags: ["vietnamese", "pho", "beef", "comfort-food"]
+ *             updateRecipe:
+ *               summary: Update recipe
+ *               value:
+ *                 text: "Updated recipe with better instructions"
+ *                 recipe:
+ *                   title: "Authentic Vietnamese Pho (Updated)"
+ *                   steps:
+ *                     - "Blanch beef bones for 10 minutes instead of 5"
+ *                     - "Roast spices until very fragrant"
+ *                     - "Simmer for 12 hours for best results"
+ *                   cooking_time: 720
  *     responses:
  *       200:
  *         description: Post updated successfully
@@ -493,7 +716,7 @@ const getPosts = catchAsync(async (req, res, next) => {
  *                   properties:
  *                     details:
  *                       type: string
- *                       example: "Invalid post data"
+ *                       example: "Cannot change post type after creation"
  *       401:
  *         description: Authentication required
  *         content:
@@ -519,7 +742,7 @@ const getPosts = catchAsync(async (req, res, next) => {
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "You are not authorized to update this post"
+ *                   example: "You do not have permission to update this post"
  *       404:
  *         description: Post not found
  *         content:
@@ -548,7 +771,7 @@ const getPosts = catchAsync(async (req, res, next) => {
  *                   example: "Internal server error"
  *   delete:
  *     summary: Delete a post
- *     description: Soft delete a post (only author can delete)
+ *     description: Delete a post (only author can delete)
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -598,7 +821,7 @@ const getPosts = catchAsync(async (req, res, next) => {
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "You are not authorized to delete this post"
+ *                   example: "You do not have permission to delete this post"
  *       404:
  *         description: Post not found
  *         content:
@@ -656,11 +879,11 @@ const deletePost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
   const userId = req.user._id;
 
-  const result = await postService.deletePost(postId, userId);
+  await postService.deletePost(postId, userId);
 
   res.status(200).json({
     success: true,
-    message: result.message,
+    message: 'Post deleted successfully',
   });
 });
 
@@ -730,21 +953,8 @@ const deletePost = catchAsync(async (req, res, next) => {
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "User not found"
  *       500:
  *         description: Internal server error
  *         content:
@@ -757,7 +967,7 @@ const deletePost = catchAsync(async (req, res, next) => {
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: "Error getting user posts: ..."
  */
 const getUserPosts = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
@@ -845,7 +1055,7 @@ const getUserPosts = catchAsync(async (req, res, next) => {
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
  *       401:
  *         description: Authentication required
@@ -872,7 +1082,7 @@ const getUserPosts = catchAsync(async (req, res, next) => {
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: "Error getting feed posts: ..."
  */
 const getFeedPosts = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
@@ -959,7 +1169,7 @@ const getFeedPosts = catchAsync(async (req, res, next) => {
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
  *       400:
  *         description: Search query is required
@@ -986,7 +1196,7 @@ const getFeedPosts = catchAsync(async (req, res, next) => {
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: "Error searching posts: ..."
  */
 const searchPosts = catchAsync(async (req, res, next) => {
   const { q, page, limit, sortBy, sortOrder } = req.query;
@@ -1083,7 +1293,7 @@ const searchPosts = catchAsync(async (req, res, next) => {
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
  *       400:
  *         description: Tags parameter is required
@@ -1110,7 +1320,7 @@ const searchPosts = catchAsync(async (req, res, next) => {
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: "Error getting posts by tags: ..."
  */
 const getPostsByTags = catchAsync(async (req, res, next) => {
   const { tags, page, limit, sortBy, sortOrder } = req.query;
@@ -1177,43 +1387,10 @@ const getPostsByTags = catchAsync(async (req, res, next) => {
  *                       type: object
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const likePost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
@@ -1264,43 +1441,10 @@ const likePost = catchAsync(async (req, res, next) => {
  *                       type: object
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const unlikePost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
@@ -1311,72 +1455,6 @@ const unlikePost = catchAsync(async (req, res, next) => {
     success: true,
     message: 'Post unliked successfully',
     data: { engagement: post.engagement },
-  });
-});
-
-/**
- * @swagger
- * /api/v1/posts/top:
- *   get:
- *     summary: Get top posts
- *     description: Get most popular posts by likes, comments, or shares
- *     tags: [Posts]
- *     parameters:
- *       - in: query
- *         name: criteria
- *         schema:
- *           type: string
- *           enum: [likes_count, comments_count, shares_count]
- *           default: likes_count
- *         description: Criteria to rank posts by
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of top posts to return
- *     responses:
- *       200:
- *         description: Top posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- */
-const getTopPosts = catchAsync(async (req, res, next) => {
-  const { criteria = 'likes_count', limit = 10 } = req.query;
-  const userId = req.user?._id;
-
-  const posts = await postService.getTopPosts(
-    criteria,
-    parseInt(limit),
-    userId
-  );
-
-  res.status(200).json({
-    success: true,
-    data: posts,
   });
 });
 
@@ -1456,7 +1534,7 @@ const getTopPosts = catchAsync(async (req, res, next) => {
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
  *       400:
  *         description: minRating parameter is required
@@ -1483,7 +1561,7 @@ const getTopPosts = catchAsync(async (req, res, next) => {
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Internal server error"
+ *                   example: "Error getting food reviews by rating: ..."
  */
 const getFoodReviewsByRating = catchAsync(async (req, res, next) => {
   const { minRating, maxRating, page, limit, sortBy, sortOrder } = req.query;
@@ -1529,6 +1607,5 @@ module.exports = {
   getPostsByTags,
   likePost,
   unlikePost,
-  getTopPosts,
   getFoodReviewsByRating,
 };

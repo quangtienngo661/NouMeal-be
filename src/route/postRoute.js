@@ -30,8 +30,6 @@ router.get('/search', optionalAuth, searchPosts);
 
 router.get('/tags', optionalAuth, getPostsByTags);
 
-router.get('/top', optionalAuth, getTopPosts);
-
 router.get('/food-reviews/rating', optionalAuth, getFoodReviewsByRating);
 
 router.get('/user/:authorId', optionalAuth, getUserPosts);

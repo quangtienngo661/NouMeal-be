@@ -2,6 +2,7 @@ const Post = require('../model/postModel');
 const AppError = require('../libs/util/AppError');
 const User = require('../model/userModel');
 const userService = require('./userService');
+
 class PostService {
   async createPost(postData) {
     try {
@@ -117,7 +118,6 @@ class PostService {
 
       // Visibility filter
       if (userId) {
-        const user = await userService.getUserById(userId);
         const followingIds = await userService.getFollowingIds(userId);
 
         query.$or = [
@@ -294,7 +294,12 @@ class PostService {
   }
 
   _validatePostData(postData) {
-    const { post_type, food_review, recipe } = postData;
+    const { post_type, food_review, recipe, text } = postData;
+
+    // Validate text field (required cho tất cả post types)
+    if (!text || text.trim() === '') {
+      throw new Error('Post text is required');
+    }
 
     if (post_type === 'food_review' && !food_review) {
       throw new Error('Food review data is required for food_review posts');
@@ -303,6 +308,12 @@ class PostService {
     if (post_type === 'recipe') {
       if (!recipe || !recipe.title) {
         throw new Error('Recipe title is required for recipe posts');
+      }
+      if (!recipe.ingredients || recipe.ingredients.length === 0) {
+        throw new Error('Recipe must have at least one ingredient');
+      }
+      if (!recipe.steps || recipe.steps.length === 0) {
+        throw new Error('Recipe must have at least one step');
       }
     }
   }
