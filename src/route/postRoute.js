@@ -3,18 +3,19 @@ const router = express.Router();
 
 const {
   createPost,
+  getPosts,
   getPostById,
   updatePost,
   deletePost,
-  getPosts,
   getUserPosts,
   getFeedPosts,
   searchPosts,
-  getPostsByTags,
+  getPostsByHashtag,
+  getPostsByFood,
+  getTrendingHashtags,
+  getPostStatistics,
   likePost,
   unlikePost,
-  getTopPosts,
-  getFoodReviewsByRating,
 } = require('../controller/postController');
 
 const { authenticate, optionalAuth } = require('../middleware/authMiddleware');
@@ -22,19 +23,23 @@ const { handleValidationErrors } = require('../middleware/validator');
 const {
   validateCreatePost,
   validateUpdatePost,
+  validateGetFeedQuery,
 } = require('../validation/postValidation');
 
-router.get('/feed', authenticate, getFeedPosts);
+// ==================== STATIC ROUTES (MUST BE FIRST) ====================
+
+router.get('/feed', authenticate, validateGetFeedQuery, getFeedPosts);
 
 router.get('/search', optionalAuth, searchPosts);
 
-router.get('/tags', optionalAuth, getPostsByTags);
-
-router.get('/food-reviews/rating', optionalAuth, getFoodReviewsByRating);
+router.get('/trending/hashtags', getTrendingHashtags);
 
 router.get('/user/:authorId', optionalAuth, getUserPosts);
 
-// CRUD operations
+router.get('/hashtag/:hashtag', optionalAuth, getPostsByHashtag);
+
+router.get('/food/:foodId', optionalAuth, getPostsByFood);
+
 router.post(
   '/',
   authenticate,
@@ -42,13 +47,12 @@ router.post(
   handleValidationErrors,
   createPost
 );
+
 router.get('/', optionalAuth, getPosts);
 
-// Like/Unlike
-router.post('/:postId/like', authenticate, likePost);
-router.post('/:postId/unlike', authenticate, unlikePost);
+router.get('/:postId/statistics', getPostStatistics);
 
-// Update & Delete
+// Update post
 router.put(
   '/:postId',
   authenticate,
@@ -56,9 +60,10 @@ router.put(
   handleValidationErrors,
   updatePost
 );
+
 router.delete('/:postId', authenticate, deletePost);
 
-// ⚠️ ĐẶT ROUTE ĐỘNG /:postId Ở CUỐI CÙNG
 router.get('/:postId', optionalAuth, getPostById);
-
+router.post('/:postId/like', authenticate, likePost);
+router.delete('/:postId/like', authenticate, unlikePost);
 module.exports = router;
