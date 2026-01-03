@@ -2,11 +2,6 @@ const mongoose = require('mongoose');
 
 const postSchema = new mongoose.Schema(
   {
-    post_type: {
-      type: String,
-      enum: ['food_review', 'recipe', 'general'],
-      required: true,
-    },
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -26,25 +21,6 @@ const postSchema = new mongoose.Schema(
         ref: 'Food',
       },
     ],
-
-    // Thông tin recipe (nếu post_type = 'recipe')
-    recipe: {
-      title: String,
-      ingredients: [
-        {
-          name: String,
-          amount: String,
-          unit: String,
-        },
-      ],
-      steps: [String],
-      cooking_time: Number,
-      servings: Number,
-      difficulty: {
-        type: String,
-        enum: ['easy', 'medium', 'hard'],
-      },
-    },
 
     engagement: {
       likes_count: { type: Number, default: 0 },
@@ -100,7 +76,6 @@ postSchema.index({ createdAt: -1 });
 // Text search
 postSchema.index({
   text: 'text',
-  'recipe.title': 'text',
   'recipe.ingredients.name': 'text',
   hashtags: 'text',
 });

@@ -71,17 +71,12 @@ class PostService {
         );
       }
 
-      // Prevent changing post type
-      if (updateData.post_type && updateData.post_type !== post.post_type) {
-        throw new AppError('Cannot change post type after creation', 400);
-      }
-
       // Validate foods if updating
       if (updateData.foods) {
         await this._validateFoods(updateData.foods);
       }
 
-      // Validate updated data based on post type
+      // Validate updated data
       await this._validatePostData({ ...post.toObject(), ...updateData });
 
       // Extract and merge hashtags if text is updated
@@ -147,12 +142,10 @@ class PostService {
     try {
       const {
         userId = null,
-        post_type,
         author,
         visibility,
         hashtags,
         search,
-        difficulty,
         foodId,
       } = filters;
 
@@ -188,7 +181,6 @@ class PostService {
       }
 
       // Apply other filters
-      if (post_type) query.post_type = post_type;
       if (author) query.author = author;
 
       // Override visibility if explicitly requested and user has access
@@ -203,10 +195,6 @@ class PostService {
 
       if (foodId) {
         query.foods = foodId;
-      }
-
-      if (difficulty) {
-        query['recipe.difficulty'] = difficulty;
       }
 
       // Text search
@@ -383,7 +371,7 @@ class PostService {
   }
 
   async _validatePostData(postData) {
-    const { post_type, recipe, text, foods } = postData;
+    const { text, foods } = postData;
 
     // Validate text field
     if (!text || text.trim() === '') {
@@ -399,48 +387,15 @@ class PostService {
       await this._validateFoods(foods);
     }
 
-    // Validate based on post type
-    if (post_type === 'recipe') {
-      if (!recipe || !recipe.title || recipe.title.trim() === '') {
-        throw new AppError('Recipe title is required for recipe posts', 400);
-      }
-
-      if (!recipe.ingredients || recipe.ingredients.length === 0) {
-        throw new AppError('Recipe must have at least one ingredient', 400);
-      }
-
-      // Validate each ingredient
-      recipe.ingredients.forEach((ingredient, index) => {
-        if (!ingredient.name || ingredient.name.trim() === '') {
-          throw new AppError(`Ingredient ${index + 1} must have a name`, 400);
-        }
-      });
-
-      if (!recipe.steps || recipe.steps.length === 0) {
-        throw new AppError('Recipe must have at least one step', 400);
-      }
-
-      // Validate each step
-      recipe.steps.forEach((step, index) => {
-        if (!step || step.trim() === '') {
-          throw new AppError(`Step ${index + 1} cannot be empty`, 400);
-        }
-      });
-
-      if (
-        recipe.difficulty &&
-        !['easy', 'medium', 'hard'].includes(recipe.difficulty)
-      ) {
-        throw new AppError('Difficulty must be easy, medium, or hard', 400);
-      }
-
-      if (recipe.cooking_time && recipe.cooking_time < 0) {
-        throw new AppError('Cooking time cannot be negative', 400);
-      }
-
-      if (recipe.servings && recipe.servings < 1) {
-        throw new AppError('Servings must be at least 1', 400);
-      }
+    // Validate visibility
+    if (
+      postData.visibility &&
+      !['public', 'followers', 'private'].includes(postData.visibility)
+    ) {
+      throw new AppError(
+        'Visibility must be public, followers, or private',
+        400
+      );
     }
   }
 
