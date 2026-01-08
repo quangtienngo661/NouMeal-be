@@ -1,58 +1,54 @@
+// src/model/foodLogModel.js
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-const foodLogSchema = new Schema({
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true, 
-  },
-  
-  food: {
-    type: Schema.Types.ObjectId,
-    ref: 'Food',
-    required: true,
-  },
-  
-  eatenAt: {
-    type: Date,
-    required: true,
-    default: Date.now,
-    index: true, 
-  },
-  
-  mealType: {
-    type: String,
-    required: true,
-    enum: ['breakfast', 'lunch', 'dinner', 'snack'],
-  },
-  
-  servingSize: {
-    type: Number,
-    required: true,
-    default: 1, 
-  },
-  
-  calories: {
-    type: Number,
-    required: true,
-  },
-  protein: {
-    type: Number,
-    required: true,
-  },
-  carb: {
-    type: Number,
-    required: true,
-  },
-  fat: {
-    type: Number,
-    required: true,
-  },
-}, { 
-  timestamps: true 
+const foodLogSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true
+    },
+    food: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Food',
+        required: true
+    },
+    meal: {
+        type: String,
+        enum: ['breakfast', 'lunch', 'dinner', 'snack'],
+        required: true
+    },
+    date: {
+        type: String, // "YYYY-MM-DD"
+        required: true,
+        index: true
+    },
+    servings: {
+        type: Number,
+        default: 1,
+        min: 0.1
+    },
+    source: {
+        type: String,
+        enum: ['recommended', 'user_posted', 'other_user', 'search', 'non_recommended'],
+        default: 'recommended'
+    },
+    // Snapshot nutrition (in case food gets deleted/edited later)
+    nutritionSnapshot: {
+        calories: { type: Number, required: true },
+        protein: { type: Number, required: true },
+        carbs: { type: Number, required: true },
+        fat: { type: Number, required: true }
+    },
+    loggedAt: {
+        type: Date,
+        default: Date.now
+    }
+}, {
+    timestamps: true
 });
 
-const FoodLog = mongoose.model('FoodLog', foodLogSchema);
-module.exports = FoodLog;
+foodLogSchema.index({ userId: 1, date: 1 });
+foodLogSchema.index({ userId: 1, date: 1, meal: 1 });
+
+module.exports = mongoose.model('FoodLog', foodLogSchema);

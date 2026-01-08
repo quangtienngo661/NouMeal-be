@@ -7,6 +7,10 @@ class UserService {
   // Register a new user
   async registerUser(userData) {
     try {
+      // Prevent client from assigning admin role during registration
+      if (userData && userData.role === 'admin') {
+        throw new AppError('Cannot assign admin role during registration', 403);
+      }
       // Check if user already exists
       const existingUser = await User.findOne({ email: userData.email });
       if (existingUser) {
@@ -189,29 +193,6 @@ class UserService {
 
       return { message: 'Account deactivated successfully' };
     } catch (error) {
-      throw error;
-    }
-  }
-
-  async getDailyCalorieNeeds(userId) {
-    try {
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-
-      const { totalCalories, macroProfile } = nutritiousFoodConditions(user);
-
-      return {
-        totalCalories,
-        macroDistribution: {
-          protein: Math.round(macroProfile.protein),
-          carbohydrates: Math.round(macroProfile.carb),
-          fat: Math.round(macroProfile.fat),
-        },
-      };
-    }
-    catch (error) {
       throw error;
     }
   }

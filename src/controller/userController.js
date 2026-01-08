@@ -42,9 +42,12 @@ const handleValidationErrors = (req, res, next) => {
  *                 gender: "male"
  *                 height: 175
  *                 weight: 70
+ *                 activity: "moderately_active"
  *                 goal: "build_muscle"
  *                 preferences: ["vegetarian", "high_protein"]
  *                 allergies: ["nuts"]
+ *                 role: "user"
+ *                 favoriteFoods: []
  *     responses:
  *       201:
  *         description: User registered successfully
@@ -243,51 +246,10 @@ const deactivateAccount = catchAsync(async (req, res, next) => {
   // });
 });
 
-/**
- * @swagger
- * /api/v1/users/daily-calorie-needs:
- *   get:
- *     summary: Get daily calorie needs for current user
- *     description: Calculates and returns the estimated daily calorie requirement based on the authenticated user's profile (age, gender, height, weight, goal).
- *     tags: [User Profile]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Daily calorie needs calculated successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/DailyCalorieNeedsResponse'
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- */
-const getDailyCalorieNeeds = catchAsync(async (req, res, next) => {
-  const result = await userService.getDailyCalorieNeeds(req.user._id);
-  return res.ok(result, 200);
-});
-
 module.exports = {
   registerUser,
   loginUser,
   changePassword,
   deactivateAccount,
   handleValidationErrors,
-  getDailyCalorieNeeds,
 };

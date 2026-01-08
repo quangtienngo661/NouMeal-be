@@ -1,7 +1,7 @@
 exports.success = (res, data, message, status = 200, meta) => {
   const payload = {
     success: true,
-    message,
+    status: status,
     data: data || null
   };
 

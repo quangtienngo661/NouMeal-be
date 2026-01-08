@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"python3 ./AI_Bot/AI.py\" \"python3 ./AI_Bot/Bot.py\" \"wait-on tcp:5001 tcp:5002 && nodemon src/server.js\"",
+    "dev": " nodemon src/server.js && concurrently \"python3 ./AI_Bot/AI.py\" \"python3 ./AI_Bot/Bot.py\" \"wait-on tcp:5001 tcp:5002 &&\"",
     "start": "node src/server.js",
     "test": "jest --detectOpenHandles --passWithNoTests",
     "test:watch": "jest --watch",
@@ -34,6 +34,7 @@
     "mongodb": "^6.20.0",
     "mongodb-memory-server": "^10.2.3",
     "mongoose": "^8.19.1",
+    "node-cache": "^5.1.2",
     "nodemailer": "^7.0.10",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
