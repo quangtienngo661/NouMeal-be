@@ -134,7 +134,7 @@ const updateProfile = catchAsync(async (req, res, next) => {
     updateData
   );
 
-  return res.ok(updatedUser, 'Profile updated successfully', 200);
+  return res.ok(updatedUser, 200, 'Profile updated successfully');
 
   // res.status(200).json({
   //   success: true,
