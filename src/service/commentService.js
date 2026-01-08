@@ -21,6 +21,9 @@ class CommentService {
         if (!parent) throw new Error('Parent comment not found');
       }
 
+      const user = await User.findById(author).select('username');
+      if (!user) throw new Error('User not found');
+      commentData.authorname = user.username;
       // ✅ FIX: Đổi tên biến từ Comment thành newComment
       const newComment = new Comment(commentData);
       await newComment.save();
@@ -46,7 +49,6 @@ class CommentService {
   async getCommentById(commentId, requestingUserId = null) {
     try {
       const comment = await Comment.findById(commentId)
-        .populate('author', 'username email avatar')
         .populate('post', 'post_type visibility author')
         .populate('parent_comment', '_id author')
         .lean();
@@ -85,12 +87,7 @@ class CommentService {
       const query = { post: postId, parent_comment: null, is_deleted: false };
 
       const [comments, total] = await Promise.all([
-        Comment.find(query)
-          .populate('author', 'username email avatar')
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        Comment.find(query).sort(sort).skip(skip).limit(limit).lean(),
         Comment.countDocuments(query),
       ]);
 
@@ -141,12 +138,7 @@ class CommentService {
       const query = { parent_comment: commentId, is_deleted: false };
 
       const [replies, total] = await Promise.all([
-        Comment.find(query)
-          .populate('author', 'username email avatar')
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        Comment.find(query).sort(sort).skip(skip).limit(limit).lean(),
         Comment.countDocuments(query),
       ]);
 

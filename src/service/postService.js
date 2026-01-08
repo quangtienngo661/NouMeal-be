@@ -625,6 +625,45 @@ class PostService {
 
     return posts;
   }
+
+  async getPostLikes(postId, options = {}) {
+    try {
+      const post = await Post.findById(postId);
+      if (!post) {
+        throw new AppError('Post not found', 404);
+      }
+
+      const { page = 1, limit = 20 } = options;
+      const skip = (page - 1) * limit;
+
+      const [likes, total] = await Promise.all([
+        Like.find({ target_type: 'Post', target_id: postId })
+          .populate('user', 'name email avatar')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Like.countDocuments({ target_type: 'Post', target_id: postId }),
+      ]);
+
+      const users = likes.map((like) => ({
+        ...like.user,
+        liked_at: like.createdAt,
+      }));
+
+      return {
+        users,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = new PostService();

@@ -14,6 +14,10 @@ const commentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    authorname: {
+      type: String,
+      required: true,
+    },
     content: {
       text: {
         type: String,
@@ -32,7 +36,7 @@ const commentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Comment',
       default: null,
-      index: true, 
+      index: true,
     },
     replies_count: { type: Number, default: 0 },
     likes_count: { type: Number, default: 0 },
@@ -57,10 +61,10 @@ const commentSchema = new mongoose.Schema(
   }
 );
 
-commentSchema.index({ post: 1, createdAt: -1 }); 
-commentSchema.index({ author: 1, createdAt: -1 }); 
-commentSchema.index({ parent_comment: 1 }); 
+commentSchema.index({ post: 1, createdAt: -1 });
+commentSchema.index({ author: 1, createdAt: -1 });
+commentSchema.index({ parent_comment: 1 });
 commentSchema.index({ visibility: 1 });
-commentSchema.index({ 'content.text': 'text' }); 
+commentSchema.index({ 'content.text': 'text' });
 
 module.exports = mongoose.model('Comment', commentSchema);

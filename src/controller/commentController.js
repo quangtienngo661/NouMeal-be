@@ -84,6 +84,49 @@ const commentService = require('../service/commentService');
  *                   example: "Comment created successfully"
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     post:
+ *                       type: string
+ *                     author:
+ *                       type: string
+ *                     author_name:
+ *                       type: string
+ *                       example: "john_doe"
+ *                       description: "Username of the comment author"
+ *                     content:
+ *                       type: object
+ *                       properties:
+ *                         text:
+ *                           type: string
+ *                         media:
+ *                           type: array
+ *                     parent_comment:
+ *                       type: string
+ *                       nullable: true
+ *                     replies_count:
+ *                       type: integer
+ *                       example: 0
+ *                     likes_count:
+ *                       type: integer
+ *                       example: 0
+ *                     has_liked:
+ *                       type: boolean
+ *                       example: false
+ *                     visibility:
+ *                       type: string
+ *                       example: "public"
+ *                     is_deleted:
+ *                       type: boolean
+ *                       example: false
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
  *       400:
  *         description: Validation error
  *         content:
@@ -105,30 +148,8 @@ const commentService = require('../service/commentService');
  *                       example: "Post ID is required"
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const createComment = catchAsync(async (req, res, next) => {
   const commentData = {
@@ -172,32 +193,41 @@ const createComment = catchAsync(async (req, res, next) => {
  *                   example: true
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     post:
+ *                       type: object
+ *                     author:
+ *                       type: object
+ *                     author_name:
+ *                       type: string
+ *                       description: "Username of the comment author"
+ *                     content:
+ *                       type: object
+ *                     parent_comment:
+ *                       type: string
+ *                       nullable: true
+ *                     replies_count:
+ *                       type: integer
+ *                     likes_count:
+ *                       type: integer
+ *                     has_liked:
+ *                       type: boolean
+ *                     visibility:
+ *                       type: string
+ *                     is_deleted:
+ *                       type: boolean
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
  *       404:
  *         description: Comment not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Comment not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  *   put:
  *     summary: Update a comment
  *     description: Update comment content (only author can update)
@@ -241,90 +271,16 @@ const createComment = catchAsync(async (req, res, next) => {
  *     responses:
  *       200:
  *         description: Comment updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Comment updated successfully"
- *                 data:
- *                   type: object
  *       400:
  *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Validation error occurred"
- *                 error:
- *                   type: object
- *                   properties:
- *                     details:
- *                       type: string
- *                       example: "Content text is required"
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       403:
  *         description: Not authorized to update this comment
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "You are not authorized to update this comment"
  *       404:
  *         description: Comment not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Comment not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  *   delete:
  *     summary: Delete a comment
  *     description: Soft delete a comment (only author can delete)
@@ -341,69 +297,14 @@ const createComment = catchAsync(async (req, res, next) => {
  *     responses:
  *       200:
  *         description: Comment deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Comment deleted successfully"
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       403:
  *         description: Not authorized to delete this comment
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "You are not authorized to delete this comment"
  *       404:
  *         description: Comment not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Comment not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const getCommentById = catchAsync(async (req, res, next) => {
   const { commentId } = req.params;
@@ -501,6 +402,37 @@ const deleteComment = catchAsync(async (req, res, next) => {
  *                       type: array
  *                       items:
  *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           post:
+ *                             type: string
+ *                           author:
+ *                             type: object
+ *                           author_name:
+ *                             type: string
+ *                             description: "Username of the comment author"
+ *                           content:
+ *                             type: object
+ *                           parent_comment:
+ *                             type: string
+ *                             nullable: true
+ *                           replies_count:
+ *                             type: integer
+ *                           likes_count:
+ *                             type: integer
+ *                           has_liked:
+ *                             type: boolean
+ *                           visibility:
+ *                             type: string
+ *                           is_deleted:
+ *                             type: boolean
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
  *                     pagination:
  *                       type: object
  *                       properties:
@@ -510,34 +442,12 @@ const deleteComment = catchAsync(async (req, res, next) => {
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const getCommentsByPost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
@@ -616,34 +526,51 @@ const getCommentsByPost = catchAsync(async (req, res, next) => {
  *                       type: array
  *                       items:
  *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           post:
+ *                             type: string
+ *                           author:
+ *                             type: object
+ *                           author_name:
+ *                             type: string
+ *                             description: "Username of the comment author"
+ *                           content:
+ *                             type: object
+ *                           parent_comment:
+ *                             type: string
+ *                           replies_count:
+ *                             type: integer
+ *                           likes_count:
+ *                             type: integer
+ *                           has_liked:
+ *                             type: boolean
+ *                           visibility:
+ *                             type: string
+ *                           is_deleted:
+ *                             type: boolean
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
  *                     pagination:
  *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
  *       404:
  *         description: Comment not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Comment not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const getRepliesByComment = catchAsync(async (req, res, next) => {
   const { commentId } = req.params;
@@ -695,53 +622,29 @@ const getRepliesByComment = catchAsync(async (req, res, next) => {
  *                 data:
  *                   type: object
  *                   properties:
- *                     engagement:
+ *                     comment_id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     likes_count:
  *                       type: integer
  *                       example: 10
+ *                     has_liked:
+ *                       type: boolean
+ *                       example: true
+ *       400:
+ *         description: Already liked or validation error
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       404:
  *         description: Comment not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Comment not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const likeComment = catchAsync(async (req, res, next) => {
   const { commentId } = req.params;
 
-  const updated = await commentService.likeComment(commentId);
+  // ✅ FIX: Truyền đầy đủ tham số userId
+  const result = await commentService.likeComment(commentId, req.user._id);
 
   res.status(200).json({
     success: true,
@@ -783,53 +686,29 @@ const likeComment = catchAsync(async (req, res, next) => {
  *                 data:
  *                   type: object
  *                   properties:
- *                     engagement:
+ *                     comment_id:
+ *                       type: string
+ *                       example: "507f1f77bcf86cd799439011"
+ *                     likes_count:
  *                       type: integer
  *                       example: 9
+ *                     has_liked:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Haven't liked yet or validation error
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       404:
  *         description: Comment not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Comment not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 const unlikeComment = catchAsync(async (req, res, next) => {
   const { commentId } = req.params;
 
-  const updated = await commentService.unlikeComment(commentId);
+  // ✅ FIX: Truyền đầy đủ tham số userId
+  const result = await commentService.unlikeComment(commentId, req.user._id);
 
   res.status(200).json({
     success: true,

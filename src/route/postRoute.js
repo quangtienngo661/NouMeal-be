@@ -16,6 +16,7 @@ const {
   getPostStatistics,
   likePost,
   unlikePost,
+  getPostLikes,
 } = require('../controller/postController');
 
 const { authenticate, optionalAuth } = require('../middleware/authMiddleware');
@@ -26,19 +27,16 @@ const {
   validateGetFeedQuery,
 } = require('../validation/postValidation');
 
-// ==================== STATIC ROUTES (MUST BE FIRST) ====================
+// ==================== STATIC ROUTES (HIGHEST PRIORITY) ====================
 
 router.get('/feed', authenticate, validateGetFeedQuery, getFeedPosts);
-
 router.get('/search', optionalAuth, searchPosts);
-
 router.get('/trending/hashtags', getTrendingHashtags);
-
 router.get('/user/:authorId', optionalAuth, getUserPosts);
-
 router.get('/hashtag/:hashtag', optionalAuth, getPostsByHashtag);
-
 router.get('/food/:foodId', optionalAuth, getPostsByFood);
+
+// ==================== ROOT ROUTES ====================
 
 router.post(
   '/',
@@ -47,12 +45,19 @@ router.post(
   handleValidationErrors,
   createPost
 );
-
 router.get('/', optionalAuth, getPosts);
 
-router.get('/:postId/statistics', getPostStatistics);
+// ==================== DYNAMIC ROUTES - SPECIFIC PATHS FIRST ====================
 
-// Update post
+// Các route có path cụ thể phải đứng TRƯỚC route generic /:postId
+router.get('/:postId/statistics', getPostStatistics);
+router.get('/:postId/likes', getPostLikes);
+router.post('/:postId/like', authenticate, likePost);
+router.delete('/:postId/like', authenticate, unlikePost);
+
+// ==================== DYNAMIC ROUTES - GENERIC :postId LAST ====================
+
+router.get('/:postId', optionalAuth, getPostById);
 router.put(
   '/:postId',
   authenticate,
@@ -60,10 +65,6 @@ router.put(
   handleValidationErrors,
   updatePost
 );
-
 router.delete('/:postId', authenticate, deletePost);
 
-router.get('/:postId', optionalAuth, getPostById);
-router.post('/:postId/like', authenticate, likePost);
-router.delete('/:postId/like', authenticate, unlikePost);
 module.exports = router;
