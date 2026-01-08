@@ -6,7 +6,7 @@ const postService = require('../service/postService');
  * /api/v1/posts:
  *   post:
  *     summary: Create a new post
- *     description: Create a food review, recipe, or general post
+ *     description: Create a post with text content and optional food references
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -17,82 +17,39 @@ const postService = require('../service/postService');
  *           schema:
  *             type: object
  *             required:
- *               - type
- *               - content
+ *               - text
  *             properties:
- *               type:
+ *               text:
  *                 type: string
- *                 enum: [food_review, recipe, general]
- *                 description: Type of post
- *               content:
- *                 type: object
- *                 required:
- *                   - text
- *                 properties:
- *                   text:
- *                     type: string
- *                     maxLength: 5000
- *                   media:
- *                     type: array
- *                     items:
- *                       type: object
- *                       properties:
- *                         type:
- *                           type: string
- *                           enum: [image, video]
- *                         url:
- *                           type: string
- *                         thumbnailUrl:
- *                           type: string
- *               location:
- *                 type: object
- *                 properties:
- *                   name:
- *                     type: string
- *                   address:
- *                     type: string
- *                   coordinates:
- *                     type: object
- *                     properties:
- *                       lat:
- *                         type: number
- *                       lng:
- *                         type: number
- *               tags:
+ *                 maxLength: 5000
+ *                 description: Post content text
+ *               foods:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 description: Array of food IDs to reference
  *               visibility:
  *                 type: string
  *                 enum: [public, followers, private]
  *                 default: public
+ *               hashtags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Custom hashtags (will be merged with auto-extracted ones from text)
  *           examples:
- *             foodReview:
- *               summary: Create food review
+ *             with_foods:
+ *               summary: Create post with food references
  *               value:
- *                 type: "food_review"
- *                 content:
- *                   text: "Amazing pho! The broth is so flavorful."
- *                   media:
- *                     - type: "image"
- *                       url: "https://example.com/photo.jpg"
- *                       thumbnailUrl: "https://example.com/photo_thumb.jpg"
- *                 location:
- *                   name: "Pho 24"
- *                   address: "123 Nguyen Hue St, District 1"
- *                   coordinates:
- *                     lat: 10.7769
- *                     lng: 106.7009
- *                 tags: ["vietnamese", "pho", "breakfast"]
+ *                 text: "Had an amazing pho today! #vietnamese #homecooking"
+ *                 foods:
+ *                   - "507f1f77bcf86cd799439011"
+ *                   - "507f1f77bcf86cd799439012"
  *                 visibility: "public"
- *             recipe:
- *               summary: Create recipe post
+ *             simple:
+ *               summary: Create simple post
  *               value:
- *                 type: "recipe"
- *                 content:
- *                   text: "My secret pho recipe..."
- *                   media: []
- *                 tags: ["recipe", "vietnamese"]
+ *                 text: "Had an amazing dinner with friends tonight! 🍜 #foodie #dinner"
  *                 visibility: "public"
  *     responses:
  *       201:
@@ -110,6 +67,60 @@ const postService = require('../service/postService');
  *                   example: "Post created successfully"
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     author:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                     text:
+ *                       type: string
+ *                     foods:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           imageUrl:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           nutritionalInfo:
+ *                             type: object
+ *                     engagement:
+ *                       type: object
+ *                       properties:
+ *                         likes_count:
+ *                           type: number
+ *                         comments_count:
+ *                           type: number
+ *                         shares_count:
+ *                           type: number
+ *                     visibility:
+ *                       type: string
+ *                     hashtags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     is_edited:
+ *                       type: boolean
+ *                     createdAt:
+ *                       type: string
+ *                     updatedAt:
+ *                       type: string
  *       400:
  *         description: Validation error
  *         content:
@@ -122,50 +133,16 @@ const postService = require('../service/postService');
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Validation error occurred"
- *                 error:
- *                   type: object
- *                   properties:
- *                     details:
- *                       type: string
- *                       example: "Post type is required"
+ *                   example: "Validation Error: Post text is required"
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  *   get:
  *     summary: Get all posts with filters
- *     description: Retrieve posts with pagination, filtering, and sorting options
+ *     description: Retrieve posts with pagination, filtering, and sorting options. Visibility logic - Unauthenticated users only see public posts. Authenticated users see public posts, their own posts, and follower-only posts from people they follow.
  *     tags: [Posts]
  *     parameters:
- *       - in: query
- *         name: post_type
- *         schema:
- *           type: string
- *           enum: [food_review, recipe, general]
- *         description: Filter by post type
  *       - in: query
  *         name: author
  *         schema:
@@ -176,39 +153,26 @@ const postService = require('../service/postService');
  *         schema:
  *           type: string
  *           enum: [public, followers, private]
- *         description: Filter by visibility
+ *         description: Filter by visibility (requires authentication)
  *       - in: query
- *         name: tags
+ *         name: hashtags
  *         schema:
  *           type: array
  *           items:
  *             type: string
- *         description: Filter by tags (can be multiple)
+ *         style: form
+ *         explode: true
+ *         description: Filter by hashtags (e.g., ?hashtags=vietnamese&hashtags=pho)
  *       - in: query
  *         name: search
  *         schema:
  *           type: string
- *         description: Search in post content and title
+ *         description: Full-text search in post content and hashtags
  *       - in: query
- *         name: minRating
- *         schema:
- *           type: number
- *           minimum: 0
- *           maximum: 5
- *         description: Minimum rating filter
- *       - in: query
- *         name: maxRating
- *         schema:
- *           type: number
- *           minimum: 0
- *           maximum: 5
- *         description: Maximum rating filter
- *       - in: query
- *         name: difficulty
+ *         name: foodId
  *         schema:
  *           type: string
- *           enum: [easy, medium, hard]
- *         description: Filter by recipe difficulty
+ *         description: Filter posts that reference a specific food
  *       - in: query
  *         name: page
  *         schema:
@@ -226,7 +190,7 @@ const postService = require('../service/postService');
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field
+ *         description: Sort field (e.g., createdAt, updatedAt)
  *       - in: query
  *         name: sortOrder
  *         schema:
@@ -252,6 +216,25 @@ const postService = require('../service/postService');
  *                       type: array
  *                       items:
  *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           author:
+ *                             type: object
+ *                           text:
+ *                             type: string
+ *                           foods:
+ *                             type: array
+ *                           engagement:
+ *                             type: object
+ *                           visibility:
+ *                             type: string
+ *                           hashtags:
+ *                             type: array
+ *                           createdAt:
+ *                             type: string
+ *                           updatedAt:
+ *                             type: string
  *                     pagination:
  *                       type: object
  *                       properties:
@@ -261,22 +244,13 @@ const postService = require('../service/postService');
  *                           type: integer
  *                         total:
  *                           type: integer
- *                         totalPages:
+ *                         pages:
  *                           type: integer
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
+
+// Create a new post
 const createPost = catchAsync(async (req, res, next) => {
   const postData = {
     ...req.body,
@@ -292,41 +266,22 @@ const createPost = catchAsync(async (req, res, next) => {
   });
 });
 
+// Get all posts with filters
 const getPosts = catchAsync(async (req, res, next) => {
-  const {
-    post_type,
-    author,
-    visibility,
-    tags,
-    search,
-    minRating,
-    maxRating,
-    difficulty,
-    page,
-    limit,
-    sortBy,
-    sortOrder,
-  } = req.query;
-
-  const userId = req.user?._id;
-
   const filters = {
-    userId,
-    post_type,
-    author,
-    visibility,
-    tags: tags ? (Array.isArray(tags) ? tags : [tags]) : undefined,
-    search,
-    minRating: minRating ? parseFloat(minRating) : undefined,
-    maxRating: maxRating ? parseFloat(maxRating) : undefined,
-    difficulty,
+    userId: req.user?._id,
+    author: req.query.author,
+    visibility: req.query.visibility,
+    hashtags: req.query.hashtags,
+    search: req.query.search,
+    foodId: req.query.foodId,
   };
 
   const options = {
-    page: page ? parseInt(page) : 1,
-    limit: limit ? parseInt(limit) : 10,
-    sortBy: sortBy || 'createdAt',
-    sortOrder: sortOrder || 'desc',
+    page: parseInt(req.query.page) || 1,
+    limit: parseInt(req.query.limit) || 10,
+    sortBy: req.query.sortBy || 'createdAt',
+    sortOrder: req.query.sortOrder || 'desc',
   };
 
   const result = await postService.getPosts(filters, options);
@@ -342,7 +297,7 @@ const getPosts = catchAsync(async (req, res, next) => {
  * /api/v1/posts/{postId}:
  *   get:
  *     summary: Get post by ID
- *     description: Retrieve detailed information of a specific post
+ *     description: Retrieve detailed information of a specific post. Visibility permissions are checked - private posts only visible to author, follower posts visible to followers.
  *     tags: [Posts]
  *     parameters:
  *       - in: path
@@ -364,35 +319,85 @@ const getPosts = catchAsync(async (req, res, next) => {
  *                   example: true
  *                 data:
  *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     author:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                     text:
+ *                       type: string
+ *                     foods:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           imageUrl:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           meal:
+ *                             type: string
+ *                           ingredients:
+ *                             type: array
+ *                           nutritionalInfo:
+ *                             type: object
+ *                           allergens:
+ *                             type: array
+ *                           tags:
+ *                             type: array
+ *                           isActive:
+ *                             type: boolean
+ *                     engagement:
+ *                       type: object
+ *                       properties:
+ *                         likes_count:
+ *                           type: number
+ *                         comments_count:
+ *                           type: number
+ *                         shares_count:
+ *                           type: number
+ *                     visibility:
+ *                       type: string
+ *                       enum: [public, followers, private]
+ *                     hashtags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     is_edited:
+ *                       type: boolean
+ *                     edited_at:
+ *                       type: string
+ *                       format: date-time
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *       403:
+ *         description: No permission to view this post
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  *   put:
- *     summary: Update a post
- *     description: Update post content (only author can update)
+ *     summary: Update post
+ *     description: Update post content, foods, visibility or hashtags. Only post author can update.
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -410,145 +415,32 @@ const getPosts = catchAsync(async (req, res, next) => {
  *           schema:
  *             type: object
  *             properties:
- *               content:
- *                 type: object
- *                 properties:
- *                   text:
- *                     type: string
- *                     maxLength: 5000
- *                   media:
- *                     type: array
- *                     items:
- *                       type: object
- *                       properties:
- *                         type:
- *                           type: string
- *                           enum: [image, video]
- *                         url:
- *                           type: string
- *                         thumbnailUrl:
- *                           type: string
- *               location:
- *                 type: object
- *                 properties:
- *                   name:
- *                     type: string
- *                   address:
- *                     type: string
- *                   coordinates:
- *                     type: object
- *                     properties:
- *                       lat:
- *                         type: number
- *                       lng:
- *                         type: number
- *               tags:
+ *               text:
+ *                 type: string
+ *                 maxLength: 5000
+ *               foods:
  *                 type: array
  *                 items:
  *                   type: string
  *               visibility:
  *                 type: string
  *                 enum: [public, followers, private]
- *           examples:
- *             updatePost:
- *               summary: Update post content
- *               value:
- *                 content:
- *                   text: "Updated post text with new information"
- *                   media:
- *                     - type: "image"
- *                       url: "https://example.com/new_photo.jpg"
- *                 tags: ["updated", "food"]
+ *               hashtags:
+ *                 type: array
+ *                 items:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Post updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Post updated successfully"
- *                 data:
- *                   type: object
  *       400:
  *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Validation error occurred"
- *                 error:
- *                   type: object
- *                   properties:
- *                     details:
- *                       type: string
- *                       example: "Invalid post data"
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       403:
- *         description: Not authorized to update this post
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "You are not authorized to update this post"
+ *         description: No permission to update this post
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  *   delete:
- *     summary: Delete a post
- *     description: Soft delete a post (only author can delete)
+ *     summary: Delete post
+ *     description: Delete a post. Only post author or admin can delete.
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -562,70 +454,12 @@ const getPosts = catchAsync(async (req, res, next) => {
  *     responses:
  *       200:
  *         description: Post deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Post deleted successfully"
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       403:
- *         description: Not authorized to delete this post
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "You are not authorized to delete this post"
+ *         description: No permission to delete this post
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
+
 const getPostById = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
   const userId = req.user?._id;
@@ -638,6 +472,7 @@ const getPostById = catchAsync(async (req, res, next) => {
   });
 });
 
+// Update post
 const updatePost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
   const userId = req.user._id;
@@ -652,15 +487,17 @@ const updatePost = catchAsync(async (req, res, next) => {
   });
 });
 
+// Delete post
 const deletePost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
   const userId = req.user._id;
+  const isAdmin = req.user.role === 'admin';
 
-  const result = await postService.deletePost(postId, userId);
+  await postService.deletePost(postId, userId, isAdmin);
 
   res.status(200).json({
     success: true,
-    message: result.message,
+    message: 'Post deleted successfully',
   });
 });
 
@@ -669,7 +506,7 @@ const deletePost = catchAsync(async (req, res, next) => {
  * /api/v1/posts/user/{authorId}:
  *   get:
  *     summary: Get posts by specific user
- *     description: Retrieve all posts created by a specific user with pagination
+ *     description: Retrieve all posts created by a specific user with pagination. Respects visibility rules - authenticated users see public posts, their own posts, and follower posts if they follow the author.
  *     tags: [Posts]
  *     parameters:
  *       - in: path
@@ -713,52 +550,20 @@ const deletePost = catchAsync(async (req, res, next) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   type: object
  *                   properties:
  *                     posts:
  *                       type: array
- *                       items:
- *                         type: object
  *                     pagination:
  *                       type: object
- *                       properties:
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         total:
- *                           type: integer
- *                         totalPages:
- *                           type: integer
  *       404:
- *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "User not found"
+ *         description: Author not found
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
+
+// Get posts by specific user
 const getUserPosts = catchAsync(async (req, res, next) => {
   const { authorId } = req.params;
   const currentUserId = req.user?._id;
@@ -788,7 +593,7 @@ const getUserPosts = catchAsync(async (req, res, next) => {
  * /api/v1/posts/feed:
  *   get:
  *     summary: Get feed posts
- *     description: Get personalized feed (public posts + user's own posts + followed users' posts)
+ *     description: Get personalized feed showing public posts, user's own posts (all visibility), and follower-only posts from followed users
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -798,82 +603,34 @@ const getUserPosts = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of posts per page
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: desc
- *         description: Sort order
  *     responses:
  *       200:
  *         description: Feed posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         type: object
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         total:
- *                           type: integer
- *                         totalPages:
- *                           type: integer
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
+ *       404:
+ *         description: User not found
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
+
+// Get feed posts
 const getFeedPosts = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
   const { page, limit, sortBy, sortOrder } = req.query;
@@ -898,7 +655,7 @@ const getFeedPosts = catchAsync(async (req, res, next) => {
  * /api/v1/posts/search:
  *   get:
  *     summary: Search posts
- *     description: Search posts by text in content, recipe title, ingredients, food name
+ *     description: Full-text search in post content and hashtags
  *     tags: [Posts]
  *     parameters:
  *       - in: query
@@ -912,82 +669,32 @@ const getFeedPosts = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of posts per page
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: desc
- *         description: Sort order
  *     responses:
  *       200:
  *         description: Posts found successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         type: object
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         total:
- *                           type: integer
- *                         totalPages:
- *                           type: integer
  *       400:
  *         description: Search query is required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Search query is required"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
+
+// Search posts
 const searchPosts = catchAsync(async (req, res, next) => {
   const { q, page, limit, sortBy, sortOrder } = req.query;
 
@@ -1017,113 +724,51 @@ const searchPosts = catchAsync(async (req, res, next) => {
 
 /**
  * @swagger
- * /api/v1/posts/tags:
+ * /api/v1/posts/hashtag/{hashtag}:
  *   get:
- *     summary: Get posts by tags
- *     description: Get food review posts filtered by tags
+ *     summary: Get posts by hashtag
+ *     description: Retrieve posts containing a specific hashtag
  *     tags: [Posts]
  *     parameters:
- *       - in: query
- *         name: tags
+ *       - in: path
+ *         name: hashtag
  *         required: true
  *         schema:
- *           type: array
- *           items:
- *             type: string
- *         description: Tags to filter by (can be multiple)
+ *           type: string
+ *         description: Hashtag (without # symbol)
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of posts per page
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: desc
- *         description: Sort order
  *     responses:
  *       200:
  *         description: Posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         type: object
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         total:
- *                           type: integer
- *                         totalPages:
- *                           type: integer
- *       400:
- *         description: Tags parameter is required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Tags parameter is required"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
-const getPostsByTags = catchAsync(async (req, res, next) => {
-  const { tags, page, limit, sortBy, sortOrder } = req.query;
 
-  if (!tags) {
-    return res.status(400).json({
-      success: false,
-      message: 'Tags parameter is required',
-    });
-  }
-
+// Get posts by hashtag
+const getPostsByHashtag = catchAsync(async (req, res, next) => {
+  const { hashtag } = req.params;
+  const { page, limit, sortBy, sortOrder } = req.query;
   const userId = req.user?._id;
-  const tagsArray = Array.isArray(tags) ? tags : [tags];
 
   const options = {
     page: page ? parseInt(page) : 1,
@@ -1132,7 +777,11 @@ const getPostsByTags = catchAsync(async (req, res, next) => {
     sortOrder: sortOrder || 'desc',
   };
 
-  const result = await postService.getPostsByTags(tagsArray, userId, options);
+  const result = await postService.getPostsByHashtags(
+    [hashtag],
+    userId,
+    options
+  );
 
   res.status(200).json({
     success: true,
@@ -1142,10 +791,195 @@ const getPostsByTags = catchAsync(async (req, res, next) => {
 
 /**
  * @swagger
+ * /api/v1/posts/food/{foodId}:
+ *   get:
+ *     summary: Get posts by food
+ *     description: Retrieve posts that reference a specific food
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: foodId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Food ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *       - in: query
+ *         name: sortBy
+ *         schema:
+ *           type: string
+ *           default: createdAt
+ *       - in: query
+ *         name: sortOrder
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *     responses:
+ *       200:
+ *         description: Posts retrieved successfully
+ *       404:
+ *         description: Food not found
+ *       500:
+ *         description: Internal server error
+ */
+
+// Get posts by food
+const getPostsByFood = catchAsync(async (req, res, next) => {
+  const { foodId } = req.params;
+  const { page, limit, sortBy, sortOrder } = req.query;
+  const userId = req.user?._id;
+
+  const options = {
+    page: page ? parseInt(page) : 1,
+    limit: limit ? parseInt(limit) : 10,
+    sortBy: sortBy || 'createdAt',
+    sortOrder: sortOrder || 'desc',
+  };
+
+  const result = await postService.getPostsByFood(foodId, userId, options);
+
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
+});
+
+/**
+ * @swagger
+ * /api/v1/posts/trending/hashtags:
+ *   get:
+ *     summary: Get trending hashtags
+ *     description: Retrieve most popular hashtags from recent public posts
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of hashtags to return
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           default: 7
+ *         description: Number of days to look back
+ *     responses:
+ *       200:
+ *         description: Trending hashtags retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       hashtag:
+ *                         type: string
+ *                       count:
+ *                         type: number
+ *       500:
+ *         description: Internal server error
+ */
+
+// Get trending hashtags
+const getTrendingHashtags = catchAsync(async (req, res, next) => {
+  const limit = parseInt(req.query.limit) || 10;
+  const days = parseInt(req.query.days) || 7;
+
+  const hashtags = await postService.getTrendingHashtags(limit, days);
+
+  res.status(200).json({
+    success: true,
+    data: hashtags,
+  });
+});
+
+/**
+ * @swagger
+ * /api/v1/posts/{postId}/statistics:
+ *   get:
+ *     summary: Get post statistics
+ *     description: Retrieve engagement metrics and metadata for a post
+ *     tags: [Posts]
+ *     parameters:
+ *       - in: path
+ *         name: postId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Post ID
+ *     responses:
+ *       200:
+ *         description: Statistics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     post_id:
+ *                       type: string
+ *                     engagement:
+ *                       type: object
+ *                       properties:
+ *                         likes_count:
+ *                           type: number
+ *                         comments_count:
+ *                           type: number
+ *                         shares_count:
+ *                           type: number
+ *                     visibility:
+ *                       type: string
+ *                     is_edited:
+ *                       type: boolean
+ *                     created_at:
+ *                       type: string
+ *                     edited_at:
+ *                       type: string
+ *       404:
+ *         description: Post not found
+ *       500:
+ *         description: Internal server error
+ */
+
+// Get post statistics
+const getPostStatistics = catchAsync(async (req, res, next) => {
+  const { postId } = req.params;
+
+  const statistics = await postService.getPostStatistics(postId);
+
+  res.status(200).json({
+    success: true,
+    data: statistics,
+  });
+});
+
+/**
+ * @swagger
  * /api/v1/posts/{postId}/like:
  *   post:
  *     summary: Like a post
- *     description: Increment the likes count of a post
+ *     description: Add a like to a post and increment likes count
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -1166,73 +1000,24 @@ const getPostsByTags = catchAsync(async (req, res, next) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Post liked successfully"
  *                 data:
  *                   type: object
  *                   properties:
- *                     engagement:
- *                       type: object
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
+ *                     post_id:
+ *                       type: string
+ *                     likes_count:
+ *                       type: number
+ *       400:
+ *         description: Already liked or validation error
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- */
-const likePost = catchAsync(async (req, res, next) => {
-  const { postId } = req.params;
-
-  const post = await postService.updateEngagement(postId, 'likes_count', 1);
-
-  res.status(200).json({
-    success: true,
-    message: 'Post liked successfully',
-    data: { engagement: post.engagement },
-  });
-});
-
-/**
- * @swagger
- * /api/v1/posts/{postId}/unlike:
- *   post:
+ *       401:
+ *         description: Authentication required
+ *   delete:
  *     summary: Unlike a post
- *     description: Decrement the likes count of a post
+ *     description: Remove a like from a post and decrement likes count
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -1246,289 +1031,55 @@ const likePost = catchAsync(async (req, res, next) => {
  *     responses:
  *       200:
  *         description: Post unliked successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Post unliked successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     engagement:
- *                       type: object
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
+ *       400:
+ *         description: Not liked yet or validation error
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
+ *       401:
+ *         description: Authentication required
  */
+
+// Like a post
+const likePost = catchAsync(async (req, res, next) => {
+  const { postId } = req.params;
+  const userId = req.user._id;
+
+  const result = await postService.likePost(postId, userId);
+
+  res.status(200).json({
+    success: true,
+    message: 'Post liked successfully',
+    data: result,
+  });
+});
+
+// Unlike a post
 const unlikePost = catchAsync(async (req, res, next) => {
   const { postId } = req.params;
+  const userId = req.user._id;
 
-  const post = await postService.updateEngagement(postId, 'likes_count', -1);
+  const result = await postService.unlikePost(postId, userId);
 
   res.status(200).json({
     success: true,
     message: 'Post unliked successfully',
-    data: { engagement: post.engagement },
-  });
-});
-
-/**
- * @swagger
- * /api/v1/posts/top:
- *   get:
- *     summary: Get top posts
- *     description: Get most popular posts by likes, comments, or shares
- *     tags: [Posts]
- *     parameters:
- *       - in: query
- *         name: criteria
- *         schema:
- *           type: string
- *           enum: [likes_count, comments_count, shares_count]
- *           default: likes_count
- *         description: Criteria to rank posts by
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of top posts to return
- *     responses:
- *       200:
- *         description: Top posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- */
-const getTopPosts = catchAsync(async (req, res, next) => {
-  const { criteria = 'likes_count', limit = 10 } = req.query;
-  const userId = req.user?._id;
-
-  const posts = await postService.getTopPosts(
-    criteria,
-    parseInt(limit),
-    userId
-  );
-
-  res.status(200).json({
-    success: true,
-    data: posts,
-  });
-});
-
-/**
- * @swagger
- * /api/v1/posts/food-reviews/rating:
- *   get:
- *     summary: Get food reviews by rating
- *     description: Get food review posts filtered by rating range
- *     tags: [Posts]
- *     parameters:
- *       - in: query
- *         name: minRating
- *         required: true
- *         schema:
- *           type: number
- *           minimum: 0
- *           maximum: 5
- *         description: Minimum rating
- *       - in: query
- *         name: maxRating
- *         schema:
- *           type: number
- *           minimum: 0
- *           maximum: 5
- *           default: 5
- *         description: Maximum rating
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of posts per page
- *       - in: query
- *         name: sortBy
- *         schema:
- *           type: string
- *           default: createdAt
- *         description: Sort field
- *       - in: query
- *         name: sortOrder
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *           default: desc
- *         description: Sort order
- *     responses:
- *       200:
- *         description: Food reviews retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         type: object
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         page:
- *                           type: integer
- *                         limit:
- *                           type: integer
- *                         total:
- *                           type: integer
- *                         totalPages:
- *                           type: integer
- *       400:
- *         description: minRating parameter is required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "minRating parameter is required"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- */
-const getFoodReviewsByRating = catchAsync(async (req, res, next) => {
-  const { minRating, maxRating, page, limit, sortBy, sortOrder } = req.query;
-
-  if (!minRating) {
-    return res.status(400).json({
-      success: false,
-      message: 'minRating parameter is required',
-    });
-  }
-
-  const userId = req.user?._id;
-
-  const options = {
-    page: page ? parseInt(page) : 1,
-    limit: limit ? parseInt(limit) : 10,
-    sortBy: sortBy || 'createdAt',
-    sortOrder: sortOrder || 'desc',
-  };
-
-  const result = await postService.getFoodReviewsByRating(
-    parseFloat(minRating),
-    maxRating ? parseFloat(maxRating) : 5,
-    userId,
-    options
-  );
-
-  res.status(200).json({
-    success: true,
     data: result,
   });
 });
 
 module.exports = {
   createPost,
-  getPostById,
   getPosts,
-  getUserPosts,
-  getFeedPosts,
+  getPostById,
   updatePost,
   deletePost,
+  getUserPosts,
+  getFeedPosts,
   searchPosts,
-  getPostsByTags,
+  getPostsByHashtag,
+  getPostsByFood,
+  getTrendingHashtags,
+  getPostStatistics,
   likePost,
   unlikePost,
-  getTopPosts,
-  getFoodReviewsByRating,
 };

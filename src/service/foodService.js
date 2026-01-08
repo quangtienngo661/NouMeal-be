@@ -11,8 +11,43 @@ const { all } = require("axios");
 
 class FoodService {
     // 📦 READ operations
-    async getFoods() {
-        return await Food.find();
+    async getFoods(categories, meal, tags, page, limit) {
+        const filter = {};
+        if (categories) {
+            filter.category = { $in: categories.split(',') };
+        }
+
+        if (meal) {
+            filter.meal = meal;
+        }
+
+        if (tags) {
+            filter.tags = { $in: tags.split(',') };
+        }
+
+        if (!page) page = 1;
+        if (!limit) limit = 10;
+
+        const result = await Food
+            .find(filter)
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        const total = await Food.countDocuments(filter, { postedBy: { $exists: false } });
+
+        const parsedLimit = parseInt(limit);
+
+        const meta = {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / parsedLimit),
+            totalItems: total,
+            itemsPerPage: parsedLimit
+        };
+
+        return {
+            result,
+            meta
+        };
     }
 
     async getAdaptiveRecommendation(userId) {
@@ -37,7 +72,7 @@ class FoodService {
         if (todayLogs.length > 0) {
             const latestLog = todayLogs[todayLogs.length - 1];
             const isNonRecommended = todayLogs.some(log => log.source !== 'recommended');
-            switch (latestLog.meal) { 
+            switch (latestLog.meal) {
                 case "breakfast": {
                     // const breakfasts = todayMeals.meals.breakfast.filter((food, index) => {
                     //     return food._id.toString() === latestLog.food._id.toString()
@@ -70,7 +105,7 @@ class FoodService {
                 case "lunch":
                     if (!isNonRecommended) {
                         todayMeals.meals.lunch = undefined;
-                        remainingMeals = { dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack]  };
+                        remainingMeals = { dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack] };
                     } else {
                         const remaingMealsCacheKey = `remainingMeals:${userId}:${this.getCurrentWeekKey()}:${today}:remaining`;
                         const cached = weeklyCache.get(remaingMealsCacheKey);
@@ -81,7 +116,7 @@ class FoodService {
                             const dinner = await Food.aggregate(
                                 await aggregateConditions(user, 'dinner', allergensCondition, true)
                             );
-                            
+
                             remainingMeals.dinner = dinner;
                         }
                         const snack = await Food.find({
@@ -110,16 +145,16 @@ class FoodService {
 
     async weeklyFoodRecommendation(userId, options = {}) {
         const cacheKey = `weekly:${userId}:${this.getCurrentWeekKey()}`;
-        
+
         const cached = weeklyCache.get(cacheKey);
         if (cached) {
             console.log("Cache hit for weekly recommendation");
             return JSON.parse(cached);
         }
-        
+
         const weeklyPlan = await this.generateWeeklyPlan(userId, false);
         const ttl = this.getSecondsUntilMidnight();
-        
+
         weeklyCache.set(cacheKey, JSON.stringify(weeklyPlan), ttl);
         return weeklyPlan;
     }
@@ -131,15 +166,66 @@ class FoodService {
             throw new AppError('Food not found', 404);
         }
 
+        console.log("food:", food);
+
         return food;
     }
 
+    async getFoodsByUserId(userId, page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+        const parsedLimit = parseInt(limit);
+
+        const foods = await Food.find({ postedBy: userId })
+            .skip(skip)
+            .limit(parsedLimit)
+            .sort({ createdAt: -1 });
+
+        const total = await Food.countDocuments({ postedBy: userId });
+
+        const meta = {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / parsedLimit),
+            totalItems: total,
+            itemsPerPage: parsedLimit
+        };
+
+        return { result: foods, meta };
+    }
+
+    async getAdminFoods(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+        const parsedLimit = parseInt(limit);
+
+        const foods = await Food.find({ postedBy: { $exists: false } })
+            .skip(skip)
+            .limit(parsedLimit)
+            .sort({ createdAt: -1 });
+
+        const total = await Food.countDocuments({ postedBy: { $exists: false } });
+
+        const meta = {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / parsedLimit),
+            totalItems: total,
+            itemsPerPage: parsedLimit
+        };
+
+        return { result: foods, meta };
+    }
+
     // ✏️ CREATE / UPDATE / DELETE
-    async createFood(foodInfo, userId) {
+    async createFoodByAdmin(foodInfo) {
+        const newFood = await Food.create({ ...foodInfo });
+        weeklyCache.flushAll(); // Clear all caches when food data changes
+        return newFood;
+    };
+
+    async createFoodByUser(foodInfo, userId) {
         const newFood = await Food.create({ ...foodInfo, postedBy: userId });
         weeklyCache.flushAll(); // Clear all caches when food data changes
         return newFood;
     };
+
     async updateFood(foodId, foodInfo, userId) {
         const existingFood = await Food.findById(foodId);
 
@@ -147,7 +233,21 @@ class FoodService {
             throw new AppError('Food not found', 404);
         }
 
-        if (existingFood.postedBy && existingFood.postedBy.toString() !== userId.toString()) {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+
+
+        const isAdmin = user.role === "admin";
+        
+        let isOwner = false;
+        if (!isAdmin) {
+            isOwner = existingFood.postedBy.toString() === userId.toString();
+        }
+
+        if (!isAdmin && !isOwner) {
             throw new AppError('You are not authorized to update this food', 403);
         }
 
@@ -163,21 +263,37 @@ class FoodService {
         weeklyCache.flushAll(); // Clear all caches when food data changes
         return updatedFood;
     }
-    async deleteFood(foodId, userId) {
-        const existingFood = await Food.findById(foodId);
 
-        if (!existingFood) {
-            throw new AppError('Food not found', 404);
+    async deleteFoodByAdmin(foodId) {
+        const food = await Food.findById(foodId);
+
+        if (!food) {
+            throw new AppError(404, "Food not found");
         }
 
-        if (existingFood.postedBy && existingFood.postedBy.toString() !== userId.toString()) {
-            throw new AppError('You are not authorized to delete this food', 403);
+        // Admin can delete any food, just mark as inactive or actually delete
+        await Food.findByIdAndDelete(foodId);
+        // OR soft delete: await Food.findByIdAndUpdate(foodId, { isActive: false });
+
+        return food;
+    }
+
+    async deleteFoodByUser(foodId, userId) {
+        const food = await Food.findById(foodId);
+
+        if (!food) {
+            throw new AppError(404, "Food not found");
         }
 
-        const deletedFood = await Food.findByIdAndDelete(foodId);
+        // Validate that the user owns this food
+        if (!food.postedBy || food.postedBy.toString() !== userId.toString()) {
+            throw new AppError(403, "You can only delete your own foods");
+        }
 
-        weeklyCache.flushAll(); // Clear all caches when food data changes
-        return deletedFood;
+        await Food.findByIdAndDelete(foodId);
+        // OR soft delete: await Food.findByIdAndUpdate(foodId, { isActive: false });
+
+        return food;
     }
 
 
@@ -225,7 +341,7 @@ class FoodService {
             _id: { $nin: Array.from(usedIds) }
         };
 
-        console.log(allergensCondition);
+        // console.log(allergensCondition);
 
         const breakfast = await Food.aggregate(
             await aggregateConditions(user, 'breakfast', allergensCondition, isDiff, isCached)

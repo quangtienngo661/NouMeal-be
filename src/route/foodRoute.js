@@ -12,9 +12,15 @@ const {
     logMeal,
     getTodayProgress,
     getAllFoodLogs,
-    getFoodLog
+    getFoodLog,
+    createFoodByUser,
+    getAdminFoods,
+    getOwnFoods,
+    getFoodsByUserId,
+    deleteFoodByAdmin,
+    deleteFoodByUser
 } = require('../controller/foodController');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, restrictTo } = require('../middleware/authMiddleware');
 const { handleValidationErrors } = require('../middleware/validator');
 const {
     validateCreateFood,
@@ -22,11 +28,17 @@ const {
     validateFoodIdParam,
 } = require('../validation/foodValidation');
 const { validateLogMeal } = require('../validation/foodLogValidation');
+const { createFoodByAdmin } = require('../service/foodService');
 
 // 📦 READ operations
 router.get('/', getFoods);
 router.get('/recommended', authenticate, getAdaptiveRecommendation);
 router.get('/weekly-recommended', authenticate, weeklyFoodsRecommendation);
+
+// Get foods by source (must come before /:foodId)
+router.get('/user', authenticate, getOwnFoods);
+router.get('/user/:userId', authenticate, getFoodsByUserId);
+router.get('/admin', authenticate, restrictTo('admin'), getAdminFoods);
 
 // 📝 FOOD LOGGING - Must come before /:foodId to avoid conflicts
 router.post('/log', authenticate, validateLogMeal, handleValidationErrors, logMeal);
@@ -38,7 +50,8 @@ router.get('/progress/today', authenticate, getTodayProgress);
 router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById);
 
 // ✏️ CREATE / UPDATE / DELETE
-router.post('/', authenticate, validateCreateFood, handleValidationErrors, createFood);
+router.post('/admin', authenticate, restrictTo('admin'), validateCreateFood, handleValidationErrors, createFoodByAdmin);
+router.post('/user', authenticate, validateCreateFood, handleValidationErrors, createFoodByUser);
 router.patch(
     '/:foodId',
     authenticate,
@@ -47,12 +60,23 @@ router.patch(
     handleValidationErrors,
     updateFood
 );
+
+// 🗑️ DELETE operations
 router.delete(
-    '/:foodId',
+    '/admin/:foodId',
+    authenticate,
+    restrictTo('admin'),
+    validateFoodIdParam,
+    handleValidationErrors,
+    deleteFoodByAdmin
+);
+
+router.delete(
+    '/user/:foodId',
     authenticate,
     validateFoodIdParam,
     handleValidationErrors,
-    deleteFood
+    deleteFoodByUser
 );
 
 // Cache management

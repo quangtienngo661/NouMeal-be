@@ -1,97 +1,92 @@
 const mongoose = require('mongoose');
+
 const postSchema = new mongoose.Schema(
-    {
-         post_type: {
-            type: String,
-            enum: ['food_review', 'recipe', 'general'],
-            required: true
-        },
-        author:{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
-            required: true,
-        },
-        content:{
-            text:{
-                type: String,
-                required: [true, 'Post content is required'],
-                maxlength: 5000
-            },
-            media:[
-                {
-                    type: {type: String, enum: ['image']},
-                    url: {type: String},
-                    thumbnailUrl: {type: String}
-                }
-            ]
-        },
-        food_review:{
-            description:{
-                name: String,
-                calories: Number,
-                protein: Number,
-                carbohydrates: Number,
-                fat: Number,
-                fiber: Number,
-            },
-            rating: {
-                type: Number,
-                min: 1,
-                max: 5,
-            },
-            tags: [String],
-        },
-        recipe:{
-            title: {
-                type: String,
-            },
-            ingredients: [
-                {
-                name: String,
-                amount: String,
-                unit: String,
-                },
-            ],
-            steps: [String],
-            cooking_time: Number, //minutes
-            servings: Number,
-            difficulty: {
-                type: String,
-                enum: ['easy', 'medium', 'hard'],
-            },
-        },
-        engagement: {
-            likes_count: { type: Number, default: 0 },
-            comments_count: { type: Number, default: 0 },
-            shares_count: { type: Number, default: 0 },
-        },
-        visibility: {
-            type: String,
-            enum: ['public', 'followers', 'private'],
-            default: 'public',
-        },
+  {
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
     },
-    {
-        timestamps: true,
-        toJSON: {
-            transform(doc, ret) {
-                delete ret.__v;
-                return ret;
-            },
-        },
-    }
+    text: {
+      type: String,
+      required: [true, 'Post content is required'],
+      maxlength: 5000,
+      trim: true,
+    },
+
+    // Reference đến món ăn (0, 1 hoặc nhiều món)
+    foods: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Food',
+      },
+    ],
+
+    engagement: {
+      likes_count: { type: Number, default: 0 },
+      comments_count: { type: Number, default: 0 },
+      shares_count: { type: Number, default: 0 },
+    },
+
+    visibility: {
+      type: String,
+      enum: ['public', 'followers', 'private'],
+      default: 'public',
+    },
+
+    // Hashtags để dễ tìm kiếm
+    hashtags: [
+      {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    ],
+
+    // Tracking chỉnh sửa
+    is_edited: {
+      type: Boolean,
+      default: false,
+    },
+    edited_at: {
+      type: Date,
+    },
+  },
+  {
+    timestamps: true,
+    toJSON: {
+      transform(doc, ret) {
+        const obj = { ...ret };
+        delete obj.__v;
+        return obj;
+      },
+    },
+  }
 );
 
-postSchema.index({author: 1, createdAt: -1});
-postSchema.index({post_type: 1});
-postSchema.index({'food_review.tags': 1});
-postSchema.index({visibility: 1});
-postSchema.index({ 
-    'content.text': 'text',
-    'recipe.title': 'text',
-    'recipe.ingredients.name': 'text',
-    'food_review.description.name': 'text'
-});
+// Indexes
+postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ post_type: 1 });
+postSchema.index({ foods: 1 });
+postSchema.index({ visibility: 1 });
+postSchema.index({ hashtags: 1 });
+postSchema.index({ 'food_review.tags': 1 });
 postSchema.index({ createdAt: -1 });
+
+// Text search
+postSchema.index({
+  text: 'text',
+  'recipe.ingredients.name': 'text',
+  hashtags: 'text',
+});
+
+postSchema.pre('findOneAndUpdate', function handleUpdate(next) {
+  const update = this.getUpdate();
+  if (update.$set && update.$set.text) {
+    update.$set.is_edited = true;
+    update.$set.edited_at = new Date();
+  }
+  next();
+});
 
 module.exports = mongoose.model('Post', postSchema);

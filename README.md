@@ -1,4 +1,4 @@
-# NouMeal Backend API
+cd ./# NouMeal Backend API
 
 This is the backend service for the **NouMeal** AI Meal Recommendation project.  
 It is built with **Express.js** and **MongoDB**, providing RESTful APIs for meal recommendations, user management, and recipe data with AI technology.
@@ -79,6 +79,7 @@ The server will start on `http://localhost:3000` (or your configured port).
 ## 📚 API Documentation
 
 Once the server is running, you can access the interactive API documentation at:
+
 ```
 http://localhost:3000/api-docs
 ```
@@ -145,9 +146,11 @@ npm test
 ### Environment Setup
 
 <!-- 1. Install dependencies: `npm install` -->
+
 1. Set up your `.env` file
 2. Start MongoDB service
-3. Run development server: 
+3. Run development server:
+
 ```bash
 npm run docker:build:dev
 npm run docker:up:dev

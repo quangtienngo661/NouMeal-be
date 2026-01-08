@@ -7,7 +7,6 @@ const {
   changePassword,
   deactivateAccount,
   handleValidationErrors, 
-  getDailyCalorieNeeds
 } = require('../controller/userController');
 
 const {
@@ -23,7 +22,6 @@ const { authenticate } = require('../middleware/authMiddleware');
 router.post('/register', validateRegistration, handleValidationErrors, registerUser);
 router.post('/login', validateLogin, handleValidationErrors, loginUser);
 router.patch('/change-password', authenticate, validatePasswordChange, handleValidationErrors, changePassword);
-router.get('/daily-calorie-needs', authenticate, getDailyCalorieNeeds);
 router.get('/:userId', authenticate, getUserById);
 
 module.exports = router;

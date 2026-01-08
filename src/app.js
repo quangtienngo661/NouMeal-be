@@ -48,7 +48,7 @@ app.use(helmet());
 
 // Response helper
 app.use((req, res, next) => {
-  res.ok = (data, message, status, meta) =>
+  res.ok = (data, status, message, meta) =>
     success(res, data, message, status, meta);
   next();
 });

@@ -1,6 +1,7 @@
 const Comment = require('../model/commentModel');
 const Post = require('../model/postModel');
-
+const Like = require('../model/likeModel');
+const AppError = require('../libs/util/AppError');
 class CommentService {
   async createComment(commentData) {
     try {
@@ -24,7 +25,9 @@ class CommentService {
       const newComment = new Comment(commentData);
       await newComment.save();
 
-      await Post.findByIdAndUpdate(post, { $inc: { comments_count: 1 } });
+      await Post.findByIdAndUpdate(post, {
+        $inc: { 'engagement.comments_count': 1 },
+      });
 
       if (parent_comment) {
         // ✅ FIX: Sửa từ Post thành Comment
@@ -49,6 +52,16 @@ class CommentService {
         .lean();
 
       if (!comment) throw new Error('Comment not found');
+      if (requestingUserId) {
+        const hasLiked = await Like.exists({
+          user: requestingUserId,
+          target_type: 'Comment',
+          target_id: commentId,
+        });
+        comment.has_liked = !!hasLiked;
+      } else {
+        comment.has_liked = false;
+      }
       return comment;
     } catch (error) {
       throw new Error(`Error retrieving comment: ${error.message}`);
@@ -80,6 +93,25 @@ class CommentService {
           .lean(),
         Comment.countDocuments(query),
       ]);
+
+      if (userId) {
+        const commentIds = comments.map((c) => c._id);
+        const likes = await Like.find({
+          user: userId,
+          target_type: 'Comment',
+          target_id: { $in: commentIds },
+        }).lean();
+
+        const likedSet = new Set(likes.map((l) => l.target_id.toString()));
+
+        comments.forEach((comment) => {
+          comment.has_liked = likedSet.has(comment._id.toString());
+        });
+      } else {
+        comments.forEach((comment) => {
+          comment.has_liked = false;
+        });
+      }
 
       return {
         comments,
@@ -117,6 +149,25 @@ class CommentService {
           .lean(),
         Comment.countDocuments(query),
       ]);
+
+      if (userId) {
+        const replyIds = replies.map((r) => r._id);
+        const likes = await Like.find({
+          user: userId,
+          target_type: 'Comment',
+          target_id: { $in: replyIds },
+        }).lean();
+
+        const likedSet = new Set(likes.map((l) => l.target_id.toString()));
+
+        replies.forEach((reply) => {
+          reply.has_liked = likedSet.has(reply._id.toString());
+        });
+      } else {
+        replies.forEach((reply) => {
+          reply.has_liked = false;
+        });
+      }
 
       return {
         replies,
@@ -177,7 +228,7 @@ class CommentService {
       await comment.save();
 
       await Post.findByIdAndUpdate(comment.post, {
-        $inc: { comments_count: -1 },
+        $inc: { 'engagement.comments_count': -1 },
       });
 
       if (comment.parent_comment) {
@@ -192,37 +243,87 @@ class CommentService {
     }
   }
 
-  async likeComment(commentId) {
+  async likeComment(commentId, userId) {
     try {
-      const comment = await Comment.findByIdAndUpdate(
+      const comment = await Comment.findById(commentId);
+      if (!comment) {
+        throw new AppError('Comment not found', 404);
+      }
+
+      // Kiểm tra đã like chưa
+      const existingLike = await Like.findOne({
+        user: userId,
+        target_type: 'Comment',
+        target_id: commentId,
+      });
+
+      if (existingLike) {
+        throw new AppError('You have already liked this comment', 400);
+      }
+
+      // Tạo like record
+      await Like.create({
+        user: userId,
+        target_type: 'Comment',
+        target_id: commentId,
+      });
+
+      // Tăng likes_count
+      const updatedComment = await Comment.findByIdAndUpdate(
         commentId,
         { $inc: { likes_count: 1 } },
         { new: true }
       );
 
-      if (!comment) {
-        throw new Error('Comment not found');
-      }
-      return comment;
+      return {
+        comment_id: commentId,
+        likes_count: updatedComment.likes_count,
+        has_liked: true,
+      };
     } catch (error) {
-      throw new Error(`Error liking comment: ${error.message}`);
+      throw error;
     }
   }
 
-  async unlikeComment(commentId) {
+  async unlikeComment(commentId, userId) {
     try {
-      const comment = await Comment.findByIdAndUpdate(
+      const comment = await Comment.findById(commentId);
+      if (!comment) {
+        throw new AppError('Comment not found', 404);
+      }
+
+      // Kiểm tra đã like chưa
+      const existingLike = await Like.findOne({
+        user: userId,
+        target_type: 'Comment',
+        target_id: commentId,
+      });
+
+      if (!existingLike) {
+        throw new AppError('You have not liked this comment', 400);
+      }
+
+      // Xóa like record
+      await Like.deleteOne({
+        user: userId,
+        target_type: 'Comment',
+        target_id: commentId,
+      });
+
+      // Giảm likes_count
+      const updatedComment = await Comment.findByIdAndUpdate(
         commentId,
         { $inc: { likes_count: -1 } },
         { new: true }
       );
 
-      if (!comment) {
-        throw new Error('Comment not found');
-      }
-      return comment;
+      return {
+        comment_id: commentId,
+        likes_count: updatedComment.likes_count,
+        has_liked: false,
+      };
     } catch (error) {
-      throw new Error(`Error unliking comment: ${error.message}`);
+      throw error;
     }
   }
 }

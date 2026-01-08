@@ -8,9 +8,40 @@ const { catchAsync } = require("../libs/util/catchAsync")
  * /api/v1/foods:
  *   get:
  *     summary: Get all foods
- *     description: Retrieve a list of all active foods.
+ *     description: Retrieve a list of all active foods with pagination support.
  *     tags: [Foods]
  *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: categories
+ *         schema:
+ *           type: string
+ *         description: Filter by food categories (comma-separated)
+ *         example: protein,vegetables
+ *       - in: query
+ *         name: meal
+ *         schema:
+ *           type: string
+ *           enum: [breakfast, lunch, dinner, snack]
+ *         description: Filter by meal type
+ *         example: lunch
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 10
  *     responses:
  *       200:
  *         description: List of foods retrieved successfully
@@ -26,8 +57,9 @@ const { catchAsync } = require("../libs/util/catchAsync")
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 exports.getFoods = catchAsync(async (req, res, next) => {
-    const result = await FoodService.getFoods();
-    return res.ok(result, 200);
+    const { categories, meal, tags, page, limit } = req.query;
+    const { result, meta } = await FoodService.getFoods(categories, meal, tags, page, limit);
+    return res.ok(result, 200, "Success", meta);
 });
 
 /**
@@ -63,7 +95,7 @@ exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
 
     const result = await FoodService.getAdaptiveRecommendation(userId);
-    return res.ok(result, 200);
+    return res.ok(result, 200, "Success");
 });
 
 /**
@@ -315,14 +347,181 @@ exports.getFoodById = catchAsync(async (req, res, next) => {
     return res.ok(result, 200);
 });
 
+/**
+ * @swagger
+ * /api/v1/foods/user:
+ *   get:
+ *     summary: Get foods created by current user
+ *     description: Retrieve all foods posted by the authenticated user with pagination support.
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: User foods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FoodListResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getOwnFoods = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.query;
+    const userId = req.user._id;
+
+    console.log("userId:", userId);
+
+    const { result, meta } = await FoodService.getFoodsByUserId(userId, page, limit);
+    return res.ok(result, 200, "Success", meta);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/admin:
+ *   get:
+ *     summary: Get foods created by admin
+ *     description: Retrieve all foods posted by admin (foods without postedBy field) with pagination support.
+ *     tags: [Foods]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Admin foods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FoodListResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getAdminFoods = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.query;
+
+    const { result, meta } = await FoodService.getAdminFoods(page, limit);
+    return res.ok(result, 200, "Success", meta);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/user/{userId}:
+ *   get:
+ *     summary: Get foods created by other user
+ *     description: Retrieve all foods posted by the specified user with pagination support.
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the user whose foods to retrieve
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: User foods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FoodListResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.query;
+    const userId = req.params.userId;
+
+    const { result, meta } = await FoodService.getFoodsByUserId(userId, page, limit);
+    return res.ok(result, 200, "Success", meta);
+});
+
 // ✏️ CREATE / UPDATE / DELETE
 /**
  * @swagger
- * /api/v1/foods:
+ * /api/v1/foods/admin:
  *   post:
- *     summary: Create a new food
- *     description: Add a new food item to the database.
+ *     summary: Create a new food by admin
+ *     description: Add a new food item to the database by admin (without postedBy field).
  *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -342,6 +541,18 @@ exports.getFoodById = catchAsync(async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - Admin only
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Internal server error
  *         content:
@@ -349,10 +560,58 @@ exports.getFoodById = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-exports.createFood = catchAsync(async (req, res, next) => {
+exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
     const foodInfo = { ...req.body };
 
-    const result = await FoodService.createFood(foodInfo, req.user._id);
+    const result = await FoodService.createFoodByAdmin(foodInfo);
+    return res.ok(result, 201);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/user:
+ *   post:
+ *     summary: Create a new food by user
+ *     description: Add a new food item to the database by authenticated user (with postedBy field).
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/FoodCreateRequest'
+ *     responses:
+ *       201:
+ *         description: Food created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/FoodItemResponse'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.createFoodByUser = catchAsync(async (req, res, next) => {
+    const foodInfo = { ...req.body };
+
+    const result = await FoodService.createFoodByUser(foodInfo, req.user._id);
     return res.ok(result, 201);
 });
 
@@ -360,7 +619,7 @@ exports.createFood = catchAsync(async (req, res, next) => {
  * @swagger
  * /api/v1/foods/{foodId}:
  *   patch:
- *     summary: Update a food
+ *     summary: Update a food (admin/user)
  *     description: Update fields of an existing food item by ID.
  *     tags: [Foods]
  *     parameters:
@@ -412,11 +671,13 @@ exports.updateFood = catchAsync(async (req, res, next) => {
 
 /**
  * @swagger
- * /api/v1/foods/{foodId}:
+ * /api/v1/foods/admin/{foodId}:
  *   delete:
- *     summary: Delete a food
- *     description: Remove a food item by ID.
+ *     summary: Delete a food by admin
+ *     description: Admin can delete any food item by ID.
  *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: foodId
@@ -426,11 +687,32 @@ exports.updateFood = catchAsync(async (req, res, next) => {
  *         description: The ID of the food to delete
  *     responses:
  *       200:
- *         description: 200
+ *         description: Food deleted successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/FoodItemResponse'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Food deleted successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Food'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - Admin only
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Food not found
  *         content:
@@ -444,10 +726,76 @@ exports.updateFood = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-exports.deleteFood = catchAsync(async (req, res, next) => {
+exports.deleteFoodByAdmin = catchAsync(async (req, res, next) => {
     const { foodId } = req.params;
-    const result = await FoodService.deleteFood(foodId, req.user._id);
-    return res.ok(result, 200);
+
+    const result = await FoodService.deleteFoodByAdmin(foodId);
+    return res.ok(result, 200, "Food deleted successfully");
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/user/{foodId}:
+ *   delete:
+ *     summary: Delete a food by user
+ *     description: User can only delete foods they created (validates postedBy field).
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: foodId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the food to delete
+ *     responses:
+ *       200:
+ *         description: Food deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Food deleted successfully
+ *                 data:
+ *                   $ref: '#/components/schemas/Food'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - You can only delete your own foods
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Food not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.deleteFoodByUser = catchAsync(async (req, res, next) => {
+    const { foodId } = req.params;
+    const userId = req.user._id;
+
+    const result = await FoodService.deleteFoodByUser(foodId, userId);
+    return res.ok(result, 200, "Food deleted successfully");
 });
 
 /**
