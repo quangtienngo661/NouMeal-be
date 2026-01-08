@@ -13,9 +13,13 @@ const generateAccessToken = (userId) => {
 
 // Generate Refresh Token (long-lived)
 const generateRefreshToken = (userId) => {
-  return jwt.sign({ id: userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d', // 7 days
-  });
+  return jwt.sign(
+    { id: userId, type: 'refresh' },
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d', // 7 days
+    }
+  );
 };
 
 // Generate both tokens
@@ -89,6 +93,45 @@ const authenticate = catchAsync(async (req, res, next) => {
   next();
 });
 
+const optionalAuth = catchAsync(async (req, res, next) => {
+  // 1) Get token from header
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  // 2) If no token, continue without user (anonymous access)
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  // 3) Try to verify token
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // 4) Check if user still exists
+    const currentUser = await User.findById(decoded.id);
+
+    if (currentUser && currentUser.isActive) {
+      // User exists and is active, attach to request
+      req.user = currentUser;
+    } else {
+      // User not found or inactive, continue as anonymous
+      req.user = null;
+    }
+  } catch (error) {
+    // Token invalid or expired, continue as anonymous
+    req.user = null;
+  }
+
+  // Always allow the request to continue
+  next();
+});
+
 // Middleware to restrict access to specific roles (if needed in future)
 const restrictTo = (...roles) => {
   return (req, res, next) => {
@@ -103,7 +146,10 @@ const restrictTo = (...roles) => {
 
 // Verify refresh token
 const verifyRefreshToken = (token) => {
-  return jwt.verify(token, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+  return jwt.verify(
+    token,
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+  );
 };
 
 // Create and send token response (enhanced with refresh token)
@@ -125,8 +171,8 @@ const createSendToken = async (user, statusCode, res, message = 'Success') => {
     data: {
       accessToken,
       refreshToken,
-      user
-    }
+      user,
+    },
   });
 };
 
@@ -146,6 +192,7 @@ module.exports = {
   generateRefreshToken,
   generateTokenPair,
   verifyRefreshToken,
+  optionalAuth,
   authenticate,
   restrictTo,
   createSendToken,
