@@ -2,7 +2,7 @@ const Post = require('../model/postModel');
 const AppError = require('../libs/util/AppError');
 const User = require('../model/userModel');
 const Food = require('../model/foodModel');
-
+const Like = require('../model/likeModel');
 class PostService {
   async createPost(postData) {
     try {
@@ -48,6 +48,7 @@ class PostService {
       if (!(await this._canViewPost(post, userId))) {
         throw new AppError('You do not have permission to view this post', 403);
       }
+      await this._addLikeStatus(post, userId);
 
       return post;
     } catch (error) {
@@ -104,7 +105,7 @@ class PostService {
             'name description imageUrl category meal ingredients nutritionalInfo allergens tags postedBy isActive',
           match: { isActive: true },
         });
-
+      await this._addLikeStatus(updatedPost, userId);
       return updatedPost;
     } catch (error) {
       if (error.name === 'ValidationError') {
@@ -222,7 +223,7 @@ class PostService {
           .lean(),
         Post.countDocuments(query),
       ]);
-
+      await this._addLikeStatusBulk(posts, userId);
       return {
         posts,
         pagination: {
@@ -299,7 +300,7 @@ class PostService {
           .lean(),
         Post.countDocuments(query),
       ]);
-
+      await this._addLikeStatusBulk(posts, userId);
       return {
         posts,
         pagination: {
@@ -514,27 +515,31 @@ class PostService {
         throw new AppError('Post not found', 404);
       }
 
-      // Check if user already liked
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
+      // Kiểm tra đã like chưa
+      const existingLike = await Like.findOne({
+        user: userId,
+        target_type: 'Post',
+        target_id: postId,
+      });
 
-      if (user.liked_posts && user.liked_posts.includes(postId)) {
+      if (existingLike) {
         throw new AppError('You have already liked this post', 400);
       }
 
-      // Add to user's liked posts
-      await User.findByIdAndUpdate(userId, {
-        $addToSet: { liked_posts: postId },
+      // Tạo like record
+      await Like.create({
+        user: userId,
+        target_type: 'Post',
+        target_id: postId,
       });
 
-      // Increment likes count
+      // Tăng likes_count
       const updatedPost = await this.updateEngagement(postId, 'likes_count', 1);
 
       return {
         post_id: postId,
         likes_count: updatedPost.engagement.likes_count,
+        has_liked: true,
       };
     } catch (error) {
       throw error;
@@ -548,22 +553,25 @@ class PostService {
         throw new AppError('Post not found', 404);
       }
 
-      // Check if user has liked
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
+      // Kiểm tra đã like chưa
+      const existingLike = await Like.findOne({
+        user: userId,
+        target_type: 'Post',
+        target_id: postId,
+      });
 
-      if (!user.liked_posts || !user.liked_posts.includes(postId)) {
+      if (!existingLike) {
         throw new AppError('You have not liked this post', 400);
       }
 
-      // Remove from user's liked posts
-      await User.findByIdAndUpdate(userId, {
-        $pull: { liked_posts: postId },
+      // Xóa like record
+      await Like.deleteOne({
+        user: userId,
+        target_type: 'Post',
+        target_id: postId,
       });
 
-      // Decrement likes count
+      // Giảm likes_count
       const updatedPost = await this.updateEngagement(
         postId,
         'likes_count',
@@ -573,10 +581,49 @@ class PostService {
       return {
         post_id: postId,
         likes_count: updatedPost.engagement.likes_count,
+        has_liked: false,
       };
     } catch (error) {
       throw error;
     }
+  }
+
+  async _addLikeStatus(post, userId) {
+    if (!userId) {
+      post.has_liked = false;
+      return post;
+    }
+
+    const hasLiked = await Like.exists({
+      user: userId,
+      target_type: 'Post',
+      target_id: post._id,
+    });
+
+    post.has_liked = !!hasLiked;
+    return post;
+  }
+
+  async _addLikeStatusBulk(posts, userId) {
+    if (!userId || posts.length === 0) {
+      posts.forEach((p) => (p.has_liked = false));
+      return posts;
+    }
+
+    const postIds = posts.map((p) => p._id);
+    const likes = await Like.find({
+      user: userId,
+      target_type: 'Post',
+      target_id: { $in: postIds },
+    }).lean();
+
+    const likedSet = new Set(likes.map((l) => l.target_id.toString()));
+
+    posts.forEach((post) => {
+      post.has_liked = likedSet.has(post._id.toString());
+    });
+
+    return posts;
   }
 }
 

@@ -746,7 +746,7 @@ const likeComment = catchAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Comment liked successfully',
-    data: { engagement: updated.likes_count },
+    data: result,
   });
 });
 
@@ -834,7 +834,7 @@ const unlikeComment = catchAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Comment unliked successfully',
-    data: { engagement: updated.likes_count },
+    data: result,
   });
 });
 
