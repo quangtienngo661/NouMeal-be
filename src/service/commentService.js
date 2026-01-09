@@ -1,7 +1,9 @@
 const Comment = require('../model/commentModel');
 const Post = require('../model/postModel');
 const Like = require('../model/likeModel');
+const User = require('../model/userModel');
 const AppError = require('../libs/util/AppError');
+
 class CommentService {
   async createComment(commentData) {
     try {
@@ -21,10 +23,10 @@ class CommentService {
         if (!parent) throw new Error('Parent comment not found');
       }
 
-      const user = await User.findById(author).select('username');
+      const user = await User.findById(author).select('name');
       if (!user) throw new Error('User not found');
-      commentData.authorname = user.username;
-      // ✅ FIX: Đổi tên biến từ Comment thành newComment
+      commentData.authorname = user.name;
+
       const newComment = new Comment(commentData);
       await newComment.save();
 
@@ -33,13 +35,11 @@ class CommentService {
       });
 
       if (parent_comment) {
-        // ✅ FIX: Sửa từ Post thành Comment
         await Comment.findByIdAndUpdate(parent_comment, {
           $inc: { replies_count: 1 },
         });
       }
 
-      // ✅ FIX: Dùng newComment._id
       return await this.getCommentById(newComment._id, author);
     } catch (error) {
       throw new Error(`Error creating comment: ${error.message}`);
@@ -54,6 +54,22 @@ class CommentService {
         .lean();
 
       if (!comment) throw new Error('Comment not found');
+
+      // ✅ Manually fetch author info to get name
+      if (comment.author) {
+        const author = await User.findById(comment.author)
+          .select('name email')
+          .lean();
+        if (author) {
+          comment.author = author;
+          comment.author_name = author.name;
+        } else {
+          comment.author_name = comment.authorname;
+        }
+      } else {
+        comment.author_name = comment.authorname;
+      }
+
       if (requestingUserId) {
         const hasLiked = await Like.exists({
           user: requestingUserId,
@@ -64,6 +80,7 @@ class CommentService {
       } else {
         comment.has_liked = false;
       }
+
       return comment;
     } catch (error) {
       throw new Error(`Error retrieving comment: ${error.message}`);
@@ -78,11 +95,11 @@ class CommentService {
         sortBy = 'createdAt',
         order = 'desc',
       } = options;
+
       const post = await Post.findById(postId).lean();
       if (!post) throw new Error('Post not found');
 
       const skip = (page - 1) * limit;
-      // ✅ FIX: Sửa logic sort (desc = -1, asc = 1)
       const sort = { createdAt: order === 'desc' ? -1 : 1 };
       const query = { post: postId, parent_comment: null, is_deleted: false };
 
@@ -90,6 +107,24 @@ class CommentService {
         Comment.find(query).sort(sort).skip(skip).limit(limit).lean(),
         Comment.countDocuments(query),
       ]);
+
+      // ✅ Manually fetch author info for each comment
+      const authorIds = [...new Set(comments.map((c) => c.author.toString()))];
+      const authors = await User.find({ _id: { $in: authorIds } })
+        .select('name email')
+        .lean();
+
+      const authorMap = new Map(authors.map((a) => [a._id.toString(), a]));
+
+      comments.forEach((comment) => {
+        const author = authorMap.get(comment.author.toString());
+        if (author) {
+          comment.author = author;
+          comment.author_name = author.name;
+        } else {
+          comment.author_name = comment.authorname;
+        }
+      });
 
       if (userId) {
         const commentIds = comments.map((c) => c._id);
@@ -132,8 +167,8 @@ class CommentService {
         sortBy = 'createdAt',
         order = 'desc',
       } = options;
+
       const skip = (page - 1) * limit;
-      // ✅ FIX: Sửa logic sort
       const sort = { createdAt: order === 'desc' ? -1 : 1 };
       const query = { parent_comment: commentId, is_deleted: false };
 
@@ -141,6 +176,24 @@ class CommentService {
         Comment.find(query).sort(sort).skip(skip).limit(limit).lean(),
         Comment.countDocuments(query),
       ]);
+
+      // ✅ Manually fetch author info for each reply
+      const authorIds = [...new Set(replies.map((r) => r.author.toString()))];
+      const authors = await User.find({ _id: { $in: authorIds } })
+        .select('name email')
+        .lean();
+
+      const authorMap = new Map(authors.map((a) => [a._id.toString(), a]));
+
+      replies.forEach((reply) => {
+        const author = authorMap.get(reply.author.toString());
+        if (author) {
+          reply.author = author;
+          reply.author_name = author.name;
+        } else {
+          reply.author_name = reply.authorname;
+        }
+      });
 
       if (userId) {
         const replyIds = replies.map((r) => r._id);
@@ -184,15 +237,16 @@ class CommentService {
         throw new Error('Unauthorized to update this comment');
       }
 
-      // ✅ FIX: Sửa typo từ forrbidden thành forbidden
       const forbiddenFields = [
         'post',
         'author',
+        'authorname', // ✅ Also protect authorname
         'parent_comment',
         'replies_count',
         'likes_count',
         'is_deleted',
       ];
+
       for (const field of forbiddenFields) {
         if (field in updateData) {
           delete updateData[field];
@@ -242,7 +296,6 @@ class CommentService {
         throw new AppError('Comment not found', 404);
       }
 
-      // Kiểm tra đã like chưa
       const existingLike = await Like.findOne({
         user: userId,
         target_type: 'Comment',
@@ -253,14 +306,12 @@ class CommentService {
         throw new AppError('You have already liked this comment', 400);
       }
 
-      // Tạo like record
       await Like.create({
         user: userId,
         target_type: 'Comment',
         target_id: commentId,
       });
 
-      // Tăng likes_count
       const updatedComment = await Comment.findByIdAndUpdate(
         commentId,
         { $inc: { likes_count: 1 } },
@@ -284,7 +335,6 @@ class CommentService {
         throw new AppError('Comment not found', 404);
       }
 
-      // Kiểm tra đã like chưa
       const existingLike = await Like.findOne({
         user: userId,
         target_type: 'Comment',
@@ -295,14 +345,12 @@ class CommentService {
         throw new AppError('You have not liked this comment', 400);
       }
 
-      // Xóa like record
       await Like.deleteOne({
         user: userId,
         target_type: 'Comment',
         target_id: commentId,
       });
 
-      // Giảm likes_count
       const updatedComment = await Comment.findByIdAndUpdate(
         commentId,
         { $inc: { likes_count: -1 } },
