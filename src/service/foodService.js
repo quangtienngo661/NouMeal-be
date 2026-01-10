@@ -180,7 +180,7 @@ class FoodService {
         return { result: foods, meta };
     }
 
-    // ✏️ CREATE / UPDATE / DELETE
+    // ✏️ CREATE / UPD
     async createFoodByAdmin(foodInfo) {
         const newFood = await Food.create({ ...foodInfo });
         caching.flushAll(); // Clear all caches when food data changes
@@ -189,8 +189,15 @@ class FoodService {
 
     async createFoodByUser(foodInfo, userId) {
         const newFood = await Food.create({ ...foodInfo, postedBy: userId });
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+        let isAppropriate = user.preferences.some(pref => foodInfo.tags.includes(pref));
+
+
         caching.flushAll(); // Clear all caches when food data changes
-        return newFood;
+        return { newFood, isAppropriate };
     };
 
     async updateFood(foodId, foodInfo, userId) {
