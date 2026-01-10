@@ -38,14 +38,75 @@ const userService = require('../service/userService');
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 status:
+ *                   type: integer
+ *                   example: 200
  *                 message:
  *                   type: string
  *                   example: "Profile updated successfully"
  *                 data:
  *                   type: object
  *                   properties:
- *                     user:
- *                       $ref: '#/components/schemas/User'
+ *                     _id:
+ *                       type: string
+ *                       example: "690603225d57f828f37481dd"
+ *                     email:
+ *                       type: string
+ *                       example: "john.doe@example.com"
+ *                     name:
+ *                       type: string
+ *                       example: "John Updated"
+ *                     age:
+ *                       type: integer
+ *                       example: 26
+ *                     gender:
+ *                       type: string
+ *                       example: "male"
+ *                     height:
+ *                       type: number
+ *                       example: 170
+ *                     weight:
+ *                       type: number
+ *                       example: 72
+ *                     goal:
+ *                       type: string
+ *                       example: "build_muscle"
+ *                     preferences:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["vegetarian", "high_protein", "organic"]
+ *                     allergies:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["peanuts"]
+ *                     favoriteFoods:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: []
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     isEmailVerified:
+ *                       type: boolean
+ *                       example: true
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2025-11-01T12:54:58.781Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2026-01-08T13:38:16.884Z"
+ *                     lastLogin:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2026-01-08T13:37:53.477Z"
+ *                     role:
+ *                       type: string
+ *                       example: "user"
  *       400:
  *         description: Validation error
  *         content:
@@ -73,7 +134,7 @@ const updateProfile = catchAsync(async (req, res, next) => {
     updateData
   );
 
-  return res.ok(updatedUser, 'Profile updated successfully', 200);
+  return res.ok(updatedUser, 200, 'Profile updated successfully');
 
   // res.status(200).json({
   //   success: true,
