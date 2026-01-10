@@ -91,11 +91,89 @@ exports.getFoods = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
+exports.getTodayMeals = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
+    const foodId = req.body?.foodId || null;
 
-    const result = await FoodService.getAdaptiveRecommendation(userId);
+    const result = await FoodService.getTodayMeals(userId, foodId);
     return res.ok(result, 200, "Success");
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/reset-today-meals:
+ *   post:
+ *     summary: Reset today's meal recommendations
+ *     description: Clears the cached non-recommended meal selection for today and returns fresh today meal recommendations for the authenticated user.
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Today meals reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Today meals reset successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                       example: "2025-12-06"
+ *                     dayName:
+ *                       type: string
+ *                       example: "Friday"
+ *                     meals:
+ *                       type: object
+ *                       properties:
+ *                         breakfast:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         lunch:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         dinner:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         snack:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.resetTodayMeals = catchAsync(async (req, res, next) => {
+    const userId = req.user._id;
+    const result = await FoodService.resetTodayMeals(userId);
+    return res.ok(result, 200, "Today meals reset successfully");
 });
 
 /**

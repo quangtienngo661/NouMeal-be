@@ -2,18 +2,18 @@ const express = require('express');
 const router = express.Router();
 const {
     getFoods,
-    getAdaptiveRecommendation,
+    getTodayMeals,
+    resetTodayMeals,
     weeklyFoodsRecommendation,
     getFoodById,
-    createFood,
     updateFood,
-    deleteFood,
     clearCache,
     logMeal,
     getTodayProgress,
     getAllFoodLogs,
     getFoodLog,
     createFoodByUser,
+    createFoodByAdmin,
     getAdminFoods,
     getOwnFoods,
     getFoodsByUserId,
@@ -28,11 +28,11 @@ const {
     validateFoodIdParam,
 } = require('../validation/foodValidation');
 const { validateLogMeal } = require('../validation/foodLogValidation');
-const { createFoodByAdmin } = require('../service/foodService');
 
 // 📦 READ operations
 router.get('/', getFoods);
-router.get('/recommended', authenticate, getAdaptiveRecommendation);
+router.get('/today-meals', authenticate, getTodayMeals);
+router.post('/reset-today-meals', authenticate, resetTodayMeals);
 router.get('/weekly-recommended', authenticate, weeklyFoodsRecommendation);
 
 // Get foods by source (must come before /:foodId)
