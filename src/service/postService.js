@@ -190,8 +190,14 @@ class PostService {
         query.visibility = visibility;
       }
 
-      if (hashtags && hashtags.length > 0) {
-        query.hashtags = { $in: hashtags.map((tag) => tag.toLowerCase()) };
+      if (hashtags) {
+        const hashtagArray = Array.isArray(hashtags) ? hashtags : [hashtags];
+
+        if (hashtagArray.length > 0) {
+          query.hashtags = {
+            $in: hashtagArray.map((tag) => tag.toLowerCase()),
+          };
+        }
       }
 
       if (foodId) {
