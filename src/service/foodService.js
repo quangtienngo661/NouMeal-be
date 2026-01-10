@@ -193,14 +193,11 @@ class FoodService {
         if (!user) {
             throw new AppError('User not found', 404);
         }
-        let isApproriate = user.preferences.some(pref => foodInfo.tags.includes(pref));
+        let isAppropriate = user.preferences.some(pref => foodInfo.tags.includes(pref));
 
-        // console.log("isApproriate:", isApproriate);
-        // console.log(user.preferences)
-        // return;
 
         caching.flushAll(); // Clear all caches when food data changes
-        return { newFood, isApproriate };
+        return { newFood, isAppropriate };
     };
 
     async updateFood(foodId, foodInfo, userId) {
