@@ -1,29 +1,65 @@
-# syntax=docker/dockerfile:1
+# # syntax=docker/dockerfile:1
+# FROM node:20-alpine
+
+# WORKDIR /app
+
+# RUN apk add --no-cache python3 py3-pip make g++ jpeg-dev zlib-dev
+# # copy package trước để cài nhanh khi code thay đổi
+# COPY package*.json ./
+
+# # cài full dependencies (kể cả dev)
+# RUN npm install
+
+# # cài nodemon global cho hot reload
+# RUN npm install -g nodemon
+
+# # copy code còn lại
+# COPY . .
+
+# COPY AI_Bot/requirements.txt ./AI_Bot/
+# RUN pip3 install --no-cache-dir -r AI_Bot/requirements.txt --break-system-packages
+
+# # set environment dev
+# ENV NODE_ENV=development
+# ENV BE_PORT=5000
+
+# EXPOSE ${BE_PORT}
+
+# # start bằng nodemon
+# CMD ["npm", "run", "dev"]
+
 FROM node:20-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache python3 py3-pip make g++ jpeg-dev zlib-dev
-# copy package trước để cài nhanh khi code thay đổi
+ENV NODE_ENV=development
+ENV BE_PORT=3000
+
+# Install Python, supervisor và các dependencies
+RUN apk add --no-cache \
+    python3 \
+    py3-pip \
+    make \
+    g++ \
+    curl \
+    supervisor
+
+# Copy package files và install Node.js dependencies
 COPY package*.json ./
+RUN npm install && npm install -g nodemon
 
-# cài full dependencies (kể cả dev)
-RUN npm install
+# Copy all code
+COPY src ./src
+COPY AI_Bot ./AI_Bot
 
-# cài nodemon global cho hot reload
-RUN npm install -g nodemon
-
-# copy code còn lại
-COPY . .
-
-COPY AI_Bot/requirements.txt ./AI_Bot/
+# Install Python dependencies
 RUN pip3 install --no-cache-dir -r AI_Bot/requirements.txt --break-system-packages
 
-# set environment dev
-ENV NODE_ENV=development
-ENV BE_PORT=5000
+# Copy supervisord config for development
+COPY supervisord.dev.conf /etc/supervisord.conf
 
-EXPOSE ${BE_PORT}
+# Expose all ports
+EXPOSE 3000 5001 5002
 
-# start bằng nodemon
-CMD ["npm", "run", "dev"]
+# Start all services with supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

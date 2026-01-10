@@ -64,20 +64,211 @@ exports.getFoods = catchAsync(async (req, res, next) => {
 
 /**
  * @swagger
- * /api/v1/foods/recommended:
+ * /api/v1/foods/today-meals:
  *   get:
- *     summary: Get food recommendations for current user
- *     description: Returns recommended foods for breakfast, lunch, dinner, and snacks based on the authenticated user's profile.
+ *     summary: Get today's meal recommendations for current user
+ *     description: Returns today's recommended meals (breakfast, lunch, dinner, snacks) based on the authenticated user's profile from the weekly plan. Can also be used with a foodId in body to get adaptive recommendations when user selects a non-recommended food.
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               foodId:
+ *                 type: string
+ *                 description: Optional food ID to get adaptive meal recommendations
+ *                 example: "692ebe81e68471451b81a9d0"
+ *     responses:
+ *       200:
+ *         description: Today's meals retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                       example: "2026-01-10"
+ *                     dayName:
+ *                       type: string
+ *                       example: "Friday"
+ *                     meals:
+ *                       type: object
+ *                       properties:
+ *                         breakfast:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         lunch:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         dinner:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         snack:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Food'
+ *             example:
+ *               success: true
+ *               message: "Success"
+ *               data:
+ *                 date: "2026-01-10"
+ *                 dayName: "Friday"
+ *                 meals:
+ *                   breakfast:
+ *                     - _id: "692ebe81e68471451b81aa09"
+ *                       name: "Bánh Mì Thịt (Vietnamese Sandwich)"
+ *                       description: "Crispy baguette with grilled pork, pâté, pickled vegetables, and cilantro."
+ *                       category: "grains"
+ *                       meal: "breakfast"
+ *                       nutritionalInfo:
+ *                         calories: 720
+ *                         protein: 38
+ *                         carbohydrates: 78
+ *                         fat: 26
+ *                       calorieDiff: 6.375
+ *                       proteinDiff: 15.4
+ *                       carbDiff: 6.6
+ *                       fatDiff: 2.3
+ *                       totalDiff: 56.175
+ *                   lunch:
+ *                     - _id: "692ebe81e68471451b81aa0e"
+ *                       name: "Mì Quảng (Quang Noodles)"
+ *                       category: "grains"
+ *                       meal: "lunch"
+ *                       nutritionalInfo:
+ *                         calories: 920
+ *                         protein: 56
+ *                         carbohydrates: 110
+ *                         fat: 28
+ *                   dinner:
+ *                     - _id: "692ebe81e68471451b81aa0f"
+ *                       name: "Cá Kho Tộ (Caramelized Fish in Clay Pot)"
+ *                       category: "protein"
+ *                       meal: "dinner"
+ *                       nutritionalInfo:
+ *                         calories: 720
+ *                         protein: 48
+ *                         carbohydrates: 82
+ *                         fat: 20
+ *                   snack:
+ *                     - _id: "692ebe81e68471451b81a9d2"
+ *                       name: "Greek Yogurt"
+ *                       category: "dairy"
+ *                       meal: "snack"
+ *                       nutritionalInfo:
+ *                         calories: 190
+ *                         protein: 19
+ *                         carbohydrates: 14
+ *                         fat: 4
+ *       400:
+ *         description: Bad request or already chose non-recommended meal today
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User or food not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getTodayMeals = catchAsync(async (req, res, next) => {
+    const userId = req.user._id;
+    const foodId = req.body?.foodId || null;
+
+    const result = await FoodService.getTodayMeals(userId, foodId);
+    return res.ok(result, 200, "Success");
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/reset-today-meals:
+ *   post:
+ *     summary: Reset today's meal recommendations
+ *     description: Clears the cached non-recommended meal selection for today and returns fresh today meal recommendations for the authenticated user.
  *     tags: [Foods]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Recommendations generated successfully
+ *         description: Today meals reset successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/FoodRecommendationWrapped'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Today meals reset successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                       example: "2025-12-06"
+ *                     dayName:
+ *                       type: string
+ *                       example: "Friday"
+ *                     meals:
+ *                       type: object
+ *                       properties:
+ *                         breakfast:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         lunch:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         dinner:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         snack:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: User not found
  *         content:
@@ -91,11 +282,10 @@ exports.getFoods = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
+exports.resetTodayMeals = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
-
-    const result = await FoodService.getAdaptiveRecommendation(userId);
-    return res.ok(result, 200, "Success");
+    const result = await FoodService.resetTodayMeals(userId);
+    return res.ok(result, 200, "Today meals reset successfully");
 });
 
 /**

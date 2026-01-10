@@ -1,15 +1,18 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
+from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
+from clarifai_grpc.grpc.api.status import status_code_pb2
 from openai import OpenAI
-import os
-import uuid
 import base64
-from io import BytesIO
-from PIL import Image
+import time
+import uuid
+import os
+import json
 from dotenv import load_dotenv
+
 from flasgger import Swagger
-load_dotenv()  
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
@@ -28,44 +31,277 @@ swagger_config = {
 }
 
 swagger_template = {
+    "swagger": "2.0",
     "info": {
-        "title": "Nutrition API",
-        "description": "API tư vấn dinh dưỡng thông minh cho người Việt",
-        "version": "1.0.0"
-    }
+        "title": "AI Nutrition Agent API",
+        "description": """
+## 🤖 Intelligent Nutrition Advisory API
+
+### Key Features:
+* 📸 **Food Analysis from Images** - Recognition and nutritional assessment
+* 🔍 **Multi-dish Comparison** - Ranking by healthiness
+* 📊 **Calorie Tracking** - Daily calorie monitoring
+* 🍽️ **Meal Suggestions** - AI-generated personalized menus
+* 🤖 **Automated AI Agent** - Intent analysis and execution
+
+### AI Agent Mode:
+Use `/api/agent` for AI to automatically analyze intent, select functions, and execute.
+        """,
+        "version": "2.0.0",
+        "contact": {
+            "name": "API Support",
+            "email": "support@nutrition-ai.vn"
+        }
+    },
+    "host": "localhost:5001",
+    "basePath": "/",
+    "schemes": ["http", "https"],
+    "tags": [
+        {"name": "AI Agent", "description": "🤖 Automated AI Agent"},
+        {"name": "Food Analysis", "description": "📸 Food Analysis"},
+        {"name": "Calorie Tracking", "description": "📊 Calorie Tracking"},
+        {"name": "Meal Planning", "description": "🍽️ Meal Planning"},
+        {"name": "AI Chat", "description": "💬 AI Chat"},
+        {"name": "User Management", "description": "👤 User Management"}
+    ]
 }
 
 swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
-# Lấy API key từ file .env
-api_key = os.getenv("OPENAI_API_KEY")
+CLARIFAI_PAT = os.getenv("CLARIFAI_PAT")
+CLARIFAI_USER_ID = os.getenv("CLARIFAI_USER_ID")
+CLARIFAI_APP_ID = os.getenv("CLARIFAI_APP_ID")
+CLARIFAI_WORKFLOW_ID = os.getenv("CLARIFAI_WORKFLOW_ID")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-client = OpenAI(api_key=api_key)
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+channel = ClarifaiChannel.get_grpc_channel()
+stub = service_pb2_grpc.V2Stub(channel)
+metadata = (("authorization", "Key " + CLARIFAI_PAT),)
 
 conversations = {}
 user_profiles = {}
 
-SYSTEM_PROMPT = """Bạn là chuyên gia dinh dưỡng AI thân thiện của Việt Nam.
+AGENT_SYSTEM_PROMPT = """You are Vietnam's intelligent nutrition AI Agent with the following capabilities:
 
-NHIỆM VỤ:
-🥗 Tư vấn dinh dưỡng và món ăn Việt
-📊 Phân tích thành phần dinh dưỡng
-🍽️ Gợi ý thực đơn lành mạnh, phù hợp người Việt
-💪 Hỗ trợ các vấn đề sức khỏe (tiểu đường, béo phì, tim mạch...)
+🤖 MAIN TASKS:
+- Analyze user intent from questions/requests
+- Automatically suggest the most suitable functions
+- Execute multiple tasks sequentially if needed
+- Learn from conversation context
 
-PHONG CÁCH:
-- Trả lời bằng tiếng Việt, ngắn gọn, dễ hiểu
-- Sử dụng emoji phù hợp
-- Ưu tiên món ăn Việt Nam
-- Khuyến khích lối sống lành mạnh"""
+🎯 AVAILABLE FUNCTIONS:
+1. analyze_food - Analyze food from images
+2. compare_foods - Compare multiple dishes
+3. track_calories - Track daily calories
+4. quick_scan - Quick scan for food recognition
+5. meal_suggestion - Suggest meals for one serving
+6. weekly_menu - Create weekly menu plan
+7. detailed_recipes - Detailed cooking recipes
+8. chat - Free consultation
+
+📋 INTENT ANALYSIS RULES:
+- If image provided → prioritize analyze_food or quick_scan
+- If multiple images → compare_foods or track_calories
+- If asking about menu → meal_suggestion or weekly_menu
+- If asking about recipes → detailed_recipes
+- If general chat → chat
+
+🔄 AUTOMATION CAPABILITIES:
+- Detect missing information and ask again
+- Suggest next steps after each task
+- Combine multiple functions if appropriate
+- Learn user preferences
+
+💡 STYLE:
+- Friendly, proactive suggestions
+- Explain reasons for function selection
+- Provide multiple options for users
+- Prioritize Vietnamese dishes"""
+
+AVAILABLE_FUNCTIONS = [
+    {
+        "name": "analyze_food",
+        "description": "Analyze one dish in detail from an image. Use when user sends a food image and wants nutritional information and suitability assessment.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "image": {"type": "string", "description": "Base64 of food image"},
+                "health_condition": {"type": "string", "description": "Health condition", "default": "healthy"},
+                "dietary_goals": {"type": "string", "description": "Dietary goals", "default": "maintain weight"}
+            },
+            "required": ["image"]
+        }
+    },
+    {
+        "name": "compare_foods",
+        "description": "Compare multiple dishes (2-4 dishes). Use when user sends multiple images and wants to know which dish is better.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "images": {"type": "array", "items": {"type": "string"}, "description": "Array of base64 images"},
+                "health_condition": {"type": "string", "description": "Health condition", "default": "healthy"}
+            },
+            "required": ["images"]
+        }
+    },
+    {
+        "name": "track_calories",
+        "description": "Track total daily calories from multiple meals. Use when user wants to check calories consumed.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "images": {"type": "array", "items": {"type": "string"}, "description": "Images of meals throughout the day"},
+                "target_calories": {"type": "integer", "description": "Daily calorie target", "default": 2000},
+                "health_condition": {"type": "string", "description": "Health condition", "default": "healthy"}
+            },
+            "required": ["images"]
+        }
+    },
+    {
+        "name": "quick_scan",
+        "description": "Quick scan for food recognition. Use when user only wants to know the dish name without detailed analysis.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "image": {"type": "string", "description": "Base64 of food image"}
+            },
+            "required": ["image"]
+        }
+    },
+    {
+        "name": "meal_suggestion",
+        "description": "Suggest menu for one meal. Use when user asks 'what should I eat', 'suggest a dish for lunch'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "meal_time": {"type": "string", "description": "Which meal (breakfast/lunch/dinner)", "default": "lunch"},
+                "health_condition": {"type": "string", "description": "Health condition", "default": "healthy"},
+                "dietary_preferences": {"type": "string", "description": "Dietary preferences", "default": "none"},
+                "budget_range": {"type": "string", "description": "Budget", "default": "100k"},
+                "cooking_time": {"type": "string", "description": "Cooking time", "default": "30 minutes"}
+            }
+        }
+    },
+    {
+        "name": "weekly_menu",
+        "description": "Create a full week menu (7 days). Use when user wants to plan meals for multiple days.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "health_condition": {"type": "string", "description": "Health condition", "default": "healthy"},
+                "dietary_preferences": {"type": "string", "description": "Dietary preferences", "default": "none"},
+                "budget_range": {"type": "string", "description": "Daily budget", "default": "500k"},
+                "cooking_time": {"type": "string", "description": "Cooking time", "default": "45 minutes"}
+            }
+        }
+    },
+    {
+        "name": "detailed_recipes",
+        "description": "Create detailed cooking recipes with ingredients and steps. Use when user asks 'how to make dish X'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "days": {"type": "integer", "description": "Number of days to create recipes for", "default": 3},
+                "health_condition": {"type": "string", "description": "Health condition", "default": "healthy"},
+                "dietary_preferences": {"type": "string", "description": "Dietary preferences", "default": "none"},
+                "budget_range": {"type": "string", "description": "Budget", "default": "500k"}
+            }
+        }
+    }
+]
+
+def recognize_food_with_clarifai(image_base64):
+    try:
+        if ',' in image_base64:
+            image_base64 = image_base64.split(',')[1]
+        
+        image_bytes = base64.b64decode(image_base64)
+        
+        userDataObject = resources_pb2.UserAppIDSet(
+            user_id=CLARIFAI_USER_ID,
+            app_id=CLARIFAI_APP_ID
+        )
+        
+        post_workflow_response = stub.PostWorkflowResults(
+            service_pb2.PostWorkflowResultsRequest(
+                user_app_id=userDataObject,
+                workflow_id=CLARIFAI_WORKFLOW_ID,
+                inputs=[
+                    resources_pb2.Input(
+                        data=resources_pb2.Data(
+                            image=resources_pb2.Image(base64=image_bytes)
+                        )
+                    )
+                ]
+            ),
+            metadata=metadata
+        )
+        
+        if post_workflow_response.status.code != status_code_pb2.SUCCESS:
+            raise Exception(f"Clarifai Error: {post_workflow_response.status.description}")
+        
+        results = post_workflow_response.results[0]
+        detected_foods = []
+        
+        for output in results.outputs:
+            if output.data.concepts:
+                for concept in output.data.concepts:
+                    if concept.value > 0.5:
+                        detected_foods.append({
+                            "name": concept.name,
+                            "confidence": round(concept.value * 100, 2)
+                        })
+        
+        seen = set()
+        unique_foods = []
+        for f in detected_foods:
+            if f["name"] not in seen:
+                unique_foods.append(f)
+                seen.add(f["name"])
+        
+        return unique_foods
+        
+    except Exception as e:
+        print(f"❌ Clarifai Error: {str(e)}")
+        return []
+
+
+def call_openai_vision(prompt, images, max_tokens=1500):
+    try:
+        content = [{"type": "text", "text": prompt}]
+        
+        for img in images:
+            if ',' in img:
+                img = img.split(',')[1]
+            if not img.startswith('data:image'):
+                img = f"data:image/jpeg;base64,{img}"
+            
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": img, "detail": "high"}
+            })
+        
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": content}],
+            max_tokens=max_tokens,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content.strip()
+        
+    except Exception as e:
+        raise Exception(f"OpenAI Vision Error: {str(e)}")
+
 
 def call_openai_text(prompt, model="gpt-4o", max_tokens=1500):
-    """Gọi OpenAI text completion"""
     try:
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": AGENT_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=max_tokens,
@@ -76,1091 +312,1366 @@ def call_openai_text(prompt, model="gpt-4o", max_tokens=1500):
         raise Exception(f"OpenAI API error: {str(e)}")
 
 
-def call_openai_vision(prompt, images_base64, max_tokens=1500):
-    """Gọi OpenAI Vision API với ảnh base64"""
+def analyze_user_intent(message, images=None, conversation_history=None):
     try:
-        content = [{"type": "text", "text": prompt}]
-        
-        for img_b64 in images_base64:
-            # Xử lý base64 (bỏ prefix nếu có)
-            if ',' in img_b64:
-                img_b64 = img_b64.split(',')[1]
-            
-            content.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}
-            })
-        
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": content}],
-            max_tokens=max_tokens,
-            temperature=0.3
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        raise Exception(f"Vision API error: {str(e)}")
-    
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """Kiểm tra API hoạt động"""
-    return jsonify({
-        "status": "ok",
-        "message": "Nutrition API đang hoạt động",
-        "version": "1.0.0"
-    }), 200
+        context = f"""
+Analyze the user's request and suggest the most suitable function.
 
+**User message:** {message}
+**Attached images:** {"Yes, " + str(len(images)) + " image(s)" if images else "No"}
+**Conversation history:** {conversation_history[-3:] if conversation_history else "None"}
 
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    """
-Chat Bot API — Gửi tin nhắn và nhận phản hồi từ AI
----
-  post:
-  tags:
-    - Bot
-  summary: Chat API — Gửi tin nhắn và nhận phản hồi từ AI
-  description: |
-    **Endpoint chính dùng cho Chat Bot thông minh**
+**Available functions:**
+{json.dumps([{"name": f["name"], "description": f["description"]} for f in AVAILABLE_FUNCTIONS], ensure_ascii=False, indent=2)}
 
-    API này hỗ trợ:
-    1. Gửi tin nhắn văn bản từ người dùng
-    2. Tự động duy trì lịch sử hội thoại dựa trên `session_id`
-    3. Kết hợp system prompt + lịch sử + tin nhắn mới và gửi đến mô hình OpenAI
-    4. Nhận và trả về phản hồi từ AI
-    5. Luôn trả kèm `session_id` để tiếp tục hội thoại
+Return JSON with the following structure:
+{{
+    "intent": "suitable_function_name",
+    "confidence": 0.0-1.0,
+    "suggested_params": {{...}},
+    "explanation": "Brief explanation of why this function was chosen",
+    "alternative_actions": ["alternative_function_1", "alternative_function_2"],
+    "missing_info": ["additional_information_needed"],
+    "next_suggestions": ["suggested_next_actions"]
+}}
 
-    **Tính năng:**
-    - Lưu tối đa **10 tin nhắn gần nhất**
-    - Tự tạo `session_id` nếu client không gửi
-    - Xử lý lỗi thân thiện
-    - Tương thích với mô hình `gpt-4o-mini`
-
-  parameters:
-    - in: body
-      name: body
-      required: true
-      description: Payload gửi từ client
-      schema:
-        type: object
-        required:
-          - message
-        properties:
-          message:
-            type: string
-            description: Tin nhắn người dùng
-            example: "Xin chào, bạn có thể giúp tôi không?"
-          session_id:
-            type: string
-            description: ID phiên chat (nếu không gửi sẽ tự tạo)
-            example: "550e8400-e29b-41d4-a716-446655440000"
-
-  responses:
-    200:
-      description: Phản hồi thành công từ AI
-      schema:
-        type: object
-        properties:
-          reply:
-            type: string
-            example: "Chào bạn! Tôi có thể hỗ trợ gì cho bạn?"
-          session_id:
-            type: string
-            example: "550e8400-e29b-41d4-a716-446655440000"
-      examples:
-        application/json:
-          reply: "Chào bạn! Tôi có thể hỗ trợ bạn điều gì?"
-          session_id: "550e8400-e29b-41d4-a716-446655440000"
-
-    400:
-      description: Lỗi input không hợp lệ
-      schema:
-        type: object
-        properties:
-          error:
-            type: string
-            example: "Tin nhắn không được để trống"
-
-    500:
-      description: Lỗi server nội bộ
-      schema:
-        type: object
-        properties:
-          error:
-            type: string
-            example: "OpenAI API error"
+Examples:
+- User: "How many calories is this dish?" + with image → intent: "analyze_food"
+- User: "What should I eat for lunch?" → intent: "meal_suggestion"
+- User: "Compare these 2 dishes" + multiple images → intent: "compare_foods"
 """
-
-
-    try:
-        data = request.json
-        message = data.get("message", "").strip()
-        session_id = data.get("session_id", str(uuid.uuid4()))
         
-        if not message:
-            return jsonify({"error": "Tin nhắn không được để trống"}), 400
-        
-        # Khởi tạo conversation nếu chưa có
-        if session_id not in conversations:
-            conversations[session_id] = []
-        
-        history = conversations[session_id]
-        
-        # Tạo messages với context
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        messages.extend(history[-10:])  # Lấy 10 tin nhắn gần nhất
-        messages.append({"role": "user", "content": message})
-        
-        # Gọi OpenAI
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=messages,
-            max_tokens=1500,
+            messages=[
+                {"role": "system", "content": AGENT_SYSTEM_PROMPT},
+                {"role": "user", "content": context}
+            ],
+            max_tokens=800,
+            temperature=0.3
+        )
+        
+        result_text = response.choices[0].message.content.strip()
+        
+        if "```json" in result_text:
+            result_text = result_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in result_text:
+            result_text = result_text.split("```")[1].split("```")[0].strip()
+        
+        intent_result = json.loads(result_text)
+        return intent_result
+        
+    except Exception as e:
+        print(f"❌ Intent Analysis Error: {str(e)}")
+        return {
+            "intent": "chat",
+            "confidence": 0.5,
+            "suggested_params": {},
+            "explanation": "Unable to analyze intent, switching to general chat",
+            "alternative_actions": [],
+            "missing_info": [],
+            "next_suggestions": []
+        }
+
+
+def execute_function(function_name, params):
+    try:
+        if function_name == "analyze_food":
+            return internal_analyze_food(
+                params.get("image"),
+                params.get("health_condition", "healthy"),
+                params.get("dietary_goals", "maintain weight")
+            )
+        elif function_name == "compare_foods":
+            return internal_compare_foods(params.get("images"), params.get("health_condition", "healthy"))
+        elif function_name == "track_calories":
+            return internal_track_calories(
+                params.get("images"),
+                params.get("target_calories", 2000),
+                params.get("health_condition", "healthy")
+            )
+        elif function_name == "quick_scan":
+            return internal_quick_scan(params.get("image"))
+        elif function_name == "meal_suggestion":
+            return internal_meal_suggestion(
+                params.get("meal_time", "lunch"),
+                params.get("health_condition", "healthy"),
+                params.get("dietary_preferences", "none"),
+                params.get("budget_range", "100k"),
+                params.get("cooking_time", "30 minutes")
+            )
+        elif function_name == "weekly_menu":
+            return internal_weekly_menu(
+                params.get("health_condition", "healthy"),
+                params.get("dietary_preferences", "none"),
+                params.get("budget_range", "500k"),
+                params.get("cooking_time", "45 minutes")
+            )
+        elif function_name == "detailed_recipes":
+            return internal_detailed_recipes(
+                params.get("days", 3),
+                params.get("health_condition", "healthy"),
+                params.get("dietary_preferences", "none"),
+                params.get("budget_range", "500k")
+            )
+        else:
+            return {"error": f"Function {function_name} does not exist"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def internal_analyze_food(image, health_condition, dietary_goals):
+    """
+    Analyze food and return new data structure suitable for UI
+    """
+    import time
+    start_time = time.time()
+    
+    # Step 1: Recognize food using Clarifai
+    detected_foods = recognize_food_with_clarifai(image)
+    if not detected_foods:
+        return {"error": "Unable to recognize food"}
+    
+    # Step 2: Create prompt for detailed analysis
+    food_list = ", ".join([f"{f['name']} ({f['confidence']}%)" for f in detected_foods])
+    
+    prompt = f"""You are a nutrition expert. Analyze the following food for someone with {health_condition} condition, goal: {dietary_goals}.
+
+Detected dishes: {food_list}
+
+Return JSON with the following structure (NO markdown, NO text outside JSON):
+{{
+    "recognized_foods": [
+        {{
+            "name": "dish name in English or Vietnamese",
+            "category": "type (e.g., Carbohydrates, Proteins, Vegetables, Fruits, Healthy Fats, Sweetener)",
+            "weight": "estimated weight (e.g., 150g, 200ml)",
+            "confidence": 95
+        }}
+    ],
+    "nutrition_analysis": {{
+        "calories": {{"value": 450, "unit": "kcal"}},
+        "protein": {{"value": 8, "unit": "g"}},
+        "carbs": {{"value": 78, "unit": "g"}},
+        "fat": {{"value": 12, "unit": "g"}},
+        "fiber": {{"value": 5, "unit": "g"}},
+        "sugar": {{"value": 35, "unit": "g"}},
+        "sodium": {{"value": 520, "unit": "mg"}},
+        "cholesterol": {{"value": 45, "unit": "mg"}}
+    }},
+    "ai_insights": [
+        "Insight 1 about the dish",
+        "Insight 2 about nutrition",
+        "Insight 3 - recommendations"
+    ]
+}}
+
+Notes:
+- recognized_foods: List of actual foods in the image, not from Clarifai
+- category: Classification by main nutrition group
+- weight: Reasonable weight estimate
+- nutrition_analysis: Calculate TOTAL nutrition of ALL dishes in the image
+- ai_insights: 3-4 brief, concise sentences with appropriate emojis"""
+    
+    # Step 3: Call OpenAI Vision for analysis
+    try:
+        response_text = call_openai_vision(prompt, [image], max_tokens=1500)
+        
+        # Process response to extract JSON
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        # Parse JSON
+        analysis_data = json.loads(response_text)
+        
+        # Calculate processing time
+        processing_time = round(time.time() - start_time, 1)
+        
+        # Return result in new format
+        return {
+            "message": "Food analysis completed successfully",
+            "data": {
+                "session_id": str(uuid.uuid4()),
+                "status": "complete",
+                "processing_time": f"{processing_time}s",
+                "recognized_foods": analysis_data.get("recognized_foods", []),
+                "nutrition_analysis": analysis_data.get("nutrition_analysis", {}),
+                "health_condition": health_condition,
+                "dietary_goals": dietary_goals,
+                "recommendations": analysis_data.get("ai_insights", [])
+            }
+        }
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON Parse Error: {str(e)}")
+        print(f"Response text: {response_text}")
+        
+        # Fallback: Return sample data if parse fails
+        return {
+            "message": "Food analysis completed successfully (fallback mode)",
+            "data": {
+                "session_id": str(uuid.uuid4()),
+                "status": "complete",
+                "processing_time": "1.5s",
+                "recognized_foods": [
+                    {
+                        "name": detected_foods[0]["name"],
+                        "category": "Unknown",
+                        "weight": "200g",
+                        "confidence": detected_foods[0]["confidence"]
+                    }
+                ],
+                "nutrition_analysis": {
+                    "calories": {"value": 0, "unit": "kcal"},
+                    "protein": {"value": 0, "unit": "g"},
+                    "carbs": {"value": 0, "unit": "g"},
+                    "fat": {"value": 0, "unit": "g"},
+                    "fiber": {"value": 0, "unit": "g"},
+                    "sugar": {"value": 0, "unit": "g"},
+                    "sodium": {"value": 0, "unit": "mg"},
+                    "cholesterol": {"value": 0, "unit": "mg"}
+                },
+                "health_condition": health_condition,
+                "dietary_goals": dietary_goals,
+                "recommendations": [
+                    "⚠️ Error occurred during detailed analysis, please try again"
+                ]
+            }
+        }
+    except Exception as e:
+        print(f"❌ Analysis Error: {str(e)}")
+        return {"error": f"Analysis error: {str(e)}"}
+
+
+def internal_compare_foods(images, health_condition):
+    all_detected = []
+    for idx, img in enumerate(images):
+        foods = recognize_food_with_clarifai(img)
+        all_detected.append({"dish_number": idx + 1, "foods": foods})
+    
+    dishes_summary = "\n".join([
+        f"- Dish {d['dish_number']}: {', '.join([f['name'] for f in d['foods']])}"
+        for d in all_detected
+    ])
+    
+    prompt = f"""Compare {len(images)} dishes for someone with {health_condition} condition.
+Dishes: {dishes_summary}
+
+Return:
+1. Comparison table of calories, protein, carbs
+2. Ranking from best → worst
+3. Recommendation on which dish to choose"""
+    
+    comparison = call_openai_vision(prompt, images, max_tokens=2000)
+    
+    return {
+        "detected_foods": all_detected,
+        "comparison": comparison,
+        "total_foods": len(images)
+    }
+
+
+def internal_track_calories(images, target_calories, health_condition):
+    daily_meals = []
+    meal_names = ["Breakfast", "Lunch", "Dinner", "Snack"]
+    
+    for idx, img in enumerate(images):
+        meal_name = meal_names[idx] if idx < len(meal_names) else f"Meal {idx + 1}"
+        foods = recognize_food_with_clarifai(img)
+        daily_meals.append({"meal_name": meal_name, "foods": foods})
+    
+    meals_summary = "\n".join([
+        f"- {m['meal_name']}: {', '.join([f['name'] for f in m['foods']])}"
+        for m in daily_meals
+    ])
+    
+    prompt = f"""Track calories for someone with {health_condition} condition.
+Target: {target_calories} kcal
+Meals: {meals_summary}
+
+Return:
+1. Total calories consumed
+2. Comparison with target (deficit/surplus amount)
+3. Nutrition distribution
+4. Adjustment suggestions"""
+    
+    tracking = call_openai_vision(prompt, images, max_tokens=2000)
+    
+    return {
+        "daily_meals": daily_meals,
+        "tracking": tracking,
+        "target_calories": target_calories
+    }
+
+
+def internal_quick_scan(image):
+    detected_foods = recognize_food_with_clarifai(image)
+    if not detected_foods:
+        return {"error": "Unable to recognize food"}
+    
+    return {"detected_foods": detected_foods, "total": len(detected_foods)}
+
+
+def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, budget_range, cooking_time):
+    prompt = f"""Suggest a meal for {meal_time} for someone with {health_condition} condition.
+
+Requirements:
+- Dietary preferences: {dietary_preferences}
+- Budget: {budget_range}
+- Cooking time: {cooking_time}
+
+Return:
+1. Suggested dishes (3-5 options)
+2. Nutritional information for each
+3. Brief recipe/preparation guide
+4. Estimated cost and time"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a nutrition expert specializing in Vietnamese cuisine."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=1500,
+        temperature=0.7
+    )
+    
+    suggestion = response.choices[0].message.content
+    
+    return {
+        "meal_time": meal_time,
+        "health_condition": health_condition,
+        "suggestions": suggestion,
+        "budget_range": budget_range,
+        "cooking_time": cooking_time
+    }
+
+
+def internal_weekly_menu(health_condition, dietary_preferences, budget_range, cooking_time):
+    prompt = f"""Create a 7-day weekly menu for someone with {health_condition} condition.
+
+Requirements:
+- Dietary preferences: {dietary_preferences}
+- Daily budget: {budget_range}
+- Cooking time per meal: {cooking_time}
+
+Return a complete weekly plan with:
+1. Breakfast, lunch, dinner for each day
+2. Nutritional balance for the week
+3. Shopping list
+4. Meal prep tips"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a nutrition expert specializing in meal planning."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=3000,
+        temperature=0.7
+    )
+    
+    menu = response.choices[0].message.content
+    
+    return {
+        "duration": "7 days",
+        "health_condition": health_condition,
+        "weekly_menu": menu,
+        "budget_range": budget_range
+    }
+
+
+def internal_detailed_recipes(days, health_condition, dietary_preferences, budget_range):
+    prompt = f"""Create detailed recipes for {days} days for someone with {health_condition} condition.
+
+Requirements:
+- Dietary preferences: {dietary_preferences}
+- Budget: {budget_range}
+
+For each recipe, provide:
+1. Ingredients with exact measurements
+2. Step-by-step cooking instructions
+3. Nutritional breakdown
+4. Cooking tips and variations
+5. Estimated cost"""
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a professional chef and nutrition expert."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=3000,
+        temperature=0.7
+    )
+    
+    recipes = response.choices[0].message.content
+    
+    return {
+        "days": days,
+        "health_condition": health_condition,
+        "detailed_recipes": recipes,
+        "budget_range": budget_range
+    }
+
+
+def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, budget_range, cooking_time, user_query=None):
+    """
+    Suggest meals based on user description
+    Returns a list of meals with nutrition facts, ingredients, instructions
+    """
+    
+    # Create prompt for AI
+    if user_query:
+        # If there's a query from user (e.g., "High protein lunch")
+        prompt = f"""You are a nutrition expert. The user wants: "{user_query}"
+
+Please suggest 1-3 most suitable meals. Return JSON with the following structure (NO markdown):
+
+{{
+    "suggested_meals": [
+        {{
+            "name": "Dish name (English or Vietnamese)",
+            "description": "Brief description of the dish and why it's suitable",
+            "difficulty": "EASY/MEDIUM/HARD",
+            "match_percentage": 98,
+            "prep_time": "15 minutes",
+            "servings": 2,
+            "tags": ["HIGH-PROTEIN", "LOW-CARB", "GLUTEN-FREE OPTION"],
+            "nutrition_facts": {{
+                "calories": {{"value": 420, "unit": "cal"}},
+                "protein": {{"value": 38, "unit": "g"}},
+                "carbs": {{"value": 18, "unit": "g"}},
+                "fat": {{"value": 22, "unit": "g"}},
+                "fiber": {{"value": 4, "unit": "g"}},
+                "sugar": {{"value": 3, "unit": "g"}},
+                "sodium": {{"value": 680, "unit": "mg"}},
+                "cholesterol": {{"value": 85, "unit": "mg"}}
+            }},
+            "ingredients": [
+                "2 chicken breasts",
+                "4 cups romaine lettuce",
+                "1/2 cup Caesar dressing",
+                "1/4 cup parmesan cheese",
+                "1 cup croutons",
+                "Lemon wedges",
+                "Olive oil for grilling",
+                "Salt and pepper"
+            ],
+            "instructions": [
+                "Season chicken breasts with salt, pepper, and olive oil.",
+                "Grill chicken for 6-7 minutes per side until fully cooked.",
+                "Let chicken rest for 5 minutes, then slice.",
+                "Wash and chop romaine lettuce.",
+                "In a large bowl, toss lettuce with Caesar dressing.",
+                "Add croutons and parmesan cheese.",
+                "Top with grilled chicken slices.",
+                "Serve with lemon wedges."
+            ]
+        }}
+    ]
+}}
+
+Notes:
+- match_percentage: Suitability with requirements (0-100%)
+- tags: Key characteristics (HIGH-PROTEIN, LOW-CARB, VEGETARIAN, GLUTEN-FREE, QUICK, etc.)
+- nutrition_facts: Detailed nutrition per serving
+- ingredients: List of ingredients with specific quantities
+- instructions: Clear, easy-to-understand steps
+- Prioritize popular dishes, easy to make, with ingredients available in Vietnam"""
+    else:
+        # Fallback: Use old information
+        prompt = f"""Suggest meals for {meal_time}:
+- Health: {health_condition}
+- Preferences: {dietary_preferences}
+- Budget: {budget_range}
+- Time: {cooking_time}
+
+Return JSON format as above with 2-3 suitable Vietnamese dishes."""
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a nutrition expert and professional chef."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2500,
             temperature=0.7
         )
         
-        bot_reply = response.choices[0].message.content.strip()
+        response_text = response.choices[0].message.content.strip()
         
-        # Lưu lịch sử
-        history.append({"role": "user", "content": message})
-        history.append({"role": "assistant", "content": bot_reply})
+        # Parse JSON
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
         
-        return jsonify({
-            "reply": bot_reply,
-            "session_id": session_id
-        }), 200
+        suggestion_data = json.loads(response_text)
         
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/meal-suggestion', methods=['POST'])
-def meal_suggestion():
-    """
-Meal Suggestion — Gợi ý món ăn cho 1 bữa
----
-  post:
-  tags:
-    - Meal
-  summary: Gợi ý món ăn theo sức khỏe, sở thích và thời gian nấu
-  description: |
-    **API gợi ý thực đơn theo ngữ cảnh người dùng**
-
-    Tự động tạo gợi ý bữa ăn dựa trên:
-    - Tình trạng sức khỏe
-    - Sở thích ăn uống
-    - Ngân sách cho bữa ăn
-    - Thời gian nấu
-    - Thời điểm ăn (sáng / trưa / tối / xế)
-
-    **API sẽ trả về:**
-    1. 2–3 món ăn Việt phù hợp
-    2. Lý do chọn món liên quan sức khỏe
-    3. Cách chế biến đơn giản
-    4. Đồ uống gợi ý kèm theo
-    5. Tổng calo ước tính
-  parameters:
-    - in: body
-      name: body
-      required: true
-      description: Dữ liệu mô tả bữa ăn muốn gợi ý
-      schema:
-        type: object
-        properties:
-          health_condition:
-            type: string
-            description: Tình trạng sức khỏe hiện tại
-            example: "tiểu đường"
-          dietary_preferences:
-            type: string
-            description: Sở thích/kiêng khem
-            example: "ít dầu mỡ"
-          budget_range:
-            type: string
-            description: Ngân sách cho bữa ăn
-            example: "100k"
-          cooking_time:
-            type: string
-            description: Thời gian có thể nấu
-            example: "20 phút"
-          meal_time:
-            type: string
-            description: Loại bữa (sáng/trưa/tối/xế)
-            example: "trưa"
-
-  responses:
-    200:
-      description: Gợi ý bữa ăn thành công
-      schema:
-        type: object
-        properties:
-          suggestion:
-            type: string
-            description: Gợi ý món ăn từ AI
-            example: "🥗 Gợi ý bữa trưa cho người tiểu đường..."
-          meal_time:
-            type: string
-            example: "trưa"
-      examples:
-        application/json:
-          suggestion: |
-            🥗 *Bữa trưa cho người tiểu đường – ngân sách 100k*  
-            1. **Cá basa kho tộ** – giàu đạm, ít đường  
-            2. **Canh rau ngót thịt băm** – thanh, dễ tiêu  
-            3. **Salad rau củ** – bổ sung chất xơ  
-            👉 Tổng calo ~480 kcal  
-          meal_time: "trưa"
-
-    400:
-      description: Dữ liệu không hợp lệ
-      schema:
-        type: object
-        properties:
-          error:
-            type: string
-            example: "Thiếu tham số đầu vào"
-
-    500:
-      description: Lỗi server
-      schema:
-        type: object
-        properties:
-          error:
-            type: string
-            example: "OpenAI API error"
-"""
-
-    try:
-        data = request.json
-        health_condition = data.get("health_condition", "khỏe mạnh")
-        dietary_preferences = data.get("dietary_preferences", "không")
-        budget_range = data.get("budget_range", "100k")
-        cooking_time = data.get("cooking_time", "30 phút")
-        meal_time = data.get("meal_time", "trưa")
-        
-        prompt = f"""
-        Gợi ý thực đơn bữa {meal_time} cho người Việt:
-        - Tình trạng sức khỏe: {health_condition}
-        - Sở thích ăn uống: {dietary_preferences}
-        - Ngân sách: {budget_range}
-        - Thời gian nấu: {cooking_time}
-        
-        Yêu cầu trả lời:
-        1. 2-3 món ăn Việt phù hợp
-        2. Lý do chọn (liên quan sức khỏe)
-        3. Cách chế biến đơn giản
-        4. Đồ uống kèm theo
-        5. Ước tính calo tổng
-        
-        Format rõ ràng, dễ đọc với emoji.
-        """
-        
-        result = call_openai_text(prompt, max_tokens=1200)
-        
-        return jsonify({
-            "suggestion": result,
-            "meal_time": meal_time
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/weekly-menu', methods=['POST'])
-def weekly_menu():
-    """
-    Tạo thực đơn 7 ngày cho người Việt
-    ---
-    tags:
-      - Analysis
-    summary: AI Weekly Menu - Lập thực đơn cả tuần
-    description: |
-      **Tạo thực đơn dinh dưỡng cho 7 ngày**
-      
-      - Tự động tính toán calo và dinh dưỡng cho từng bữa
-      - Phù hợp với tình trạng sức khỏe và sở thích cá nhân
-      - Kèm danh sách mua sắm và tips tiết kiệm thời gian
-      - Tối ưu ngân sách và thời gian nấu nướng
-      
-      **Đặc điểm:**
-      - Thực đơn cho 3 bữa/ngày × 7 ngày
-      - Món ăn Việt Nam phổ biến
-      - Chi tiết calo từng bữa và tổng calo mỗi ngày
-      - Danh sách nguyên liệu tổng hợp cho cả tuần
-      
-    parameters:
-      - in: body
-        name: body
-        required: true
-        description: Thông tin về sức khỏe, sở thích và yêu cầu thực đơn
-        schema:
-          type: object
-          properties:
-            health_condition:
-              type: string
-              description: Tình trạng sức khỏe (khỏe mạnh, tiểu đường, huyết áp cao, béo phì, v.v.)
-              default: "khỏe mạnh"
-              example: "tiểu đường"
-            dietary_preferences:
-              type: string
-              description: Sở thích ăn uống (chay, ít dầu mỡ, nhiều protein, v.v.)
-              default: "không"
-              example: "ít dầu mỡ"
-            budget_range:
-              type: string
-              description: Ngân sách mỗi ngày (ví dụ 100k, 200k, 500k)
-              default: "500k"
-              example: "300k"
-            cooking_time:
-              type: string
-              description: Thời gian nấu mỗi bữa (ví dụ 30 phút, 45 phút, 1 giờ)
-              default: "45 phút"
-              example: "30 phút"
-              
-    responses:
-      200:
-        description: Tạo thực đơn tuần thành công
-        schema:
-          type: object
-          properties:
-            menu:
-              type: string
-              description: Thực đơn chi tiết 7 ngày với format markdown
-            duration:
-              type: string
-              description: Thời gian áp dụng thực đơn
-              example: "7 ngày"
-      400:
-        description: Thiếu thông tin hoặc dữ liệu không hợp lệ
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "Ngân sách không hợp lệ"
-              
-      500:
-        description: Lỗi server
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "OpenAI API error"
-    """
-    try:
-        data = request.json
-        health_condition = data.get("health_condition", "khỏe mạnh")
-        dietary_preferences = data.get("dietary_preferences", "không")
-        budget_range = data.get("budget_range", "500k")
-        cooking_time = data.get("cooking_time", "45 phút")
-        
-        prompt = f"""
-        Lập thực đơn 7 ngày cho người Việt:
-        - Sức khỏe: {health_condition}
-        - Sở thích: {dietary_preferences}
-        - Ngân sách mỗi ngày: {budget_range}
-        - Thời gian nấu: {cooking_time}
-        
-        Format theo mẫu:
-        **Thứ 2:**
-        - Sáng: [món + calo]
-        - Trưa: [món + calo]
-        - Tối: [món + calo]
-        
-        Kèm theo:
-        - Danh sách mua sắm cho cả tuần
-        - Tips tiết kiệm thời gian
-        - Tổng calo mỗi ngày
-        """
-        
-        result = call_openai_text(prompt, model="gpt-4o", max_tokens=2500)
-        
-        return jsonify({
-            "menu": result,
-            "duration": "7 ngày"
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/detailed-recipes', methods=['POST'])
-def detailed_recipes():
-    """
-    Tạo công thức nấu ăn chi tiết
-    ---
-    tags:
-      - Analysis
-    summary: AI Detailed Recipes - Công thức nấu ăn chi tiết
-    description: |
-      **Tạo công thức nấu ăn chi tiết với hướng dẫn từng bước**
-      
-      - Nguyên liệu cụ thể với khối lượng chính xác
-      - Các bước làm chi tiết dễ hiểu
-      - Thông tin dinh dưỡng và calo đầy đủ
-      - Chi phí ước tính cho từng món
-      - Tips và tricks hữu ích
-      
-      **Đặc điểm:**
-      - Công thức chi tiết cho nhiều ngày
-      - Phù hợp với tình trạng sức khỏe
-      - Tính toán calo và dinh dưỡng
-      - Ước tính chi phí nguyên liệu
-      - Thời gian chuẩn bị và nấu nướng
-      
-    parameters:
-      - in: body
-        name: body
-        required: true
-        description: Thông tin về sức khỏe, sở thích và số ngày cần công thức
-        schema:
-          type: object
-          properties:
-            health_condition:
-              type: string
-              description: Tình trạng sức khỏe (khỏe mạnh, tiểu đường, huyết áp cao, béo phì, v.v.)
-              default: "khỏe mạnh"
-              example: "tiểu đường"
-            dietary_preferences:
-              type: string
-              description: Sở thích ăn uống (chay, ít dầu mỡ, nhiều protein, v.v.)
-              default: "không"
-              example: "ít dầu mỡ"
-            budget_range:
-              type: string
-              description: Ngân sách cho nguyên liệu (ví dụ 100k, 200k, 500k)
-              default: "500k"
-              example: "300k"
-            days:
-              type: integer
-              description: Số ngày cần công thức (1-7 ngày)
-              default: 3
-              example: 3
-              
-    responses:
-      200:
-        description: Tạo công thức nấu ăn thành công
-        schema:
-          type: object
-          properties:
-            recipes:
-              type: string
-              description: Công thức nấu ăn chi tiết với format markdown
-            days:
-              type: integer
-              description: Số ngày công thức được tạo
-              example: 3
-      400:
-        description: Thiếu thông tin hoặc dữ liệu không hợp lệ
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "Số ngày phải từ 1-7"
-              
-      500:
-        description: Lỗi server
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "OpenAI API error"
-    """   
-    try:
-        data = request.json
-        health_condition = data.get("health_condition", "khỏe mạnh")
-        dietary_preferences = data.get("dietary_preferences", "không")
-        budget_range = data.get("budget_range", "500k")
-        days = data.get("days", 3)
-        
-        prompt = f"""
-        Tạo thực đơn {days} ngày với công thức chi tiết:
-        - Sức khỏe: {health_condition}
-        - Sở thích: {dietary_preferences}
-        - Ngân sách: {budget_range}
-        
-        Mỗi món gồm:
-        1. Tên món và ảnh minh họa (mô tả)
-        2. Nguyên liệu cụ thể (khối lượng)
-        3. Các bước làm chi tiết
-        4. Thời gian chuẩn bị + nấu
-        5. Calo và dinh dưỡng
-        6. Chi phí ước tính
-        7. Tips hay
-        """
-        
-        result = call_openai_text(prompt, model="gpt-4o", max_tokens=3000)
-        
-        return jsonify({
-            "recipes": result,
-            "days": days
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/analyze-food', methods=['POST'])
-def analyze_food():
-    """
-    Phân tích món ăn từ ảnh
-    ---
-    tags:
-      - Analysis
-    summary: AI Analyze Food - Phân tích món ăn từ ảnh
-    description: |
-      **Phân tích chi tiết món ăn từ ảnh với AI Vision**
-      
-      - Nhận diện tên món và nguyên liệu chính
-      - Ước tính calo và thông tin dinh dưỡng
-      - Đánh giá mức độ phù hợp với sức khỏe
-      - Phân tích ưu nhược điểm của món ăn
-      - Gợi ý cách ăn tốt hơn hoặc thay thế
-      
-      **Đặc điểm:**
-      - Sử dụng AI Vision để nhận diện món ăn
-      - Phân tích dựa trên tình trạng sức khỏe cá nhân
-      - Tính toán calo và dinh dưỡng chi tiết
-      - Đánh giá theo thang điểm sao (1-5)
-      - Gợi ý cải thiện hoặc món thay thế
-      
-    parameters:
-      - in: body
-        name: body
-        required: true
-        description: Ảnh món ăn và thông tin sức khỏe người dùng
-        schema:
-          type: object
-          required:
-            - image
-          properties:
-            image:
-              type: string
-              description: Ảnh món ăn dạng base64 (có hoặc không có prefix data:image/jpeg;base64,)
-              example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
-            health_condition:
-              type: string
-              description: Tình trạng sức khỏe (khỏe mạnh, tiểu đường, huyết áp cao, béo phì, v.v.)
-              default: "khỏe mạnh"
-              example: "tiểu đường"
-            dietary_goals:
-              type: string
-              description: Mục tiêu ăn uống (duy trì cân nặng, giảm cân, tăng cơ, v.v.)
-              default: "duy trì cân nặng"
-              example: "giảm cân"
-              
-    responses:
-      200:
-        description: Phân tích món ăn thành công
-        schema:
-          type: object
-          properties:
-            analysis:
-              type: string
-              description: Kết quả phân tích chi tiết món ăn với format markdown
-      400:
-        description: Thiếu thông tin hoặc dữ liệu không hợp lệ
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "Chưa có ảnh"
-              
-      500:
-        description: Lỗi server
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "OpenAI API error"
-    """
-    try:
-        data = request.json
-        image_base64 = data.get("image")
-        health_condition = data.get("health_condition", "khỏe mạnh")
-        dietary_goals = data.get("dietary_goals", "duy trì cân nặng")
-        
-        if not image_base64:
-            return jsonify({"error": "Chưa có ảnh"}), 400
-        
-        prompt = f"""
-        Phân tích món ăn trong ảnh cho người {health_condition}, mục tiêu {dietary_goals}:
-        
-        1. **Nhận diện món ăn**: Tên món, nguyên liệu chính
-        2. **Dinh dưỡng**: Ước tính calo, protein, carb, fat
-        3. **Đánh giá**: Mức độ phù hợp (⭐ 1-5 sao) + lý do
-        4. **Ưu điểm**: Điểm tốt của món
-        5. **Nhược điểm**: Điểm cần cải thiện
-        6. **Gợi ý**: Cách ăn tốt hơn hoặc thay thế
-        
-        Trả lời ngắn gọn, thực tế, dễ hiểu.
-        """
-        
-        result = call_openai_vision(prompt, [image_base64])
-        
-        return jsonify({
-            "analysis": result
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/compare-foods', methods=['POST'])
-def compare_foods():
-    """
-    So sánh nhiều món ăn
-    ---
-    tags:
-      - Analysis
-    summary: AI Compare Foods - So sánh nhiều món ăn
-    description: |
-      **So sánh chi tiết nhiều món ăn để chọn lựa tốt nhất**
-      
-      - Nhận diện tên từng món ăn từ ảnh
-      - So sánh thông tin dinh dưỡng chi tiết
-      - Xếp hạng từ tốt nhất đến kém nhất
-      - Khuyến nghị món nên chọn dựa trên sức khỏe
-      - Cảnh báo món không phù hợp
-      
-      **Đặc điểm:**
-      - Hỗ trợ so sánh từ 2 món trở lên
-      - Bảng so sánh dinh dưỡng trực quan
-      - Xếp hạng dựa trên tình trạng sức khỏe
-      - Giải thích chi tiết lý do xếp hạng
-      - Gợi ý món tốt nhất cho người dùng
-      - Cảnh báo rủi ro sức khỏe nếu có
-      
-    parameters:
-      - in: body
-        name: body
-        required: true
-        description: Ảnh các món ăn cần so sánh và thông tin sức khỏe
-        schema:
-          type: object
-          required:
-            - images
-          properties:
-            images:
-              type: array
-              description: Mảng ảnh các món ăn dạng base64 (tối thiểu 2 ảnh)
-              minItems: 2
-              items:
-                type: string
-              example:
-                - "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
-                - "/9j/4AAQSkZJRgABAQAA..."
-                - "/9j/4AAQSkZJRgABAQBB..."
-            health_condition:
-              type: string
-              description: Tình trạng sức khỏe (khỏe mạnh, tiểu đường, huyết áp cao, béo phì, v.v.)
-              default: "khỏe mạnh"
-              example: "tiểu đường"
-              
-    responses:
-      200:
-        description: So sánh món ăn thành công
-        schema:
-          type: object
-          properties:
-            comparison:
-              type: string
-              description: Kết quả so sánh chi tiết các món ăn với format markdown
-            total_foods:
-              type: integer
-              description: Tổng số món ăn được so sánh
-              example: 3
-      400:
-        description: Thiếu thông tin hoặc dữ liệu không hợp lệ
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "Cần ít nhất 2 ảnh để so sánh"
-              
-      500:
-        description: Lỗi server
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "OpenAI API error"
-    """
-    try:
-        data = request.json
-        images = data.get("images", [])
-        health_condition = data.get("health_condition", "khỏe mạnh")
-        
-        if not images or len(images) < 2:
-            return jsonify({"error": "Cần ít nhất 2 ảnh để so sánh"}), 400
-        
-        prompt = f"""
-        So sánh {len(images)} món ăn cho người {health_condition}:
-        
-        1. **Nhận diện**: Tên từng món
-        2. **So sánh dinh dưỡng**: Bảng so sánh calo, protein, carb, fat
-        3. **Xếp hạng**: Từ tốt nhất → kém nhất (giải thích)
-        4. **Khuyến nghị**: Nên chọn món nào và tại sao
-        5. **Lưu ý**: Cảnh báo nếu có món không phù hợp
-        
-        Trình bày rõ ràng, có emoji.
-        """
-        
-        result = call_openai_vision(prompt, images, max_tokens=2000)
-        
-        return jsonify({
-            "comparison": result,
-            "total_foods": len(images)
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/track-calories', methods=['POST'])
-def track_calories():
-    """
-    Theo dõi calo trong ngày
-    ---
-    tags:
-      - Analysis
-    summary: AI Track Calories - Theo dõi calo trong ngày
-    description: |
-      **Theo dõi và phân tích lượng calo tiêu thụ trong ngày**
-      
-      - Nhận diện món ăn từ nhiều bữa trong ngày
-      - Tính toán tổng calo đã tiêu thụ
-      - So sánh với mục tiêu calo hàng ngày
-      - Phân tích mức độ đạt mục tiêu
-      - Gợi ý điều chỉnh bữa ăn tiếp theo
-      
-      **Đặc điểm:**
-      - Hỗ trợ nhiều ảnh (nhiều bữa ăn)
-      - Tính toán calo tự động cho từng bữa
-      - So sánh với mục tiêu cá nhân
-      - Phân tích chênh lệch chi tiết
-      - Gợi ý món ăn thêm hoặc cách điều chỉnh
-      - Hiển thị biểu đồ ASCII trực quan
-      
-    parameters:
-      - in: body
-        name: body
-        required: true
-        description: Ảnh các bữa ăn và thông tin mục tiêu calo
-        schema:
-          type: object
-          required:
-            - images
-          properties:
-            images:
-              type: array
-              description: Mảng ảnh các bữa ăn dạng base64 (có hoặc không có prefix)
-              items:
-                type: string
-              example:
-                - "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAA..."
-                - "/9j/4AAQSkZJRgABAQAA..."
-            target_calories:
-              type: integer
-              description: Mục tiêu calo trong ngày (kcal)
-              default: 2000
-              example: 1800
-            health_condition:
-              type: string
-              description: Tình trạng sức khỏe (khỏe mạnh, tiểu đường, huyết áp cao, béo phì, v.v.)
-              default: "khỏe mạnh"
-              example: "giảm cân"
-              
-    responses:
-      200:
-        description: Theo dõi calo thành công
-        schema:
-          type: object
-          properties:
-            tracking:
-              type: string
-              description: Kết quả theo dõi và phân tích calo chi tiết với format markdown
-            target:
-              type: integer
-              description: Mục tiêu calo trong ngày
-              example: 2000
-            meals_count:
-              type: integer
-              description: Số lượng bữa ăn đã phân tích
-              example: 3
-      400:
-        description: Thiếu thông tin hoặc dữ liệu không hợp lệ
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "Chưa có ảnh bữa ăn"
-              
-      500:
-        description: Lỗi server
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "OpenAI API error"
-    """
-    try:
-        data = request.json
-        images = data.get("images", [])
-        target_calories = data.get("target_calories", 2000)
-        health_condition = data.get("health_condition", "khỏe mạnh")
-        
-        if not images:
-            return jsonify({"error": "Chưa có ảnh bữa ăn"}), 400
-        
-        prompt = f"""
-        Theo dõi calo từ {len(images)} bữa ăn hôm nay:
-        Mục tiêu: {target_calories} kcal
-        Sức khỏe: {health_condition}
-        
-        Yêu cầu:
-        1. **Chi tiết bữa ăn**: Nhận diện món + calo từng bữa
-        2. **Tổng calo**: Cộng tất cả bữa ăn
-        3. **So sánh mục tiêu**: 
-           - Đã ăn: X kcal
-           - Mục tiêu: {target_calories} kcal
-           - Chênh lệch: +/- Y kcal (Z%)
-        4. **Phân tích**: Đánh giá tổng thể (tốt/vừa/quá nhiều/quá ít)
-        5. **Gợi ý**: 
-           - Nếu thiếu: món nên ăn thêm
-           - Nếu thừa: cách điều chỉnh bữa sau
-        
-        Kèm biểu đồ ASCII nếu có thể.
-        """
-        
-        result = call_openai_vision(prompt, images, max_tokens=2000)
-        
-        return jsonify({
-            "tracking": result,
-            "target": target_calories,
-            "meals_count": len(images)
-        }), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route('/api/user/profile', methods=['POST'])
-def save_user_profile():
-    """
-    Lưu thông tin người dùng
-    ---
-    tags:
-      - User Profile ( Có thể dùng hoặc không )
-    summary: Save User Profile - Lưu thông tin cá nhân
-    description: |
-      **Lưu hoặc cập nhật thông tin cá nhân người dùng**
-      
-      - Lưu thông tin cơ bản (tên, tuổi, cân nặng, chiều cao)
-      - Lưu tình trạng sức khỏe và mục tiêu
-      - Lưu sở thích ăn uống và dị ứng
-      - Tự động tạo user_id nếu chưa có
-      - Hỗ trợ cập nhật thông tin đã lưu
-      
-    parameters:
-      - in: body
-        name: body
-        required: true
-        description: Thông tin cá nhân người dùng
-        schema:
-          type: object
-          properties:
-            user_id:
-              type: string
-              description: ID người dùng (tự động tạo nếu không có)
-              example: "user_123"
-            name:
-              type: string
-              description: Tên người dùng
-              example: "Nguyễn Văn A"
-            age:
-              type: integer
-              description: Tuổi
-              example: 30
-            weight:
-              type: number
-              description: Cân nặng (kg)
-              example: 70.5
-            height:
-              type: number
-              description: Chiều cao (cm)
-              example: 170
-            health_condition:
-              type: string
-              description: Tình trạng sức khỏe
-              default: "khỏe mạnh"
-              example: "tiểu đường"
-            dietary_preferences:
-              type: array
-              description: Sở thích ăn uống
-              items:
-                type: string
-              example: ["chay", "ít dầu mỡ"]
-            allergies:
-              type: array
-              description: Dị ứng thực phẩm
-              items:
-                type: string
-              example: ["hải sản", "đậu phộng"]
-            target_calories:
-              type: integer
-              description: Mục tiêu calo hàng ngày (kcal)
-              default: 2000
-              example: 1800
-            activity_level:
-              type: string
-              description: Mức độ vận động (ít, vừa phải, nhiều)
-              default: "vừa phải"
-              example: "nhiều"
-              
-    responses:
-      200:
-        description: Lưu thông tin thành công
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: "Lưu thông tin thành công"
-            user_id:
-              type: string
-              example: "user_123"
-              
-      500:
-        description: Lỗi server
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "Database error"
-    """
-    try:
-        data = request.json
-        user_id = data.get("user_id", str(uuid.uuid4()))
-        
-        user_profiles[user_id] = {
-            "name": data.get("name"),
-            "age": data.get("age"),
-            "weight": data.get("weight"),
-            "height": data.get("height"),
-            "health_condition": data.get("health_condition", "khỏe mạnh"),
-            "dietary_preferences": data.get("dietary_preferences", []),
-            "allergies": data.get("allergies", []),
-            "target_calories": data.get("target_calories", 2000),
-            "activity_level": data.get("activity_level", "vừa phải")
+        return {
+            "message": "Meal suggestions completed successfully",
+            "data": {
+                "query": user_query or f"{meal_time} meal",
+                "total_suggestions": len(suggestion_data.get("suggested_meals", [])),
+                "meals": suggestion_data.get("suggested_meals", []),
+                "filters": {
+                    "meal_time": meal_time,
+                    "health_condition": health_condition,
+                    "dietary_preferences": dietary_preferences,
+                    "budget_range": budget_range,
+                    "cooking_time": cooking_time
+                }
+            }
         }
         
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON Parse Error: {str(e)}")
+        print(f"Response: {response_text}")
+        
+        # Fallback
+        return {
+            "message": "Meal suggestions completed successfully (text mode)",
+            "data": {
+                "query": user_query or f"{meal_time} meal",
+                "total_suggestions": 0,
+                "meals": [],
+                "text_suggestion": response_text,
+                "filters": {
+                    "meal_time": meal_time,
+                    "health_condition": health_condition,
+                    "dietary_preferences": dietary_preferences
+                }
+            }
+        }
+        
+    except Exception as e:
+        print(f"❌ Meal Suggestion Error: {str(e)}")
+        return {"error": f"Meal suggestion error: {str(e)}"}
+
+@app.route('/api/v1/meal-suggestion', methods=['POST'])
+def meal_suggestion():
+    """
+    Suggest meals based on user description
+    ---
+    tags:
+      - Meal Planning
+    summary: AI suggests meals from description
+    description: >
+      User inputs description (e.g., "High protein lunch", "Quick vegan dinner"),
+      AI will suggest suitable dishes with nutrition facts, ingredients, instructions.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              query:
+                type: string
+                description: Description of desired meal
+                example: "High protein lunch"
+              meal_time:
+                type: string
+                description: Meal time (breakfast/lunch/dinner/snack)
+                default: "lunch"
+              health_condition:
+                type: string
+                default: "healthy"
+              dietary_preferences:
+                type: string
+                default: "none"
+              budget_range:
+                type: string
+                default: "100k"
+              cooking_time:
+                type: string
+                default: "30 minutes"
+    responses:
+      200:
+        description: Suggestion successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                data:
+                  type: object
+                  properties:
+                    query:
+                      type: string
+                    total_suggestions:
+                      type: integer
+                    meals:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          description:
+                            type: string
+                          difficulty:
+                            type: string
+                          match_percentage:
+                            type: integer
+                          prep_time:
+                            type: string
+                          servings:
+                            type: integer
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                          nutrition_facts:
+                            type: object
+                          ingredients:
+                            type: array
+                            items:
+                              type: string
+                          instructions:
+                            type: array
+                            items:
+                              type: string
+            example:
+              success: true
+              message: "Meal suggestions completed successfully"
+              data:
+                query: "High protein lunch"
+                total_suggestions: 1
+                meals:
+                  - name: "Grilled Chicken Caesar Salad"
+                    description: "Outstanding protein content (38g) with balanced macros. Perfect for muscle building and satiety."
+                    difficulty: "MEDIUM"
+                    match_percentage: 98
+                    prep_time: "25 minutes"
+                    servings: 2
+                    tags: ["HIGH-PROTEIN", "LOW-CARB", "GLUTEN-FREE OPTION"]
+                    nutrition_facts:
+                      calories: {"value": 420, "unit": "cal"}
+                      protein: {"value": 38, "unit": "g"}
+                      carbs: {"value": 18, "unit": "g"}
+                      fat: {"value": 22, "unit": "g"}
+                      fiber: {"value": 4, "unit": "g"}
+                      sugar: {"value": 3, "unit": "g"}
+                      sodium: {"value": 680, "unit": "mg"}
+                      cholesterol: {"value": 85, "unit": "mg"}
+                    ingredients:
+                      - "2 chicken breasts"
+                      - "4 cups romaine lettuce"
+                      - "1/2 cup Caesar dressing"
+                      - "1/4 cup parmesan cheese"
+                      - "1 cup croutons"
+                      - "Lemon wedges"
+                      - "Olive oil for grilling"
+                      - "Salt and pepper"
+                    instructions:
+                      - "Season chicken breasts with salt, pepper, and olive oil."
+                      - "Grill chicken for 6-7 minutes per side until fully cooked."
+                      - "Let chicken rest for 5 minutes, then slice."
+                      - "Wash and chop romaine lettuce."
+                      - "In a large bowl, toss lettuce with Caesar dressing."
+                      - "Add croutons and parmesan cheese."
+                      - "Top with grilled chicken slices."
+                      - "Serve with lemon wedges."
+      400:
+        description: Missing information
+      500:
+        description: Server error
+    """
+    try:
+        data = request.json
+        
+        # Get query from user (e.g., "High protein lunch")
+        user_query = data.get("query", "").strip()
+        
+        if not user_query:
+            return jsonify({
+                "success": False,
+                "error": "Query cannot be empty"
+            }), 400
+        
+        result = internal_meal_suggestion(
+            data.get("meal_time", "lunch"),
+            data.get("health_condition", "healthy"),
+            data.get("dietary_preferences", "none"),
+            data.get("budget_range", "100k"),
+            data.get("cooking_time", "30 minutes"),  # ✅ Added this line
+            user_query=user_query
+        )
+        
+        if "error" in result:
+            return jsonify({"success": False, **result}), 500
+        
+        return jsonify({"success": True, **result}), 200
+        
+    except Exception as e:
         return jsonify({
-            "message": "Lưu thông tin thành công",
-            "user_id": user_id
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+def internal_weekly_menu(health_condition, dietary_preferences, budget_range, cooking_time):
+    prompt = f"""Create a 7-day menu:
+- Health: {health_condition}
+- Preferences: {dietary_preferences}
+- Budget: {budget_range}/day
+- Time: {cooking_time}
+
+Format: Monday-Sunday with 3 meals/day + calories"""
+    
+    result = call_openai_text(prompt, model="gpt-4o", max_tokens=2500)
+    return {"menu": result, "duration": "7 days"}
+
+
+def internal_detailed_recipes(days, health_condition, dietary_preferences, budget_range):
+    prompt = f"""Create detailed recipes for {days} days:
+- Health: {health_condition}
+- Preferences: {dietary_preferences}
+- Budget: {budget_range}
+
+Each dish: ingredients, steps, calories, cost"""
+    
+    result = call_openai_text(prompt, model="gpt-4o", max_tokens=3000)
+    return {"recipes": result, "days": days}
+
+
+@app.route('/api/v1/agent', methods=['POST'])
+def ai_agent():
+    """
+    AI Agent - Food Image Recognition & Analysis
+    ---
+    tags:
+      - AI Agent
+    summary: Analyze food images and provide nutritional information
+    description: >
+      AI Agent automatically recognizes food from images, analyzes nutrition, and provides appropriate health recommendations.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Is this dish good for people with diabetes?"
+              images:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "data:image/jpeg;base64,..."
+              auto_execute:
+                type: boolean
+                default: true
+              user_id:
+                type: string
+                example: "user_123"
+    responses:
+      200:
+        description: Analysis successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                data:
+                  type: object
+                  properties:
+                    recognized_foods:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          category:
+                            type: string
+                          weight:
+                            type: string
+                          confidence:
+                            type: number
+                    nutrition_analysis:
+                      type: object
+                      properties:
+                        calories:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        protein:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        carbs:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fat:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fiber:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sugar:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sodium:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        cholesterol:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                    ai_insights:
+                      type: array
+                      items:
+                        type: string
+                    processing_time:
+                      type: string
+            example:
+              success: true
+              message: "Food analysis completed successfully"
+              data:
+                recognized_foods:
+                  - name: "Fresh Garden Salad"
+                    category: "Vegetables"
+                    weight: "200g"
+                    confidence: 96
+                  - name: "Avocado"
+                    category: "Healthy Fats"
+                    weight: "80g"
+                    confidence: 93
+                  - name: "Mixed Nuts"
+                    category: "Protein & Fats"
+                    weight: "30g"
+                    confidence: 88
+                nutrition_analysis:
+                  calories:
+                    value: 380
+                    unit: "kcal"
+                  protein:
+                    value: 12
+                    unit: "g"
+                  carbs:
+                    value: 18
+                    unit: "g"
+                  fat:
+                    value: 32
+                    unit: "g"
+                  fiber:
+                    value: 12
+                    unit: "g"
+                  sugar:
+                    value: 4
+                    unit: "g"
+                  sodium:
+                    value: 95
+                    unit: "mg"
+                  cholesterol:
+                    value: 0
+                    unit: "mg"
+                ai_insights:
+                  - "Excellent source of healthy fats from avocado and nuts!"
+                  - "High fiber content will keep you full for longer."
+                  - "Consider adding a protein source like grilled chicken or tofu."
+                processing_time: "1.5s"
+
+      400:
+        description: Invalid input data
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                error:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
+            example:
+              success: false
+              message: "Invalid request"
+              error:
+                code: "INVALID_INPUT"
+                details: "Image cannot be empty or format is not supported"
+
+      500:
+        description: Server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                error:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
+            example:
+              success: false
+              message: "Image processing error"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "Unable to analyze image, please try again"
+    """
+    try:
+        data = request.json
+        message = data.get("message", "").strip()
+        images = data.get("images", [])
+        session_id = data.get("session_id", str(uuid.uuid4()))
+        user_id = data.get("user_id")
+        auto_execute = data.get("auto_execute", True)
+        
+        if not message:
+            return jsonify({"error": "Message cannot be empty"}), 400
+        
+        if session_id not in conversations:
+            conversations[session_id] = []
+        conversation_history = conversations[session_id]
+        
+        user_profile = user_profiles.get(user_id) if user_id else None
+        
+        intent_analysis = analyze_user_intent(message, images, conversation_history)
+        
+        suggested_params = intent_analysis.get("suggested_params", {})
+        
+        if user_profile:
+            if "health_condition" not in suggested_params:
+                suggested_params["health_condition"] = user_profile.get("health_condition", "healthy")
+            if "target_calories" not in suggested_params:
+                suggested_params["target_calories"] = user_profile.get("target_calories", 2000)
+        
+        if images:
+            if intent_analysis["intent"] in ["analyze_food", "quick_scan"]:
+                suggested_params["image"] = images[0]
+            elif intent_analysis["intent"] in ["compare_foods", "track_calories"]:
+                suggested_params["images"] = images
+        
+        result = None
+        
+        if auto_execute:
+            missing_info = intent_analysis.get("missing_info", [])
+            
+            if not missing_info:
+                result = execute_function(intent_analysis["intent"], suggested_params)
+            else:
+                result = {
+                    "status": "need_more_info",
+                    "message": f"I need more information: {', '.join(missing_info)}"
+                }
+        
+        suggestions = []
+        
+        if result and "error" not in result:
+            if intent_analysis["intent"] == "analyze_food":
+                suggestions = [
+                    "💡 Would you like to compare with another dish?",
+                    "📊 Or I can create a weekly menu based on this dish?",
+                    "🍽️ Want to know how to make this dish healthier?"
+                ]
+            elif intent_analysis["intent"] == "meal_suggestion":
+                suggestions = [
+                    "📅 Would you like me to create a weekly menu?",
+                    "📖 Or I can provide detailed recipes?",
+                    "🎯 Want to adjust to specific goals?"
+                ]
+        else:
+            suggestions = intent_analysis.get("next_suggestions", [
+                "🤔 Can you provide more details?",
+                "📸 Or send an image for more detailed analysis?"
+            ])
+        
+        conversation_history.append({
+            "role": "user",
+            "content": message,
+            "has_images": len(images) > 0
+        })
+        conversation_history.append({
+            "role": "assistant",
+            "intent": intent_analysis["intent"],
+            "result": result
+        })
+        
+        return jsonify({
+            "success": True,
+            "session_id": session_id,
+            "intent_analysis": {
+                "intent": intent_analysis["intent"],
+                "confidence": intent_analysis["confidence"],
+                "explanation": intent_analysis["explanation"],
+                "alternative_actions": intent_analysis.get("alternative_actions", []),
+                "missing_info": intent_analysis.get("missing_info", [])
+            },
+            "result": result,
+            "suggestions": suggestions,
+            "executed": auto_execute and result is not None
         }), 200
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/v1/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        "status": "OK",
+        "message": "AI Agent Nutrition API is running!",
+        "version": "2.0 - AI Agent",
+        "endpoints": {
+            "ai_agent": [
+                "/api/agent",
+                "/api/agent/suggest",
+                "/api/agent/multi-step"
+            ],
+            "standard": [
+                "/api/chat",
+                "/api/analyze-food",
+                "/api/compare-foods",
+                "/api/track-calories",
+                "/api/quick-scan",
+                "/api/meal-suggestion",
+                "/api/weekly-menu",
+                "/api/detailed-recipes",
+                "/api/user/profile"
+            ]
+        }
+    }), 200
 
-@app.route('/api/user/profile/<user_id>', methods=['GET'])
-def get_user_profile(user_id):
+@app.route('/api/v1/analyze-food', methods=['POST'])
+def analyze_food():
     """
-    Lấy thông tin người dùng
+    Analyze food from image
     ---
     tags:
-      - User Profile ( Có thể dùng hoặc không )
-    summary: Get User Profile - Lấy thông tin cá nhân
-    description: |
-      **Lấy thông tin cá nhân đã lưu của người dùng**
-      
-      - Lấy toàn bộ thông tin profile
-      - Bao gồm thông tin cơ bản và sức khỏe
-      - Sở thích ăn uống và dị ứng
-      - Mục tiêu calo và mức độ vận động
-      
-    parameters:
-      - in: path
-        name: user_id
-        required: true
-        type: string
-        description: ID người dùng cần lấy thông tin
-        example: "user_123"
-        
+      - Food Analysis
+    summary: Analyze food nutrition from image
+    description: >
+      Analyze food based on image, evaluate nutrition, and provide recommendations 
+      appropriate to the user's health condition and dietary goals.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - image
+            properties:
+              image:
+                type: string
+                description: Food image in base64 format
+                example: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+              health_condition:
+                type: string
+                description: Health condition
+                default: "healthy"
+                example: "diabetes"
+              dietary_goals:
+                type: string
+                description: Dietary goals
+                default: "maintain weight"
+                example: "lose weight"
+              session_id:
+                type: string
+                description: Session ID
+                example: "uuid-v4"
+              user_id:
+                type: string
+                description: User ID
+                example: "user_123"
     responses:
       200:
-        description: Lấy thông tin thành công
-        schema:
-          type: object
-          properties:
-            name:
-              type: string
-              example: "Nguyễn Văn A"
-            age:
-              type: integer
-              example: 30
-            weight:
-              type: number
-              example: 70.5
-            height:
-              type: number
-              example: 170
-            health_condition:
-              type: string
-              example: "tiểu đường"
-            dietary_preferences:
-              type: array
-              items:
-                type: string
-              example: ["chay", "ít dầu mỡ"]
-            allergies:
-              type: array
-              items:
-                type: string
-              example: ["hải sản"]
-            target_calories:
-              type: integer
-              example: 1800
-            activity_level:
-              type: string
-              example: "nhiều"
-              
-      404:
-        description: Không tìm thấy người dùng
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: "Không tìm thấy người dùng"
-    """
-    if user_id not in user_profiles:
-        return jsonify({"error": "Không tìm thấy người dùng"}), 404
-    
-    return jsonify(user_profiles[user_id]), 200
+        description: Analysis successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                data:
+                  type: object
+                  properties:
+                    session_id:
+                      type: string
+                    status:
+                      type: string
+                      description: Analysis status
+                      example: "complete"
+                    processing_time:
+                      type: string
+                      description: Processing time
+                      example: "1.0s"
+                    recognized_foods:
+                      type: array
+                      description: List of recognized foods
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            description: Food name
+                          category:
+                            type: string
+                            description: Food type
+                          weight:
+                            type: string
+                            description: Estimated weight
+                          confidence:
+                            type: number
+                            description: Confidence level (%)
+                            minimum: 0
+                            maximum: 100
+                    nutrition_analysis:
+                      type: object
+                      description: Detailed nutrition analysis
+                      properties:
+                        calories:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        protein:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        carbs:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fat:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        fiber:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sugar:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        sodium:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                        cholesterol:
+                          type: object
+                          properties:
+                            value:
+                              type: number
+                            unit:
+                              type: string
+                    health_condition:
+                      type: string
+                    dietary_goals:
+                      type: string
+                    recommendations:
+                      type: array
+                      items:
+                        type: string
+            example:
+              success: true
+              message: "Food analysis completed successfully"
+              data:
+                session_id: "550e8400-e29b-41d4-a716-446655440000"
+                status: "complete"
+                processing_time: "1.0s"
+                recognized_foods:
+                  - name: "Pancakes"
+                    category: "Carbohydrates"
+                    weight: "150g"
+                    confidence: 97
+                  - name: "Fresh Berries"
+                    category: "Fruits"
+                    weight: "100g"
+                    confidence: 95
+                  - name: "Maple Syrup"
+                    category: "Sweetener"
+                    weight: "30ml"
+                    confidence: 91
+                nutrition_analysis:
+                  calories:
+                    value: 450
+                    unit: "kcal"
+                  protein:
+                    value: 8
+                    unit: "g"
+                  carbs:
+                    value: 78
+                    unit: "g"
+                  fat:
+                    value: 12
+                    unit: "g"
+                  fiber:
+                    value: 5
+                    unit: "g"
+                  sugar:
+                    value: 35
+                    unit: "g"
+                  sodium:
+                    value: 520
+                    unit: "mg"
+                  cholesterol:
+                    value: 45
+                    unit: "mg"
+                health_condition: "healthy"
+                dietary_goals: "maintain weight"
+                recommendations:
+                  - "💡 Balanced breakfast with good energy from carbohydrates"
+                  - "🥗 Consider adding protein for longer satiety"
+                  - "⚠️ Note: Sugar content is quite high, limit if trying to lose weight"
 
+      400:
+        description: Invalid input data
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                error:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
+            example:
+              success: false
+              message: "Invalid request"
+              error:
+                code: "INVALID_INPUT"
+                details: "Food image not found or invalid format"
+
+      500:
+        description: Server error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+                error:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                    details:
+                      type: string
+            example:
+              success: false
+              message: "Image processing error"
+              error:
+                code: "PROCESSING_ERROR"
+                details: "OpenAI API rate limit exceeded"
+    """
+    try:
+        data = request.json
+        result = internal_analyze_food(
+            data.get("image"),
+            data.get("health_condition", "healthy"),
+            data.get("dietary_goals", "maintain weight")
+        )
+        
+        if "error" in result:
+            return jsonify(result), 400
+        
+        return jsonify({"success": True, **result}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({"error": "Endpoint không tồn tại"}), 404
+    return jsonify({"error": "Endpoint does not exist"}), 404
 
 
 @app.errorhandler(500)
 def internal_error(error):
-    return jsonify({"error": "Lỗi server"}), 500
+    return jsonify({"error": "Server error"}), 500
+
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=5002, debug=True)
+    app.run(host='0.0.0.0', port=5002, debug=True)
 
 

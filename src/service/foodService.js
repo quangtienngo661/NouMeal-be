@@ -3,11 +3,8 @@ const User = require("../model/userModel");
 const AppError = require("../libs/util/AppError");
 const { aggregateConditions } = require("../libs/conditions/recommendConditions");
 const NodeCache = require("node-cache");
-const weeklyCache = new NodeCache({ checkperiod: 3600 });
+const caching = new NodeCache({ checkperiod: 3600 });
 const FoodLog = require("../model/foodLogModel");
-const FoodLogService = require("./foodLogService");
-const mongoose = require("mongoose");
-const { all } = require("axios");
 
 class FoodService {
     // 📦 READ operations
@@ -50,103 +47,73 @@ class FoodService {
         };
     }
 
-    async getAdaptiveRecommendation(userId) {
+    async getTodayMeals(userId, foodId) {
         const weeklyPlan = await this.weeklyFoodRecommendation(userId);
         const today = new Date().toISOString().split('T')[0];
         const todayMeals = weeklyPlan.find(day => day.date === today);
 
-        const user = await User.findById(userId);
+        const { isNonRecommendedExisted, meal } = caching.get(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`) || {};
 
-        if (!user) {
-            throw new AppError('User not found', 404);
-        }
-
-        const allergensCondition = {
-            allergens: { $nin: user.allergies || [] },
-            isActive: true,
-        };
-
-        const todayLogs = await FoodLog.find({ user, date: today }).populate('food');
-        let remainingMeals = {};
-
-        if (todayLogs.length > 0) {
-            const latestLog = todayLogs[todayLogs.length - 1];
-            const isNonRecommended = todayLogs.some(log => log.source !== 'recommended');
-            switch (latestLog.meal) {
-                case "breakfast": {
-                    // const breakfasts = todayMeals.meals.breakfast.filter((food, index) => {
-                    //     return food._id.toString() === latestLog.food._id.toString()
-                    // });
-                    if (!isNonRecommended) {
-                        remainingMeals = { lunch: [...todayMeals.meals.lunch], dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack] };
-                    } else {
-                        const lunch = await Food.aggregate(
-                            await aggregateConditions(user, 'lunch', allergensCondition, true)
-                        );
-
-                        const dinner = await Food.aggregate(
-                            await aggregateConditions(user, 'dinner', allergensCondition, true)
-                        );
-
-                        const snack = await Food.find({
-                            meal: 'snack',
-
-                        }).limit(1);
-
-                        remainingMeals.lunch = lunch;
-                        remainingMeals.dinner = dinner;
-                        remainingMeals.snack = snack;
-
-                        const remaingMealsCacheKey = `remainingMeals:${userId}:${this.getCurrentWeekKey()}:${today}:remaining`;
-                        weeklyCache.set(remaingMealsCacheKey, JSON.stringify(remainingMeals), this.getSecondsUntilMidnight());
-                    }
-                    break;
-                }
-                case "lunch":
-                    if (!isNonRecommended) {
-                        todayMeals.meals.lunch = undefined;
-                        remainingMeals = { dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack] };
-                    } else {
-                        const remaingMealsCacheKey = `remainingMeals:${userId}:${this.getCurrentWeekKey()}:${today}:remaining`;
-                        const cached = weeklyCache.get(remaingMealsCacheKey);
-                        if (cached) {
-                            const dinner = JSON.parse(cached).dinner;
-                            remainingMeals.dinner = dinner;
-                        } else {
-                            const dinner = await Food.aggregate(
-                                await aggregateConditions(user, 'dinner', allergensCondition, true)
-                            );
-
-                            remainingMeals.dinner = dinner;
-                        }
-                        const snack = await Food.find({
-                            meal: 'snack',
-
-                        }).limit(1);
-                        remainingMeals.snack = snack;
-                    }
-                    break;
-                // Note: no need to handle dinner and snack cases because the remaining calories will be for these 2 meals
-                default:
-                    break;
+        if (!foodId) {
+            if (isNonRecommendedExisted) {
+                caching.del(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`);
             }
+
+            return todayMeals;
         } else {
-            remainingMeals = { ...todayMeals.meals };
+            const food = await Food.findById(foodId);
+            if (!food) {
+                throw new AppError('Food not found', 404);
+            }
+
+            const mealType = food.meal;
+
+            if (isNonRecommendedExisted && mealType !== meal) {
+                throw new AppError('You have already chose a non-recommended meal today. You can only log one non-recommended meal per day.', 400);
+            }
+
+            const adaptiveMeals = await this.getAdaptiveMeals(food, userId, todayMeals);
+
+            caching.set(
+                `adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`,
+                {
+                    isNonRecommendedExisted: true,
+                    meal: mealType
+                },
+                this.getSecondsUntilMidnight());
+
+            const adaptiveMealsResponse = {
+                date: todayMeals.date,
+                dayName: todayMeals.dayName,
+                meals: adaptiveMeals
+            };
+            return adaptiveMealsResponse;
         }
-        // return todayMeals?.meals || await this.generateDailyFallback(userId);
-        return remainingMeals;
+    }
+
+    async resetTodayMeals(userId) {
+        try {
+            caching.del(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`);
+            const weeklyPlan = await this.weeklyFoodRecommendation(userId);
+            const today = new Date().toISOString().split('T')[0];
+            const todayMeals = weeklyPlan.find(day => day.date === today);
+            return todayMeals;
+        }
+        catch (error) {
+            throw new AppError('Failed to reset today meals cache', 500);
+        }
     }
 
     getCachedWeeklyPlan(userId) {
         const cacheKey = `weekly:${userId}:${this.getCurrentWeekKey()}`;
-        const cached = weeklyCache.get(cacheKey);
+        const cached = caching.get(cacheKey);
         return cached ? JSON.parse(cached) : null;
     }
 
     async weeklyFoodRecommendation(userId, options = {}) {
         const cacheKey = `weekly:${userId}:${this.getCurrentWeekKey()}`;
 
-        const cached = weeklyCache.get(cacheKey);
+        const cached = caching.get(cacheKey);
         if (cached) {
             console.log("Cache hit for weekly recommendation");
             return JSON.parse(cached);
@@ -155,7 +122,7 @@ class FoodService {
         const weeklyPlan = await this.generateWeeklyPlan(userId, false);
         const ttl = this.getSecondsUntilMidnight();
 
-        weeklyCache.set(cacheKey, JSON.stringify(weeklyPlan), ttl);
+        caching.set(cacheKey, JSON.stringify(weeklyPlan), ttl);
         return weeklyPlan;
     }
 
@@ -216,13 +183,13 @@ class FoodService {
     // ✏️ CREATE / UPDATE / DELETE
     async createFoodByAdmin(foodInfo) {
         const newFood = await Food.create({ ...foodInfo });
-        weeklyCache.flushAll(); // Clear all caches when food data changes
+        caching.flushAll(); // Clear all caches when food data changes
         return newFood;
     };
 
     async createFoodByUser(foodInfo, userId) {
         const newFood = await Food.create({ ...foodInfo, postedBy: userId });
-        weeklyCache.flushAll(); // Clear all caches when food data changes
+        caching.flushAll(); // Clear all caches when food data changes
         return newFood;
     };
 
@@ -241,7 +208,7 @@ class FoodService {
 
 
         const isAdmin = user.role === "admin";
-        
+
         let isOwner = false;
         if (!isAdmin) {
             isOwner = existingFood.postedBy.toString() === userId.toString();
@@ -260,7 +227,7 @@ class FoodService {
             }
         );
 
-        weeklyCache.flushAll(); // Clear all caches when food data changes
+        caching.flushAll(); // Clear all caches when food data changes
         return updatedFood;
     }
 
@@ -443,9 +410,183 @@ class FoodService {
     }
 
     async clearAllCache() {
-        weeklyCache.flushAll();
+        caching.flushAll();
         return { message: 'All weekly recommendation caches cleared' };
     }
+
+    async getAdaptiveMeals(food, user, todayMeals) {
+        let adaptiveMeals = {};
+        const today = new Date().toISOString().split('T')[0];
+        const allergensCondition = {
+            allergens: { $nin: user.allergies || [] },
+            isActive: true,
+        };
+
+        if (food) {
+            switch (food.meal) {
+                case "breakfast": {
+                    const lunch = await Food.aggregate(
+                        await aggregateConditions(user, 'lunch', allergensCondition, true)
+                    );
+
+                    const dinner = await Food.aggregate(
+                        await aggregateConditions(user, 'dinner', allergensCondition, true)
+                    );
+
+                    const snack = await Food.find({
+                        meal: 'snack',
+                    }).limit(1);
+
+                    adaptiveMeals.breakfast = [food];
+                    adaptiveMeals.lunch = lunch;
+                    adaptiveMeals.dinner = dinner;
+                    adaptiveMeals.snack = snack;
+
+                    const remaingMealsCacheKey = `remainingMeals:${user._id}:${this.getCurrentWeekKey()}:${today}:remaining`;
+                    caching.set(remaingMealsCacheKey, JSON.stringify(adaptiveMeals), this.getSecondsUntilMidnight());
+
+                    break;
+                }
+                case "lunch":
+                    const remaingMealsCacheKey = `remainingMeals:${user._id}:${this.getCurrentWeekKey()}:${today}:remaining`;
+                    const cached = caching.get(remaingMealsCacheKey);
+                    if (cached) {
+                        const dinner = JSON.parse(cached).dinner;
+                        adaptiveMeals.dinner = dinner;
+                    } else {
+                        const breakfast = await Food.aggregate(
+                            await aggregateConditions(user, 'breakfast', allergensCondition, true)
+                        );
+                        const dinner = await Food.aggregate(
+                            await aggregateConditions(user, 'dinner', allergensCondition, true)
+                        );
+                        const snack = await Food.find({
+                            meal: 'snack',
+                        }).limit(1);
+                        adaptiveMeals.breakfast = breakfast;
+                        adaptiveMeals.lunch = [food];
+                        adaptiveMeals.dinner = dinner;
+                        adaptiveMeals.snack = snack;
+                    }
+                    break;
+                case "dinner":
+                    const remainingMealsCacheKey = `remainingMeals:${user._id}:${this.getCurrentWeekKey()}:${today}:remaining`;
+                    const cachedMeals = caching.get(remainingMealsCacheKey);
+                    if (cachedMeals) {
+                        const breakfast = JSON.parse(cachedMeals).breakfast;
+                        const lunch = JSON.parse(cachedMeals).lunch;
+                        adaptiveMeals.breakfast = breakfast;
+                        adaptiveMeals.lunch = lunch;
+                    } else {
+                        const breakfast = await Food.aggregate(
+                            await aggregateConditions(user, 'breakfast', allergensCondition, true)
+                        );
+                        const lunch = await Food.aggregate(
+                            await aggregateConditions(user, 'lunch', allergensCondition, true)
+                        );
+                        const snack = await Food.find({
+                            meal: 'snack',
+                        }).limit(1);
+                        adaptiveMeals.breakfast = breakfast;
+                        adaptiveMeals.lunch = lunch;
+                        adaptiveMeals.dinner = [food];
+                        adaptiveMeals.snack = snack;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            adaptiveMeals = { ...todayMeals.meals };
+        }
+
+        return adaptiveMeals;
+    }
+
+    // async getAdaptiveRecommendation(user, todayMeals) {
+    //     const weeklyPlan = await this.weeklyFoodRecommendation(user._id);
+    //     const today = new Date().toISOString().split('T')[0];
+    //     const todayMeals = weeklyPlan.find(day => day.date === today);
+
+    //     let remainingMeals = {};
+
+    //     remainingMeals = await this.getRemainingMeals(food, user, todayMeals);
+
+    //     return remainingMeals;
+    // }
+
+    // async getRemainingMeals(remainingMeals, user, todayMeals) {
+    //     const today = new Date().toISOString().split('T')[0];
+    //     const todayLogs = await FoodLog.find({ user, date: today }).populate('food');
+    //     const allergensCondition = {
+    //         allergens: { $nin: user.allergies || [] },
+    //         isActive: true,
+    //     };
+
+    //     if (todayLogs.length > 0) {
+    //         const latestLog = todayLogs[todayLogs.length - 1];
+    //         const isNonRecommended = todayLogs.some(log => log.source !== 'recommended');
+    //         switch (latestLog.meal) {
+    //             case "breakfast": {
+    //                 if (!isNonRecommended) {
+    //                     remainingMeals = { lunch: [...todayMeals.meals.lunch], dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack] };
+    //                 } else {
+    //                     const lunch = await Food.aggregate(
+    //                         await aggregateConditions(user, 'lunch', allergensCondition, true)
+    //                     );
+
+    //                     const dinner = await Food.aggregate(
+    //                         await aggregateConditions(user, 'dinner', allergensCondition, true)
+    //                     );
+
+    //                     const snack = await Food.find({
+    //                         meal: 'snack',
+
+    //                     }).limit(1);
+
+    //                     remainingMeals.lunch = lunch;
+    //                     remainingMeals.dinner = dinner;
+    //                     remainingMeals.snack = snack;
+
+    //                     const remaingMealsCacheKey = `remainingMeals:${user._id}:${this.getCurrentWeekKey()}:${today}:remaining`;
+    //                     caching.set(remaingMealsCacheKey, JSON.stringify(remainingMeals), this.getSecondsUntilMidnight());
+    //                 }
+    //                 break;
+    //             }
+    //             case "lunch":
+    //                 if (!isNonRecommended) {
+    //                     todayMeals.meals.lunch = undefined;
+    //                     remainingMeals = { dinner: [...todayMeals.meals.dinner], snack: [...todayMeals.meals.snack] };
+    //                 } else {
+    //                     const remaingMealsCacheKey = `remainingMeals:${userId}:${this.getCurrentWeekKey()}:${today}:remaining`;
+    //                     const cached = caching.get(remaingMealsCacheKey);
+    //                     if (cached) {
+    //                         const dinner = JSON.parse(cached).dinner;
+    //                         remainingMeals.dinner = dinner;
+    //                     } else {
+    //                         const dinner = await Food.aggregate(
+    //                             await aggregateConditions(user, 'dinner', allergensCondition, true)
+    //                         );
+
+    //                         remainingMeals.dinner = dinner;
+    //                     }
+    //                     const snack = await Food.find({
+    //                         meal: 'snack',
+
+    //                     }).limit(1);
+    //                     remainingMeals.snack = snack;
+    //                 }
+    //                 break;
+    //             // Note: no need to handle dinner and snack cases because the remaining calories will be for these 2 meals
+    //             default:
+    //                 break;
+    //         }
+    //     } else {
+    //         remainingMeals = { ...todayMeals.meals };
+    //     }
+
+    //     return remainingMeals;
+    // }
 }
 
 module.exports = new FoodService();

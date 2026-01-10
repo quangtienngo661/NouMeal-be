@@ -1,22 +1,79 @@
-# Ignore node_modules (sẽ cài lại trong container)
-node_modules
+# # Ignore node_modules (sẽ cài lại trong container)
+# node_modules
 
-# Ignore logs
-*.log
+# # Ignore logs
+# *.log
 
-# Ignore git
-.git
+# # Ignore git
+# .git
+# .gitignore
+
+# # Ignore docker files
+# Dockerfile
+# docker-compose.yml
+
+# # Ignore editor files
+# .vscode
+# .idea
+# *.swp
+
+# # Ignore OS files
+# .DS_Store
+# Thumbs.db
+
+# Node modules (sẽ được cài lại trong container)
+node_modules/
+npm-debug.log
+
+# Python cache và bytecode
+AI_Bot/__pycache__/
+AI_Bot/*.pyc
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment variables
+.env
+.env.local
+AI_Bot/.env
+
+# Git files
+.git/
 .gitignore
+.gitattributes
 
-# Ignore docker files
-Dockerfile
-docker-compose.yml
+# Docker files
+docker-compose*.yml
+Dockerfile*
+.dockerignore
 
-# Ignore editor files
-.vscode
-.idea
+# Editor files
+.vscode/
+.idea/
 *.swp
+*.swo
+*~
 
-# Ignore OS files
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+
+# Testing
+coverage/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
