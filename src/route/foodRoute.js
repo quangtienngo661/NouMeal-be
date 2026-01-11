@@ -19,7 +19,8 @@ const {
     getFoodsByUserId,
     deleteFoodByAdmin,
     deleteFoodByUser,
-    checkFoodAppropriate
+    checkFoodAppropriate,
+    resetTodayLogs
 } = require('../controller/foodController');
 const { authenticate, restrictTo } = require('../middleware/authMiddleware');
 const { handleValidationErrors } = require('../middleware/validator');
@@ -45,6 +46,7 @@ router.get('/admin', authenticate, restrictTo('admin'), getAdminFoods);
 router.post('/log', authenticate, validateLogMeal, handleValidationErrors, logMeal);
 router.get('/logs', authenticate, getAllFoodLogs);
 router.get('/logs/:date', authenticate, getFoodLog);
+router.delete('/logs/reset', authenticate, resetTodayLogs);
 router.get('/progress/today', authenticate, getTodayProgress);
 
 // Check food appropriateness - Must come before /:foodId to avoid conflicts

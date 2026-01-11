@@ -156,6 +156,16 @@ class FoodLogService {
             remainingMeals
         };
     }
+
+    async resetTodayLogs(userId) {
+        const today = new Date().toISOString().split('T')[0];
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+        await FoodLog.deleteMany({ user: userId, date: today });
+        return { message: 'Today\'s food logs have been reset.' };
+    }
 }
 
 module.exports = new FoodLogService();
