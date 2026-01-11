@@ -52,10 +52,14 @@ class FoodService {
         const today = new Date().toISOString().split('T')[0];
         const todayMeals = weeklyPlan.find(day => day.date === today);
 
-        const { isNonRecommendedExisted, meal } = caching.get(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`) || {};
+        const cachingData = caching.get(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`) || {};
+
+        if (cachingData && cachingData.cachedMeals) {
+            return JSON.parse(cachingData.cachedMeals); 
+        }
 
         if (!foodId) {
-            if (isNonRecommendedExisted) {
+            if (cachingData) {
                 caching.del(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`);
             }
 
@@ -68,25 +72,29 @@ class FoodService {
 
             const mealType = food.meal;
 
-            if (isNonRecommendedExisted && mealType !== meal) {
+            if (cachingData.isNonRecommendedExisted && mealType !== cachingData.meal) {
                 throw new AppError('You have already chose a non-recommended meal today. You can only log one non-recommended meal per day.', 400);
             }
 
             const adaptiveMeals = await this.getAdaptiveMeals(food, userId, todayMeals);
 
-            caching.set(
-                `adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`,
-                {
-                    isNonRecommendedExisted: true,
-                    meal: mealType
-                },
-                this.getSecondsUntilMidnight());
-
+            
             const adaptiveMealsResponse = {
                 date: todayMeals.date,
                 dayName: todayMeals.dayName,
                 meals: adaptiveMeals
             };
+
+            const cachedMeals = JSON.stringify(adaptiveMealsResponse);
+            
+            caching.set(
+                `adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`,
+                {
+                    cachedMeals,
+                    isNonRecommendedExisted: true,
+                    meal: mealType
+                },
+                this.getSecondsUntilMidnight());
             return adaptiveMealsResponse;
         }
     }
@@ -431,7 +439,7 @@ class FoodService {
 
     async clearAllCache() {
         caching.flushAll();
-        return { message: 'All weekly recommendation caches cleared' };
+        return { message: 'All caches cleared' };
     }
 
     async getAdaptiveMeals(food, user, todayMeals) {
