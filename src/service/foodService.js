@@ -5,6 +5,8 @@ const { aggregateConditions } = require("../libs/conditions/recommendConditions"
 const NodeCache = require("node-cache");
 const caching = new NodeCache({ checkperiod: 3600 });
 const FoodLog = require("../model/foodLogModel");
+const { GOAL_TAG_MAPPING } = require("../libs/mappers/goalTagMapping");
+
 
 class FoodService {
     // 📦 READ operations
@@ -55,7 +57,7 @@ class FoodService {
         const cachingData = caching.get(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`) || {};
 
         if (cachingData && cachingData.cachedMeals) {
-            return JSON.parse(cachingData.cachedMeals); 
+            return JSON.parse(cachingData.cachedMeals);
         }
 
         if (!foodId) {
@@ -76,9 +78,15 @@ class FoodService {
                 throw new AppError('You have already chose a non-recommended meal today. You can only log one non-recommended meal per day.', 400);
             }
 
+            const user = await User.findById(userId);
+            if (!user) {
+                throw new AppError('User not found', 404);
+            }
+
+
             const adaptiveMeals = await this.getAdaptiveMeals(food, userId, todayMeals);
 
-            
+
             const adaptiveMealsResponse = {
                 date: todayMeals.date,
                 dayName: todayMeals.dayName,
@@ -86,7 +94,7 @@ class FoodService {
             };
 
             const cachedMeals = JSON.stringify(adaptiveMealsResponse);
-            
+
             caching.set(
                 `adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`,
                 {
@@ -197,12 +205,6 @@ class FoodService {
 
     async createFoodByUser(foodInfo, userId) {
         const newFood = await Food.create({ ...foodInfo, postedBy: userId });
-        const user = await User.findById(userId);
-        if (!user) {
-            throw new AppError('User not found', 404);
-        }
-        // let isAppropriate = user.preferences.some(pref => foodInfo.tags.includes(pref));
-
         caching.flushAll(); // Clear all caches when food data changes
         return newFood;
     };
@@ -212,13 +214,13 @@ class FoodService {
 
         if (!user) {
             throw new AppError('User not found', 404);
-        }
+        }        
 
-        if (!user.preferences || user.preferences.length === 0 || !foodInfo.tags || foodInfo.tags.length === 0) {
-            return false;
-        }
+        const isAppropriate = foodInfo.tags.some(tag => GOAL_TAG_MAPPING[user.goal]?.some(goalTag => goalTag === tag));
 
-        return user.preferences.some(pref => foodInfo.tags.includes(pref)) ? true : false;
+        const isAllergyFree = !foodInfo.allergens.some(allergen => user.allergies.includes(allergen));
+
+        return { isAppropriate, isAllergyFree };
     }
 
     async updateFood(foodId, foodInfo, userId) {

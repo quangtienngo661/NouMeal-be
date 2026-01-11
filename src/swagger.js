@@ -811,17 +811,31 @@ const swaggerOptions = {
     tags: [
       {
         name: 'Authentication',
-        description:
-          'User registration, login, password change, and account deactivation',
+        description: 'User registration, login, email verification, password reset, and token management',
       },
       {
         name: 'User Profile',
-        description:
-          'User profile viewing, updating, and user lookup operations',
+        description: 'User profile viewing, updating, and user lookup operations',
       },
       {
-        name: 'Foods',
-        description: 'Food catalog management and recommendation endpoints'
+        name: 'Foods - User',
+        description: 'Food browsing, recommendations, user food creation, and personal food management'
+      },
+      {
+        name: 'Foods - Admin',
+        description: 'Admin food management, creation, and deletion of system-wide food items'
+      },
+      {
+        name: 'Food Logs',
+        description: 'Food consumption tracking, meal logging, and nutrition progress monitoring'
+      },
+      {
+        name: 'Posts',
+        description: 'Social feed posts, creation, updates, likes, and post interactions'
+      },
+      {
+        name: 'Comments',
+        description: 'Comment and reply management on posts with likes and interactions'
       },
     ],
   },
