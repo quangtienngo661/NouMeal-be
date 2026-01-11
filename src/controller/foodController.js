@@ -67,21 +67,18 @@ exports.getFoods = catchAsync(async (req, res, next) => {
  * /api/v1/foods/today-meals:
  *   get:
  *     summary: Get today's meal recommendations for current user
- *     description: Returns today's recommended meals (breakfast, lunch, dinner, snacks) based on the authenticated user's profile from the weekly plan. Can also be used with a foodId in body to get adaptive recommendations when user selects a non-recommended food.
+ *     description: Returns today's recommended meals (breakfast, lunch, dinner, snacks) based on the authenticated user's profile from the weekly plan. Can also be used with a foodId in query to get adaptive recommendations when user selects a non-recommended food.
  *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               foodId:
- *                 type: string
- *                 description: Optional food ID to get adaptive meal recommendations
- *                 example: "692ebe81e68471451b81a9d0"
+ *     parameters:
+ *       - in: query
+ *         name: foodId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Optional food ID to get adaptive meal recommendations
+ *         example: "692ebe81e68471451b81a9d0"
  *     responses:
  *       200:
  *         description: Today's meals retrieved successfully
@@ -205,7 +202,7 @@ exports.getFoods = catchAsync(async (req, res, next) => {
  */
 exports.getTodayMeals = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
-    const foodId = req.body?.foodId || null;
+    const foodId = req.query.foodId || null;
 
     const result = await FoodService.getTodayMeals(userId, foodId);
     return res.ok(result, 200, "Success");
