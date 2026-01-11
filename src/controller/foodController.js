@@ -1477,3 +1477,168 @@ exports.getFoodLog = catchAsync(async (req, res, next) => {
     const result = await FoodLogService.getFoodLog(req.user._id, date);
     return res.ok(result, 200);
 });
+
+/**
+ * @swagger
+ * /api/v1/foods/check-appropriate:
+ *   post:
+ *     summary: Check if a food is appropriate for user's preferences
+ *     description: |
+ *       Checks whether a food object matches any of the authenticated user's dietary preferences based on food tags.
+ *       Returns false if user has no preferences or food has no tags.
+ *       This endpoint is useful to check appropriateness before creating a new food.
+ *     tags: [Foods]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - category
+ *               - meal
+ *               - nutritionalInfo
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Name of the food
+ *                 example: "Grilled Chicken Salad"
+ *               description:
+ *                 type: string
+ *                 description: Description of the food
+ *                 example: "Healthy grilled chicken with mixed greens"
+ *               category:
+ *                 type: string
+ *                 enum: [protein, vegetables, fruits, grains, dairy]
+ *                 description: Food category
+ *                 example: "protein"
+ *               meal:
+ *                 type: string
+ *                 enum: [breakfast, lunch, dinner, snack]
+ *                 description: Meal type
+ *                 example: "lunch"
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Tags for food preferences (vegetarian, vegan, gluten-free, etc.)
+ *                 example: ["high-protein", "low-carb", "gluten-free"]
+ *               allergens:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of allergens in the food
+ *                 example: []
+ *               nutritionalInfo:
+ *                 type: object
+ *                 required:
+ *                   - calories
+ *                   - protein
+ *                   - carbohydrates
+ *                   - fat
+ *                 properties:
+ *                   calories:
+ *                     type: number
+ *                     description: Calories in kcal
+ *                     example: 350
+ *                   protein:
+ *                     type: number
+ *                     description: Protein in grams
+ *                     example: 40
+ *                   carbohydrates:
+ *                     type: number
+ *                     description: Carbohydrates in grams
+ *                     example: 15
+ *                   fat:
+ *                     type: number
+ *                     description: Fat in grams
+ *                     example: 12
+ *     responses:
+ *       200:
+ *         description: Food appropriateness check completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     isAppropriate:
+ *                       type: boolean
+ *                       description: Whether the food matches user's preferences. False if user has no preferences or food has no tags.
+ *                       example: true
+ *                     userId:
+ *                       type: string
+ *                       example: "67562c8b5e4f123456789abc"
+ *             examples:
+ *               appropriate:
+ *                 summary: Food matches user preferences
+ *                 value:
+ *                   success: true
+ *                   message: "Success"
+ *                   data:
+ *                     isAppropriate: true
+ *                     userId: "67562c8b5e4f123456789abc"
+ *               notAppropriate:
+ *                 summary: Food does not match user preferences
+ *                 value:
+ *                   success: true
+ *                   message: "Success"
+ *                   data:
+ *                     isAppropriate: false
+ *                     userId: "67562c8b5e4f123456789abc"
+ *               noPreferencesOrTags:
+ *                 summary: User has no preferences or food has no tags
+ *                 value:
+ *                   success: true
+ *                   message: "Success"
+ *                   data:
+ *                     isAppropriate: false
+ *                     userId: "67562c8b5e4f123456789abc"
+ *       400:
+ *         description: Bad request - Invalid food data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.checkFoodAppropriate = catchAsync(async (req, res, next) => {
+    const userId = req.user._id;
+    const foodInfo = req.body;
+    
+    // Check if food is appropriate for user's preferences
+    const isAppropriate = await FoodService.isAppropriate(userId, foodInfo);
+    
+    return res.ok({
+        isAppropriate,
+        userId
+    }, 200, "Success");
+});

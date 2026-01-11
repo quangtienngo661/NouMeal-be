@@ -193,12 +193,25 @@ class FoodService {
         if (!user) {
             throw new AppError('User not found', 404);
         }
-        let isAppropriate = user.preferences.some(pref => foodInfo.tags.includes(pref));
-
+        // let isAppropriate = user.preferences.some(pref => foodInfo.tags.includes(pref));
 
         caching.flushAll(); // Clear all caches when food data changes
-        return { newFood, isAppropriate };
+        return newFood;
     };
+
+    async isAppropriate(userId, foodInfo) {
+        const user = await User.findById(userId);
+
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+
+        if (!user.preferences || user.preferences.length === 0 || !foodInfo.tags || foodInfo.tags.length === 0) {
+            return false;
+        }
+
+        return user.preferences.some(pref => foodInfo.tags.includes(pref)) ? true : false;
+    }
 
     async updateFood(foodId, foodInfo, userId) {
         const existingFood = await Food.findById(foodId);
