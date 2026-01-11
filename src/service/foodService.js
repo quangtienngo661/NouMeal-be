@@ -56,13 +56,9 @@ class FoodService {
 
         const cachingData = caching.get(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`) || {};
 
-        if (cachingData && cachingData.cachedMeals) {
-            return JSON.parse(cachingData.cachedMeals);
-        }
-
         if (!foodId) {
-            if (cachingData) {
-                caching.del(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`);
+            if (cachingData && cachingData.cachedMeals) {
+                return JSON.parse(cachingData.cachedMeals);
             }
 
             return todayMeals;
@@ -214,7 +210,7 @@ class FoodService {
 
         if (!user) {
             throw new AppError('User not found', 404);
-        }        
+        }
 
         const isAppropriate = foodInfo.tags.some(tag => GOAL_TAG_MAPPING[user.goal]?.some(goalTag => goalTag === tag));
 
