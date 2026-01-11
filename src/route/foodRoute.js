@@ -18,7 +18,8 @@ const {
     getOwnFoods,
     getFoodsByUserId,
     deleteFoodByAdmin,
-    deleteFoodByUser
+    deleteFoodByUser,
+    checkFoodAppropriate
 } = require('../controller/foodController');
 const { authenticate, restrictTo } = require('../middleware/authMiddleware');
 const { handleValidationErrors } = require('../middleware/validator');
@@ -45,6 +46,9 @@ router.post('/log', authenticate, validateLogMeal, handleValidationErrors, logMe
 router.get('/logs', authenticate, getAllFoodLogs);
 router.get('/logs/:date', authenticate, getFoodLog);
 router.get('/progress/today', authenticate, getTodayProgress);
+
+// Check food appropriateness - Must come before /:foodId to avoid conflicts
+router.post('/check-appropriate', authenticate, validateCreateFood, handleValidationErrors, checkFoodAppropriate);
 
 // Food by ID - Must come after specific routes
 router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById);
