@@ -53,26 +53,26 @@ class FoodLogService {
 
 
         // Check cache to determine if food is from recommendations (avoids circular dependency)
-        const foodService = require('./foodService');
-        const weeklyPlan = foodService.getCachedWeeklyPlan(userId);
+        // const foodService = require('./foodService');
+        // const weeklyPlan = foodService.getCachedWeeklyPlan(userId);
 
-        let isRecommended = false;
-        if (weeklyPlan) {
-            const todayMeals = weeklyPlan.find(day => day.date === today);
-            if (todayMeals && todayMeals.meals[food.meal]) {
-                isRecommended = todayMeals.meals[food.meal].some(
-                    recommendedFood => recommendedFood._id.toString() === food._id.toString()
-                );
-            }
-        }
+        // let isRecommended = false;
+        // if (weeklyPlan) {
+        //     const todayMeals = weeklyPlan.find(day => day.date === today);
+        //     if (todayMeals && todayMeals.meals[food.meal]) {
+        //         isRecommended = todayMeals.meals[food.meal].some(
+        //             recommendedFood => recommendedFood._id.toString() === food._id.toString()
+        //         );
+        //     }
+        // }
 
-        const existingNonRecommendedLog = todayLogs.some(log => log.source !== 'recommended');
-        if (existingNonRecommendedLog && !isRecommended) {
-            throw new AppError(
-                `You have already logged a non-recommended meal today. You can only log one non-recommended meal per day.`,
-                400
-            );
-        }
+        // const existingNonRecommendedLog = todayLogs.some(log => log.source !== 'recommended');
+        // if (existingNonRecommendedLog && !isRecommended) {
+        //     throw new AppError(
+        //         `You have already logged a non-recommended meal today. You can only log one non-recommended meal per day.`,
+        //         400
+        //     );
+        // }
 
         const newFoodLog = await FoodLog.create({
             user: user._id,
