@@ -28,11 +28,6 @@ const foodLogSchema = new mongoose.Schema({
         default: 1,
         min: 0.1
     },
-    source: {
-        type: String,
-        enum: ['recommended', 'user_posted', 'other_user', 'search', 'non_recommended'],
-        default: 'recommended'
-    },
     // Snapshot nutrition (in case food gets deleted/edited later)
     nutritionSnapshot: {
         calories: { type: Number, required: true },

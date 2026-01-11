@@ -80,7 +80,6 @@ class FoodLogService {
             meal: food.meal,
             date: new Date().toISOString().split('T')[0],
             servings: 1,
-            source: isRecommended ? 'recommended' : 'non_recommended',
             nutritionSnapshot: {
                 calories: food.nutritionalInfo.calories,
                 protein: food.nutritionalInfo.protein,
