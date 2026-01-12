@@ -165,6 +165,10 @@ const foodSchema = new mongoose.Schema(
         },
       },
     ],
+    isPublic: {
+      type: Boolean,
+      default: true
+    }
   },
   {
     timestamps: true,

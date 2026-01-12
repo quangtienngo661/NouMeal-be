@@ -6,6 +6,9 @@ const NodeCache = require("node-cache");
 const caching = new NodeCache({ checkperiod: 3600 });
 const FoodLog = require("../model/foodLogModel");
 const { GOAL_TAG_MAPPING } = require("../libs/mappers/goalTagMapping");
+const { image } = require("../config/cloudinaryConfig");
+const { uploadToCloudinary, deleteFromCloudinary } = require("../middleware/multer");
+const { base64ToBuffer } = require("../libs/util/imageHelper");
 
 
 class FoodService {
@@ -80,7 +83,7 @@ class FoodService {
             }
 
 
-            const adaptiveMeals = await this.getAdaptiveMeals(food, userId, todayMeals);
+            const adaptiveMeals = await this.getAdaptiveMeals(food, user, todayMeals);
 
 
             const adaptiveMealsResponse = {
@@ -105,10 +108,10 @@ class FoodService {
 
     async resetTodayMeals(userId) {
         try {
-            caching.del(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`);
             const weeklyPlan = await this.weeklyFoodRecommendation(userId);
             const today = new Date().toISOString().split('T')[0];
             const todayMeals = weeklyPlan.find(day => day.date === today);
+            caching.del(`adaptiveMeals:${userId}:${this.getCurrentWeekKey()}:${today}-nonRecommendedExisted`);
             return todayMeals;
         }
         catch (error) {
@@ -127,12 +130,12 @@ class FoodService {
 
         const cached = caching.get(cacheKey);
         if (cached) {
-            console.log("Cache hit for weekly recommendation");
             return JSON.parse(cached);
         }
 
         const weeklyPlan = await this.generateWeeklyPlan(userId, false);
-        const ttl = this.getSecondsUntilMidnight();
+        // Weekly cache should last until end of week (Sunday 23:59) not just midnight
+        const ttl = this.getSecondsUntilEndOfWeek();
 
         caching.set(cacheKey, JSON.stringify(weeklyPlan), ttl);
         return weeklyPlan;
@@ -193,15 +196,48 @@ class FoodService {
     }
 
     // ✏️ CREATE / UPD
-    async createFoodByAdmin(foodInfo) {
-        const newFood = await Food.create({ ...foodInfo });
-        caching.flushAll(); // Clear all caches when food data changes
+    async createFoodByAdmin(foodInfo, base64Image) {
+        let imageUrl = null;
+
+        // Upload image to Cloudinary if provided
+        if (base64Image) {
+            const buffer = base64ToBuffer(base64Image);
+            const result = await uploadToCloudinary(buffer, {
+                folder: 'mealgenie/foods',
+            });
+            imageUrl = result.url;
+            console.log("Cloudinary upload result:", result);
+        }
+
+        const newFood = await Food.create({
+            ...foodInfo,
+            imageUrl
+        });
         return newFood;
     };
 
-    async createFoodByUser(foodInfo, userId) {
-        const newFood = await Food.create({ ...foodInfo, postedBy: userId });
-        caching.flushAll(); // Clear all caches when food data changes
+    async createFoodByUser(foodInfo, base64Image, userId) {
+        if (!base64Image) {
+            throw new AppError('Image is required for user-submitted foods', 400);
+        }
+
+        // Convert base64 to buffer
+        const buffer = base64ToBuffer(base64Image);
+
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary(buffer, {
+            folder: 'mealgenie/foods',
+        });
+
+        console.log("Cloudinary upload result:", result);
+
+        const newFood = await Food.create({
+            ...foodInfo,
+            postedBy: userId,
+            isPublic: false,
+            imageUrl: result.url
+        });
+
         return newFood;
     };
 
@@ -244,6 +280,22 @@ class FoodService {
             throw new AppError('You are not authorized to update this food', 403);
         }
 
+        // Nếu có imageUrl mới và food có imageUrl cũ, xóa ảnh cũ từ Cloudinary
+        if (foodInfo.imageUrl && existingFood.imageUrl) {
+            try {
+                // Extract publicId from Cloudinary URL
+                const urlParts = existingFood.imageUrl.split('mealgenie/foods/');
+                if (urlParts.length > 1) {
+                    const publicId = 'mealgenie/foods/' + urlParts[1].split('.')[0];
+                    await deleteFromCloudinary(publicId);
+                    console.log('Deleted old image from Cloudinary:', publicId);
+                }
+            } catch (error) {
+                console.error('Failed to delete old image:', error);
+                // Không throw error, vẫn tiếp tục update
+            }
+        }
+
         const updatedFood = await Food.findByIdAndUpdate(
             foodId,
             { ...foodInfo },
@@ -253,7 +305,6 @@ class FoodService {
             }
         );
 
-        caching.flushAll(); // Clear all caches when food data changes
         return updatedFood;
     }
 
@@ -331,7 +382,8 @@ class FoodService {
         const allergensCondition = {
             allergens: { $nin: user.allergies || [] },
             isActive: true,
-            _id: { $nin: Array.from(usedIds) }
+            _id: { $nin: Array.from(usedIds) },
+            isPublic: true
         };
 
         // console.log(allergensCondition);
@@ -350,7 +402,8 @@ class FoodService {
 
         const snack = await Food.find({
             meal: 'snack',
-            _id: { $nin: Array.from(usedIds) }
+            _id: { $nin: Array.from(usedIds) },
+            isPublic: true
         }).limit(1);
 
         return {
@@ -370,13 +423,14 @@ class FoodService {
 
         const allergensCondition = {
             allergens: { $nin: user.allergies || [] },
-            isActive: true
+            isActive: true,
+            isPublic: true
         };
 
         const breakfastFoods = await Food.aggregate(await aggregateConditions(user, 'breakfast', allergensCondition));
         const lunchFoods = await Food.aggregate(await aggregateConditions(user, 'lunch', allergensCondition));
         const dinnerFoods = await Food.aggregate(await aggregateConditions(user, 'dinner', allergensCondition));
-        const snacks = await Food.find({ meal: 'snack' }).limit(1);
+        const snacks = await Food.find({ meal: 'snack', isPublic: true }).limit(1);
 
         return {
             breakfast: breakfastFoods,
@@ -435,6 +489,20 @@ class FoodService {
         return Math.floor((midnight - now) / 1000);
     }
 
+    getSecondsUntilEndOfWeek() {
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        
+        // Calculate days until Sunday (week ends on Sunday 23:59:59)
+        const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+        
+        const endOfWeek = new Date(now);
+        endOfWeek.setDate(now.getDate() + daysUntilSunday);
+        endOfWeek.setHours(23, 59, 59, 999);
+        
+        return Math.floor((endOfWeek - now) / 1000);
+    }
+
     async clearAllCache() {
         caching.flushAll();
         return { message: 'All caches cleared' };
@@ -442,87 +510,40 @@ class FoodService {
 
     async getAdaptiveMeals(food, user, todayMeals) {
         let adaptiveMeals = {};
-        const today = new Date().toISOString().split('T')[0];
         const allergensCondition = {
             allergens: { $nin: user.allergies || [] },
             isActive: true,
+            isPublic: true
         };
 
         if (food) {
-            switch (food.meal) {
-                case "breakfast": {
-                    const lunch = await Food.aggregate(
-                        await aggregateConditions(user, 'lunch', allergensCondition, true)
-                    );
+            // Generate adaptive meals based on the non-recommended food chosen
+            // User can switch foods within the same meal type before logging
+            const breakfast = await Food.aggregate(
+                await aggregateConditions(user, 'breakfast', allergensCondition, true)
+            );
+            const lunch = await Food.aggregate(
+                await aggregateConditions(user, 'lunch', allergensCondition, true)
+            );
+            const dinner = await Food.aggregate(
+                await aggregateConditions(user, 'dinner', allergensCondition, true)
+            );
+            const snack = await Food.find({
+                meal: 'snack',
+                allergens: { $nin: user.allergies || [] },
+                isActive: true,
+                isPublic: true
+            }).limit(1);
 
-                    const dinner = await Food.aggregate(
-                        await aggregateConditions(user, 'dinner', allergensCondition, true)
-                    );
-
-                    const snack = await Food.find({
-                        meal: 'snack',
-                    }).limit(1);
-
-                    adaptiveMeals.breakfast = [food];
-                    adaptiveMeals.lunch = lunch;
-                    adaptiveMeals.dinner = dinner;
-                    adaptiveMeals.snack = snack;
-
-                    const remaingMealsCacheKey = `remainingMeals:${user._id}:${this.getCurrentWeekKey()}:${today}:remaining`;
-                    caching.set(remaingMealsCacheKey, JSON.stringify(adaptiveMeals), this.getSecondsUntilMidnight());
-
-                    break;
-                }
-                case "lunch":
-                    const remaingMealsCacheKey = `remainingMeals:${user._id}:${this.getCurrentWeekKey()}:${today}:remaining`;
-                    const cached = caching.get(remaingMealsCacheKey);
-                    if (cached) {
-                        const dinner = JSON.parse(cached).dinner;
-                        adaptiveMeals.dinner = dinner;
-                    } else {
-                        const breakfast = await Food.aggregate(
-                            await aggregateConditions(user, 'breakfast', allergensCondition, true)
-                        );
-                        const dinner = await Food.aggregate(
-                            await aggregateConditions(user, 'dinner', allergensCondition, true)
-                        );
-                        const snack = await Food.find({
-                            meal: 'snack',
-                        }).limit(1);
-                        adaptiveMeals.breakfast = breakfast;
-                        adaptiveMeals.lunch = [food];
-                        adaptiveMeals.dinner = dinner;
-                        adaptiveMeals.snack = snack;
-                    }
-                    break;
-                case "dinner":
-                    const remainingMealsCacheKey = `remainingMeals:${user._id}:${this.getCurrentWeekKey()}:${today}:remaining`;
-                    const cachedMeals = caching.get(remainingMealsCacheKey);
-                    if (cachedMeals) {
-                        const breakfast = JSON.parse(cachedMeals).breakfast;
-                        const lunch = JSON.parse(cachedMeals).lunch;
-                        adaptiveMeals.breakfast = breakfast;
-                        adaptiveMeals.lunch = lunch;
-                    } else {
-                        const breakfast = await Food.aggregate(
-                            await aggregateConditions(user, 'breakfast', allergensCondition, true)
-                        );
-                        const lunch = await Food.aggregate(
-                            await aggregateConditions(user, 'lunch', allergensCondition, true)
-                        );
-                        const snack = await Food.find({
-                            meal: 'snack',
-                        }).limit(1);
-                        adaptiveMeals.breakfast = breakfast;
-                        adaptiveMeals.lunch = lunch;
-                        adaptiveMeals.dinner = [food];
-                        adaptiveMeals.snack = snack;
-                    }
-                    break;
-                default:
-                    break;
-            }
+            // Replace the chosen meal with the non-recommended food
+            adaptiveMeals = {
+                breakfast: food.meal === 'breakfast' ? [food] : breakfast,
+                lunch: food.meal === 'lunch' ? [food] : lunch,
+                dinner: food.meal === 'dinner' ? [food] : dinner,
+                snack: food.meal === 'snack' ? [food] : snack
+            };
         } else {
+            // No non-recommended food chosen, return today's recommended meals
             adaptiveMeals = { ...todayMeals.meals };
         }
 

@@ -30,7 +30,6 @@ const {
     validateFoodIdParam,
 } = require('../validation/foodValidation');
 const { validateLogMeal } = require('../validation/foodLogValidation');
-
 // 📦 READ operations
 router.get('/', getFoods);
 router.get('/today-meals', authenticate, getTodayMeals);
@@ -56,8 +55,8 @@ router.post('/check-appropriate', authenticate, validateCreateFood, handleValida
 router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById);
 
 // ✏️ CREATE / UPDATE / DELETE
-router.post('/admin', authenticate, restrictTo('admin'), validateCreateFood, handleValidationErrors, createFoodByAdmin);
-router.post('/user', authenticate, validateCreateFood, handleValidationErrors, createFoodByUser);
+router.post('/admin', authenticate, restrictTo('admin'), createFoodByAdmin);
+router.post('/user', authenticate, createFoodByUser);
 router.patch(
     '/:foodId',
     authenticate,

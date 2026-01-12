@@ -718,7 +718,7 @@ exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
  * /api/v1/foods/admin:
  *   post:
  *     summary: Create a new food by admin
- *     description: Add a new food item to the database by admin (without postedBy field).
+ *     description: Add a new food item to the database by admin (without postedBy field). Image should be sent as base64 string.
  *     tags: [Foods - Admin]
  *     security:
  *       - bearerAuth: []
@@ -727,16 +727,79 @@ exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/FoodCreateRequest'
+ *             type: object
+ *             required:
+ *               - name
+ *               - category
+ *               - meal
+ *               - nutritionalInfo
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Grilled Salmon with Vegetables"
+ *               description:
+ *                 type: string
+ *                 example: "Fresh Atlantic salmon grilled with olive oil, served with steamed broccoli"
+ *               category:
+ *                 type: string
+ *                 enum: [protein, carbs, vegetables, fruits, dairy, grains, fats]
+ *                 example: "protein"
+ *               meal:
+ *                 type: string
+ *                 enum: [breakfast, lunch, dinner, snack]
+ *                 example: "lunch"
+ *               nutritionalInfo:
+ *                 type: object
+ *                 required:
+ *                   - calories
+ *                   - protein
+ *                   - carbohydrates
+ *                   - fat
+ *                 properties:
+ *                   calories:
+ *                     type: number
+ *                     example: 450
+ *                   protein:
+ *                     type: number
+ *                     example: 42
+ *                   carbohydrates:
+ *                     type: number
+ *                     example: 18
+ *                   fat:
+ *                     type: number
+ *                     example: 22
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["high_protein", "low_carb", "omega_3"]
+ *               allergens:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["fish"]
+ *               image:
+ *                 type: string
+ *                 description: Base64 encoded image string (with or without data URI prefix)
+ *                 example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD..."
  *     responses:
  *       201:
  *         description: Food created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/FoodItemResponse'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Success"
+ *                 data:
+ *                   $ref: '#/components/schemas/Food'
  *       400:
- *         description: Validation error
+ *         description: Validation error or invalid base64 format
  *         content:
  *           application/json:
  *             schema:
@@ -761,9 +824,9 @@ exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
-    const foodInfo = { ...req.body };
+    const { image, ...foodInfo } = req.body;
 
-    const result = await FoodService.createFoodByAdmin(foodInfo);
+    const result = await FoodService.createFoodByAdmin(foodInfo, image);
     return res.ok(result, 201);
 });
 
@@ -772,7 +835,7 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  * /api/v1/foods/user:
  *   post:
  *     summary: Create a new food by user
- *     description: Add a new food item to the database by authenticated user (with postedBy field).
+ *     description: Add a new food item to the database by authenticated user (with postedBy field, isPublic=false by default). Image is REQUIRED and should be sent as base64 string. Admin approval required before food appears in recommendations.
  *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
@@ -781,16 +844,97 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/FoodCreateRequest'
+ *             type: object
+ *             required:
+ *               - name
+ *               - category
+ *               - meal
+ *               - nutritionalInfo
+ *               - image
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "My Protein Smoothie Bowl"
+ *               description:
+ *                 type: string
+ *                 example: "Homemade smoothie bowl with banana and Greek yogurt"
+ *               category:
+ *                 type: string
+ *                 enum: [protein, carbs, vegetables, fruits, dairy, grains, fats]
+ *                 example: "dairy"
+ *               meal:
+ *                 type: string
+ *                 enum: [breakfast, lunch, dinner, snack]
+ *                 example: "breakfast"
+ *               nutritionalInfo:
+ *                 type: object
+ *                 required:
+ *                   - calories
+ *                   - protein
+ *                   - carbohydrates
+ *                   - fat
+ *                 properties:
+ *                   calories:
+ *                     type: number
+ *                     example: 380
+ *                   protein:
+ *                     type: number
+ *                     example: 28
+ *                   carbohydrates:
+ *                     type: number
+ *                     example: 45
+ *                   fat:
+ *                     type: number
+ *                     example: 10
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["high_protein", "balanced"]
+ *               allergens:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["dairy"]
+ *               image:
+ *                 type: string
+ *                 description: Base64 encoded image string (REQUIRED - with or without data URI prefix)
+ *                 example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD..."
  *     responses:
  *       201:
- *         description: Food created successfully
+ *         description: Food created successfully (pending admin approval)
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/FoodItemResponse'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "6933899ead3ca3ce89445d23"
+ *                     name:
+ *                       type: string
+ *                       example: "My Protein Smoothie Bowl"
+ *                     imageUrl:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/xxx/mealgenie/foods/abc123.jpg"
+ *                     postedBy:
+ *                       type: string
+ *                       example: "692d24c28e5236c6f9ba3aa8"
+ *                     isPublic:
+ *                       type: boolean
+ *                       example: false
+ *                       description: Food will not appear in recommendations until admin approval
  *       400:
- *         description: Validation error
+ *         description: Validation error, missing required image, or invalid base64 format
  *         content:
  *           application/json:
  *             schema:
@@ -802,16 +946,16 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
- *         description: Internal server error
+ *         description: Internal server error (including Cloudinary upload failure)
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 exports.createFoodByUser = catchAsync(async (req, res, next) => {
-    const foodInfo = { ...req.body };
+    const { image, ...foodInfo } = req.body;
 
-    const result = await FoodService.createFoodByUser(foodInfo, req.user._id);
+    const result = await FoodService.createFoodByUser(foodInfo, image, req.user._id);
     return res.ok(result, 201);
 });
 
@@ -862,8 +1006,13 @@ exports.createFoodByUser = catchAsync(async (req, res, next) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 exports.updateFood = catchAsync(async (req, res, next) => {
-    const { foodId } = req.params;
-    const foodInfo = { ...req.body }
+    const foodInfo = { ...req.body.data };
+
+    // Thêm thông tin ảnh từ Cloudinary nếu có
+    let imgUrl = null;
+    if (req.cloudinaryResult) {
+        imgUrl = req.cloudinaryResult.url;
+    }
 
     const result = await FoodService.updateFood(foodId, foodInfo, req.user._id);
     return res.ok(result, 200);
@@ -1643,10 +1792,10 @@ exports.getFoodLog = catchAsync(async (req, res, next) => {
 exports.checkFoodAppropriate = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
     const foodInfo = req.body;
-    
+
     // Check if food is appropriate for user's preferences
     const isAppropriate = await FoodService.isAppropriate(userId, foodInfo);
-    
+
     return res.ok({
         isAppropriate,
         userId
