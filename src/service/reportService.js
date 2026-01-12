@@ -276,71 +276,129 @@ function estimateDailyCalories({ weight, height, age, gender, activity, goal }) 
 }
 
 async function getTodayTotals(userId, { tz = 'UTC' } = {}) {
+  // Get today's date string in YYYY-MM-DD format based on timezone
   const now = new Date();
-  // truncate to day UTC or provided tz via $dateTrunc in pipeline
-  const pipeline = [
-    { $match: { user: asObjectId(userId) } },
-    {
-      $addFields: {
-        eatenDay: { $dateTrunc: { date: '$eatenAt', unit: 'day', timezone: tz } }
-      }
-    },
-    {
-      $match: { eatenDay: { $eq: { $dateTrunc: { date: now, unit: 'day', timezone: tz } } } }
-    },
-    {
-      $group: {
-        _id: null,
-        calories: { $sum: '$calories' },
-        protein: { $sum: '$protein' },
-        carb: { $sum: '$carb' },
-        fat: { $sum: '$fat' }
-      }
-    },
-    { $project: { _id: 0, calories: 1, protein: 1, carb: 1, fat: 1 } }
-  ];
-  const res = await FoodLog.aggregate(pipeline);
-  return res[0] || { calories: 0, protein: 0, carb: 0, fat: 0 };
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const todayStr = formatter.format(now); // "YYYY-MM-DD"
+  
+  // Use find() to get today's logs and calculate totals manually
+  const logs = await FoodLog.find({ user: userId, date: todayStr }).lean();
+  
+  const totals = logs.reduce((acc, log) => {
+    const servings = log.servings || 1;
+    acc.calories += (log.nutritionSnapshot?.calories || 0) * servings;
+    acc.protein += (log.nutritionSnapshot?.protein || 0) * servings;
+    acc.carb += (log.nutritionSnapshot?.carbs || 0) * servings;
+    acc.fat += (log.nutritionSnapshot?.fat || 0) * servings;
+    return acc;
+  }, { calories: 0, protein: 0, carb: 0, fat: 0 });
+  
+  return totals;
 }
 
 async function caloriesByMealToday(userId, { tz = 'UTC' } = {}) {
+  // Get today's date string in YYYY-MM-DD format based on timezone
   const now = new Date();
-  const pipeline = [
-    { $match: { user: asObjectId(userId) } },
-    { $addFields: { eatenDay: { $dateTrunc: { date: '$eatenAt', unit: 'day', timezone: tz } } } },
-    { $match: { eatenDay: { $eq: { $dateTrunc: { date: now, unit: 'day', timezone: tz } } } } },
-    { $group: { _id: '$mealType', calories: { $sum: '$calories' } } },
-    { $project: { mealType: '$_id', calories: 1, _id: 0 } }
-  ];
-  return FoodLog.aggregate(pipeline);
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+  const todayStr = formatter.format(now); // "YYYY-MM-DD"
+
+  // Use find() and group manually
+  const logs = await FoodLog.find({ user: userId, date: todayStr }).lean();
+  
+  const byMeal = {};
+  logs.forEach(log => {
+    const mealType = log.meal;
+    const servings = log.servings || 1;
+    const calories = (log.nutritionSnapshot?.calories || 0) * servings;
+    
+    if (!byMeal[mealType]) {
+      byMeal[mealType] = { mealType, calories: 0 };
+    }
+    byMeal[mealType].calories += calories;
+  });
+  
+  return Object.values(byMeal);
 }
 
 async function recentLoggedFoods(userId, { limit = 10 } = {}) {
-  const logs = await FoodLog.find({ user: asObjectId(userId) }).sort({ eatenAt: -1 }).limit(limit).populate('food').lean();
-  return logs.map(l => ({ id: l._id, eatenAt: l.eatenAt, mealType: l.mealType, servingSize: l.servingSize, calories: l.calories, protein: l.protein, carb: l.carb, fat: l.fat, food: l.food }));
+  const logs = await FoodLog.find({ user: asObjectId(userId) })
+    .sort({ loggedAt: -1 })
+    .limit(limit)
+    .populate('food')
+    .lean();
+  
+  return logs.map(l => ({
+    id: l._id,
+    loggedAt: l.loggedAt,
+    date: l.date,
+    mealType: l.meal,
+    servings: l.servings,
+    calories: (l.nutritionSnapshot?.calories || 0) * (l.servings || 1),
+    protein: (l.nutritionSnapshot?.protein || 0) * (l.servings || 1),
+    carb: (l.nutritionSnapshot?.carbs || 0) * (l.servings || 1),
+    fat: (l.nutritionSnapshot?.fat || 0) * (l.servings || 1),
+    food: l.food
+  }));
 }
 
 async function timeSeriesCaloriesAndMacros(userId, { startDate, endDate, groupBy = 'day', tz = 'UTC' } = {}) {
-  const unit = getTruncUnit(groupBy);
-  const match = { user: asObjectId(userId) };
-  if (startDate || endDate) match.eatenAt = {};
-  if (startDate) match.eatenAt.$gte = startDate;
-  if (endDate) match.eatenAt.$lte = endDate;
+  // Build query filter
+  const query = { user: userId };
+  
+  // Convert dates to YYYY-MM-DD format for comparison with date field
+  if (startDate || endDate) {
+    query.date = {};
+    if (startDate) {
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      query.date.$gte = formatter.format(startDate);
+    }
+    if (endDate) {
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      query.date.$lte = formatter.format(endDate);
+    }
+  }
 
-  const pipeline = [
-    { $match: match },
-    { $group: { _id: { $dateTrunc: { date: '$eatenAt', unit, timezone: tz } }, calories: { $sum: '$calories' }, protein: { $sum: '$protein' }, carb: { $sum: '$carb' }, fat: { $sum: '$fat' } } },
-    { $sort: { '_id': 1 } },
-    { $project: { date: '$_id', calories: 1, protein: 1, carb: 1, fat: 1, _id: 0 } }
-  ];
-  const rows = await FoodLog.aggregate(pipeline);
-  // add P/C/F percentages
+  // Fetch logs and group manually
+  const logs = await FoodLog.find(query).lean();
+  
+  // Group by date (or week/month based on groupBy)
+  const groupedData = {};
+  
+  logs.forEach(log => {
+    let groupKey = log.date; // Default: group by day (YYYY-MM-DD)
+    
+    if (groupBy === 'week') {
+      // Get the Monday of the week
+      const d = new Date(log.date + 'T00:00:00Z');
+      const day = d.getUTCDay();
+      const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+      d.setUTCDate(diff);
+      groupKey = d.toISOString().split('T')[0];
+    } else if (groupBy === 'month') {
+      groupKey = log.date.substring(0, 7) + '-01'; // YYYY-MM-01
+    }
+    
+    if (!groupedData[groupKey]) {
+      groupedData[groupKey] = { calories: 0, protein: 0, carb: 0, fat: 0 };
+    }
+    
+    const servings = log.servings || 1;
+    groupedData[groupKey].calories += (log.nutritionSnapshot?.calories || 0) * servings;
+    groupedData[groupKey].protein += (log.nutritionSnapshot?.protein || 0) * servings;
+    groupedData[groupKey].carb += (log.nutritionSnapshot?.carbs || 0) * servings;
+    groupedData[groupKey].fat += (log.nutritionSnapshot?.fat || 0) * servings;
+  });
+  
+  // Convert to array and add percentages
+  const rows = Object.entries(groupedData)
+    .map(([dateStr, data]) => ({ date: new Date(dateStr + 'T00:00:00Z'), ...data }))
+    .sort((a, b) => a.date - b.date);
+  
   return rows.map(r => {
-    const total = (r.calories || 0) || 1;
     const proteinCals = (r.protein || 0) * 4;
     const fatCals = (r.fat || 0) * 9;
     const carbCals = (r.carb || 0) * 4;
-    const sumCals = proteinCals + fatCals + carbCals || total;
+    const sumCals = proteinCals + fatCals + carbCals || 1;
     return {
       date: r.date,
       calories: r.calories || 0,
@@ -356,18 +414,48 @@ async function timeSeriesCaloriesAndMacros(userId, { startDate, endDate, groupBy
   });
 }
 
-async function perMealAnalysis(userId, { startDate, endDate } = {}) {
-  const match = { user: asObjectId(userId) };
-  if (startDate || endDate) match.eatenAt = {};
-  if (startDate) match.eatenAt.$gte = startDate;
-  if (endDate) match.eatenAt.$lte = endDate;
+async function perMealAnalysis(userId, { startDate, endDate, tz = 'UTC' } = {}) {
+  // Build query filter
+  const query = { user: userId };
+  
+  // Convert dates to YYYY-MM-DD format for comparison with date field
+  if (startDate || endDate) {
+    query.date = {};
+    if (startDate) {
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      query.date.$gte = formatter.format(startDate);
+    }
+    if (endDate) {
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      query.date.$lte = formatter.format(endDate);
+    }
+  }
 
-  const pipeline = [
-    { $match: match },
-    { $group: { _id: '$mealType', avgCalories: { $avg: '$calories' }, avgProtein: { $avg: '$protein' }, count: { $sum: 1 } } },
-    { $project: { mealType: '$_id', avgCalories: 1, avgProtein: 1, count: 1, _id: 0 } }
-  ];
-  const rows = await FoodLog.aggregate(pipeline);
+  // Fetch logs and group by meal type
+  const logs = await FoodLog.find(query).lean();
+  
+  const mealStats = {};
+  logs.forEach(log => {
+    const mealType = log.meal;
+    const servings = log.servings || 1;
+    const calories = (log.nutritionSnapshot?.calories || 0) * servings;
+    const protein = (log.nutritionSnapshot?.protein || 0) * servings;
+    
+    if (!mealStats[mealType]) {
+      mealStats[mealType] = { mealType, totalCalories: 0, totalProtein: 0, count: 0 };
+    }
+    mealStats[mealType].totalCalories += calories;
+    mealStats[mealType].totalProtein += protein;
+    mealStats[mealType].count += 1;
+  });
+  
+  const rows = Object.values(mealStats).map(stat => ({
+    mealType: stat.mealType,
+    avgCalories: stat.count > 0 ? stat.totalCalories / stat.count : 0,
+    avgProtein: stat.count > 0 ? stat.totalProtein / stat.count : 0,
+    count: stat.count
+  }));
+  
   // find highest avg calories and lowest avg protein
   let highestCalories = null;
   let lowestProtein = null;
@@ -378,21 +466,74 @@ async function perMealAnalysis(userId, { startDate, endDate } = {}) {
   return { perMeal: rows, highestCalories, lowestProtein };
 }
 
-async function topFoodsPerMeal(userId, { startDate, endDate, top = 5 } = {}) {
-  const match = { user: asObjectId(userId) };
-  if (startDate || endDate) match.eatenAt = {};
-  if (startDate) match.eatenAt.$gte = startDate;
-  if (endDate) match.eatenAt.$lte = endDate;
+async function topFoodsPerMeal(userId, { startDate, endDate, top = 5, tz = 'UTC' } = {}) {
+  // Build query filter
+  const query = { user: userId };
+  
+  // Convert dates to YYYY-MM-DD format for comparison with date field
+  if (startDate || endDate) {
+    query.date = {};
+    if (startDate) {
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      query.date.$gte = formatter.format(startDate);
+    }
+    if (endDate) {
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+      query.date.$lte = formatter.format(endDate);
+    }
+  }
 
-  const pipeline = [
-    { $match: match },
-    { $group: { _id: { meal: '$mealType', food: '$food' }, count: { $sum: 1 }, avgCalories: { $avg: '$calories' }, avgProtein: { $avg: '$protein' }, avgCarb: { $avg: '$carb' }, avgFat: { $avg: '$fat' } } },
-    { $sort: { '_id.meal': 1, count: -1 } },
-    { $group: { _id: '$_id.meal', foods: { $push: { food: '$_id.food', count: '$count', avgCalories: '$avgCalories', avgProtein: '$avgProtein', avgCarb: '$avgCarb', avgFat: '$avgFat' } } } },
-    { $project: { meal: '$_id', foods: { $slice: ['$foods', top] }, _id: 0 } }
-  ];
-  const rows = await FoodLog.aggregate(pipeline);
-  // populate food details separately for returned food ids
+  // Fetch logs and group by meal and food
+  const logs = await FoodLog.find(query).lean();
+  
+  // Group by meal -> food
+  const mealFoodStats = {};
+  logs.forEach(log => {
+    const mealType = log.meal;
+    const foodId = log.food?.toString() || log.food;
+    const servings = log.servings || 1;
+    
+    if (!mealFoodStats[mealType]) {
+      mealFoodStats[mealType] = {};
+    }
+    if (!mealFoodStats[mealType][foodId]) {
+      mealFoodStats[mealType][foodId] = {
+        food: foodId,
+        count: 0,
+        totalCalories: 0,
+        totalProtein: 0,
+        totalCarb: 0,
+        totalFat: 0
+      };
+    }
+    
+    const stat = mealFoodStats[mealType][foodId];
+    stat.count += 1;
+    stat.totalCalories += (log.nutritionSnapshot?.calories || 0) * servings;
+    stat.totalProtein += (log.nutritionSnapshot?.protein || 0) * servings;
+    stat.totalCarb += (log.nutritionSnapshot?.carbs || 0) * servings;
+    stat.totalFat += (log.nutritionSnapshot?.fat || 0) * servings;
+  });
+  
+  // Convert to array format and get top foods per meal
+  const rows = [];
+  for (const [mealType, foodStats] of Object.entries(mealFoodStats)) {
+    const foods = Object.values(foodStats)
+      .map(stat => ({
+        food: stat.food,
+        count: stat.count,
+        avgCalories: stat.count > 0 ? stat.totalCalories / stat.count : 0,
+        avgProtein: stat.count > 0 ? stat.totalProtein / stat.count : 0,
+        avgCarb: stat.count > 0 ? stat.totalCarb / stat.count : 0,
+        avgFat: stat.count > 0 ? stat.totalFat / stat.count : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, top);
+    
+    rows.push({ meal: mealType, foods });
+  }
+  
+  // Populate food details
   for (const r of rows) {
     const foodIds = r.foods.map(f => f.food).filter(Boolean);
     if (foodIds.length) {
