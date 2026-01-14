@@ -55,8 +55,8 @@ router.post('/check-appropriate', authenticate, validateCreateFood, handleValida
 router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById);
 
 // ✏️ CREATE / UPDATE / DELETE
-router.post('/admin', authenticate, restrictTo('admin'), createFoodByAdmin);
-router.post('/user', authenticate, createFoodByUser);
+router.post('/admin', authenticate, restrictTo('admin'), validateCreateFood, handleValidationErrors, createFoodByAdmin);
+router.post('/user', authenticate, validateCreateFood, handleValidationErrors, createFoodByUser);
 router.patch(
     '/:foodId',
     authenticate,

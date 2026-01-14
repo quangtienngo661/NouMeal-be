@@ -109,18 +109,18 @@ exports.validateFoodIdParam = [
 exports.validateCreateFood = [
 
   // -------- Basic --------
-  body("data.name")
+  body("name")
     .trim()
     .notEmpty().withMessage("name is required")
     .isLength({ max: 100 }).withMessage("name cannot exceed 100 characters"),
 
-  body("data.description")
+  body("description")
     .optional()
     .trim()
     .isLength({ max: 500 }).withMessage("description cannot exceed 500 characters"),
 
   // -------- Instructions --------
-  body("data.instructions")
+  body("instructions")
     .isArray().withMessage("instructions must be an array")
     .custom((array) => {
       if (!array || array.length === 0) {
@@ -129,97 +129,97 @@ exports.validateCreateFood = [
       return true;
     }),
 
-  body("data.instructions.*.step")
+  body("instructions.*.step")
     .optional()
     .isInt({ min: 1 }).withMessage("instructions[*].step must be >= 1"),
 
-  body("data.instructions.*.description")
+  body("instructions.*.description")
     .optional()
     .isString()
     .isLength({ max: 500 }).withMessage("instructions[*].description max 500 chars"),
 
   // -------- Category / Meal --------
-  body("data.category")
+  body("category")
     .notEmpty().withMessage("category is required")
     .isIn(CATEGORY_VALUES).withMessage("Invalid category"),
 
-  body("data.meal")
+  body("meal")
     .optional()
     .isIn(MEAL_VALUES).withMessage("Invalid meal"),
 
   // -------- Ingredients --------
-  body("data.ingredients")
+  body("ingredients")
     .isArray().withMessage("ingredients must be an array")
     .custom((arr) => {
       if (!arr || arr.length === 0) throw new AppError("ingredients cannot be empty");
       return true;
     }),
 
-  body("data.ingredients.*.name")
+  body("ingredients.*.name")
     .isString().withMessage("ingredient name must be string")
     .notEmpty().withMessage("ingredient name required"),
 
-  body("data.ingredients.*.amount")
+  body("ingredients.*.amount")
     .isString().withMessage("ingredient amount must be string")
     .notEmpty().withMessage("ingredient amount required"),
 
   // -------- Nutritional Info --------
-  body("data.nutritionalInfo")
+  body("nutritionalInfo")
     .optional()
     .isObject().withMessage("nutritionalInfo must be object"),
 
-  body("data.nutritionalInfo.calories")
+  body("nutritionalInfo.calories")
     .optional()
     .isNumeric().withMessage("calories must be number"),
 
-  body("data.nutritionalInfo.protein")
+  body("nutritionalInfo.protein")
     .optional()
     .isNumeric().withMessage("protein must be number"),
 
-  body("data.nutritionalInfo.carbohydrates")
+  body("nutritionalInfo.carbohydrates")
     .optional()
     .isNumeric(),
 
-  body("data.nutritionalInfo.fat")
+  body("nutritionalInfo.fat")
     .optional()
     .isNumeric(),
 
-  body("data.nutritionalInfo.fiber")
+  body("nutritionalInfo.fiber")
     .optional()
     .isNumeric(),
 
-  body("data.nutritionalInfo.sugar")
+  body("nutritionalInfo.sugar")
     .optional()
     .isNumeric(),
 
-  body("data.nutritionalInfo.sodium")
+  body("nutritionalInfo.sodium")
     .optional()
     .isNumeric(),
 
-  body("data.nutritionalInfo.cholesterol")
+  body("nutritionalInfo.cholesterol")
     .optional()
     .isNumeric(),
 
   // -------- Allergens --------
-  body("data.allergens")
+  body("allergens")
     .optional()
     .isArray().withMessage("allergens must be array"),
 
-  body("data.allergens.*")
+  body("allergens.*")
     .optional()
     .isIn(ALLERGEN_VALUES).withMessage("Invalid allergen"),
 
   // -------- Flags --------
-  body("data.isActive")
+  body("isActive")
     .optional()
     .isBoolean().withMessage("isActive must be boolean"),
 
   // -------- Tags --------
-  body("data.tags")
+  body("tags")
     .optional()
     .isArray().withMessage("tags must be array"),
 
-  body("data.tags.*")
+  body("tags.*")
     .optional()
     .isString().withMessage("each tag must be string"),
 ];

@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"python3 ./AI_Bot/AI.py\" \"python3 ./AI_Bot/Bot.py\" \"wait-on tcp:5001 tcp:5002 && nodemon src/server.js\"",
+    "backend": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "jest --detectOpenHandles --passWithNoTests",
     "test:watch": "jest --watch",
@@ -12,8 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "docker:build:dev": "docker compose -f docker-compose.dev.yml build",
-    "docker:up:dev": "docker compose -f docker-compose.dev.yml up"
+    "docker": "docker compose up -d --build"
   },
   "keywords": [],
   "author": "",
