@@ -190,14 +190,23 @@ class PostService {
         query.visibility = visibility;
       }
 
-      if (hashtags && hashtags.length > 0) {
-        query.hashtags = { $in: hashtags.map((tag) => tag.toLowerCase()) };
+      if (hashtags) {
+        const hashtagArray = Array.isArray(hashtags) ? hashtags : [hashtags];
+
+        if (hashtagArray.length > 0) {
+          query.hashtags = {
+            $in: hashtagArray.map((tag) => tag.toLowerCase()),
+          };
+        }
       }
 
       if (foodId) {
         query.foods = foodId;
       }
-
+      const userAccount = await User.findById(userId);
+      if (userAccount.followingUsers.includes(author)) {
+        query.is_from_follower = true;
+      }
       // Text search
       if (search) {
         query.$text = { $search: search };
@@ -262,62 +271,122 @@ class PostService {
         throw new AppError('User not found', 404);
       }
 
-      const followingIds = user.following || [];
-
-      const query = {
-        $or: [
-          { visibility: 'public' },
-          {
-            visibility: 'followers',
-            author: { $in: [...followingIds, userId] },
-          },
-          { author: userId },
-        ],
-      };
-
-      const {
-        page = 1,
-        limit = 10,
-        sortBy = 'createdAt',
-        sortOrder = 'desc',
-      } = options;
-
+      const followingIds = user.followingUsers || [];
+      const { page = 1, limit = 10 } = options;
       const skip = (page - 1) * limit;
-      const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
-      const [posts, total] = await Promise.all([
-        Post.find(query)
-          .populate('author', 'name email avatar')
-          .populate({
-            path: 'foods',
-            select:
-              'name description imageUrl category meal ingredients nutritionalInfo allergens tags postedBy isActive',
-            match: { isActive: true },
-          })
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        Post.countDocuments(query),
+      const userHashtags = [
+        ...(user.preferences || []).map((pref) => pref.toLowerCase()),
+        ...(user.allergies || []).map((allergy) => allergy.toLowerCase()),
+      ];
+
+      const followingPosts = await Post.aggregate([
+        {
+          $match: {
+            author: { $in: followingIds },
+            $or: [
+              { visibility: 'public' },
+              { visibility: 'followers', author: { $in: followingIds } },
+            ],
+          },
+        },
+        {
+          $sort: { createdAt: -1 },
+        },
+        {
+          $addFields: {
+            priority: 1,
+            source: 'following',
+          },
+        },
       ]);
-      await this._addLikeStatusBulk(posts, userId);
+
+      const hashtagPosts = await Post.aggregate([
+        {
+          $match: {
+            visibility: 'public',
+            author: { $nin: [...followingIds, userId] },
+            hashtags: { $in: userHashtags },
+          },
+        },
+        {
+          $addFields: {
+            priority: 2,
+            source: 'hashtag',
+            matchScore: {
+              $size: {
+                $setIntersection: ['$hashtags', userHashtags],
+              },
+            },
+          },
+        },
+        {
+          $sort: {
+            matchScore: -1,
+            createdAt: -1,
+          },
+        },
+      ]);
+
+      const allPosts = [...followingPosts, ...hashtagPosts];
+
+      const uniquePosts = [];
+      const seenIds = new Set();
+
+      for (const post of allPosts) {
+        const postId = post._id.toString();
+        if (!seenIds.has(postId)) {
+          seenIds.add(postId);
+          uniquePosts.push(post);
+        }
+      }
+
+      const paginatedPosts = uniquePosts.slice(skip, skip + limit);
+
+      const postIds = paginatedPosts.map((p) => p._id);
+      const populatedPosts = await Post.find({ _id: { $in: postIds } })
+        .populate('author', 'name email avatar')
+        .populate({
+          path: 'foods',
+          select:
+            'name description imageUrl category meal ingredients nutritionalInfo allergens tags postedBy isActive',
+          match: { isActive: true },
+        })
+        .lean();
+
+      const postsMap = new Map(
+        populatedPosts.map((p) => [p._id.toString(), p])
+      );
+      const orderedPosts = paginatedPosts
+        .map((p) => {
+          const populated = postsMap.get(p._id.toString());
+          if (populated) {
+            populated.priority = p.priority;
+            populated.source = p.source;
+            populated.matchScore = p.matchScore;
+          }
+          return populated;
+        })
+        .filter(Boolean);
+
+      await this._addLikeStatusBulk(orderedPosts, userId);
+
       return {
-        posts,
+        posts: orderedPosts,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / limit),
+          total: uniquePosts.length,
+          pages: Math.ceil(uniquePosts.length / limit),
+        },
+        stats: {
+          followingPosts: followingPosts.length,
+          hashtagPosts: hashtagPosts.length,
+          totalUnique: uniquePosts.length,
+          userHashtags: userHashtags.length,
+          followingCount: followingIds.length,
         },
       };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async searchPosts(searchTerm, userId = null, options = {}) {
-    try {
-      return await this.getPosts({ search: searchTerm, userId }, options);
     } catch (error) {
       throw error;
     }
@@ -624,6 +693,45 @@ class PostService {
     });
 
     return posts;
+  }
+
+  async getPostLikes(postId, options = {}) {
+    try {
+      const post = await Post.findById(postId);
+      if (!post) {
+        throw new AppError('Post not found', 404);
+      }
+
+      const { page = 1, limit = 20 } = options;
+      const skip = (page - 1) * limit;
+
+      const [likes, total] = await Promise.all([
+        Like.find({ target_type: 'Post', target_id: postId })
+          .populate('user', 'name email avatar')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Like.countDocuments({ target_type: 'Post', target_id: postId }),
+      ]);
+
+      const users = likes.map((like) => ({
+        ...like.user,
+        liked_at: like.createdAt,
+      }));
+
+      return {
+        users,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

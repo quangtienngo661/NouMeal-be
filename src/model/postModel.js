@@ -51,6 +51,10 @@ const postSchema = new mongoose.Schema(
     edited_at: {
       type: Date,
     },
+    is_from_follower: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
