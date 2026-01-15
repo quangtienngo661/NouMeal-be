@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { number } = require('joi');
 
 const userSchema = new mongoose.Schema(
   {
@@ -196,6 +197,7 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
+      virtuals: true,
       transform(doc, ret) {
         delete ret.password;
         delete ret.__v;
@@ -281,7 +283,10 @@ userSchema.methods.clearPasswordResetOTP = function () {
   this.passwordResetOTP = undefined;
   this.passwordResetOTPExpires = undefined;
 };
-
+// Number of followers virtual field
+userSchema.virtual('NumberOfFollowers').get(function () {
+  return this.followingUsers.length;
+});
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;

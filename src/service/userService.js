@@ -4,6 +4,7 @@ const emailService = require('../libs/util/emailService');
 const {
   nutritiousFoodConditions,
 } = require('../libs/conditions/recommendConditions');
+const { number } = require('joi');
 
 class UserService {
   // Register a new user
@@ -231,7 +232,6 @@ class UserService {
 
       user.followingUsers.push(targetUserId);
       await user.save({ validateBeforeSave: false });
-
       return {
         message: `You are now following ${targetUser.name}`,
         following: targetUser.getPublicProfile(),
