@@ -2,23 +2,25 @@ const express = require('express');
 const router = express.Router();
 const {
     getFoods,
-    getAdaptiveRecommendation,
+    getTodayMeals,
+    resetTodayMeals,
     weeklyFoodsRecommendation,
     getFoodById,
-    createFood,
     updateFood,
-    deleteFood,
     clearCache,
     logMeal,
     getTodayProgress,
     getAllFoodLogs,
     getFoodLog,
     createFoodByUser,
+    createFoodByAdmin,
     getAdminFoods,
     getOwnFoods,
     getFoodsByUserId,
     deleteFoodByAdmin,
-    deleteFoodByUser
+    deleteFoodByUser,
+    checkFoodAppropriate,
+    resetTodayLogs
 } = require('../controller/foodController');
 const { authenticate, restrictTo } = require('../middleware/authMiddleware');
 const { handleValidationErrors } = require('../middleware/validator');
@@ -28,11 +30,11 @@ const {
     validateFoodIdParam,
 } = require('../validation/foodValidation');
 const { validateLogMeal } = require('../validation/foodLogValidation');
-const { createFoodByAdmin } = require('../service/foodService');
 
 // 📦 READ operations
 router.get('/', getFoods);
-router.get('/recommended', authenticate, getAdaptiveRecommendation);
+router.get('/today-meals', authenticate, getTodayMeals);
+router.post('/reset-today-meals', authenticate, resetTodayMeals);
 router.get('/weekly-recommended', authenticate, weeklyFoodsRecommendation);
 
 // Get foods by source (must come before /:foodId)
@@ -44,7 +46,11 @@ router.get('/admin', authenticate, restrictTo('admin'), getAdminFoods);
 router.post('/log', authenticate, validateLogMeal, handleValidationErrors, logMeal);
 router.get('/logs', authenticate, getAllFoodLogs);
 router.get('/logs/:date', authenticate, getFoodLog);
+router.delete('/logs/reset', authenticate, resetTodayLogs);
 router.get('/progress/today', authenticate, getTodayProgress);
+
+// Check food appropriateness - Must come before /:foodId to avoid conflicts
+router.post('/check-appropriate', authenticate, validateCreateFood, handleValidationErrors, checkFoodAppropriate);
 
 // Food by ID - Must come after specific routes
 router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById);

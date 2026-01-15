@@ -9,7 +9,7 @@ const { catchAsync } = require("../libs/util/catchAsync")
  *   get:
  *     summary: Get all foods
  *     description: Retrieve a list of all active foods with pagination support.
- *     tags: [Foods]
+ *     tags: [Foods - User]
  *     security: []
  *     parameters:
  *       - in: query
@@ -64,20 +64,208 @@ exports.getFoods = catchAsync(async (req, res, next) => {
 
 /**
  * @swagger
- * /api/v1/foods/recommended:
+ * /api/v1/foods/today-meals:
  *   get:
- *     summary: Get food recommendations for current user
- *     description: Returns recommended foods for breakfast, lunch, dinner, and snacks based on the authenticated user's profile.
- *     tags: [Foods]
+ *     summary: Get today's meal recommendations for current user
+ *     description: Returns today's recommended meals (breakfast, lunch, dinner, snacks) based on the authenticated user's profile from the weekly plan. Can also be used with a foodId in query to get adaptive recommendations when user selects a non-recommended food.
+ *     tags: [Foods - User]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: foodId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Optional food ID to get adaptive meal recommendations
+ *         example: "692ebe81e68471451b81a9d0"
+ *     responses:
+ *       200:
+ *         description: Today's meals retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                       example: "2026-01-10"
+ *                     dayName:
+ *                       type: string
+ *                       example: "Friday"
+ *                     meals:
+ *                       type: object
+ *                       properties:
+ *                         breakfast:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         lunch:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         dinner:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         snack:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Food'
+ *             example:
+ *               success: true
+ *               message: "Success"
+ *               data:
+ *                 date: "2026-01-10"
+ *                 dayName: "Friday"
+ *                 meals:
+ *                   breakfast:
+ *                     - _id: "692ebe81e68471451b81aa09"
+ *                       name: "Bánh Mì Thịt (Vietnamese Sandwich)"
+ *                       description: "Crispy baguette with grilled pork, pâté, pickled vegetables, and cilantro."
+ *                       category: "grains"
+ *                       meal: "breakfast"
+ *                       nutritionalInfo:
+ *                         calories: 720
+ *                         protein: 38
+ *                         carbohydrates: 78
+ *                         fat: 26
+ *                       calorieDiff: 6.375
+ *                       proteinDiff: 15.4
+ *                       carbDiff: 6.6
+ *                       fatDiff: 2.3
+ *                       totalDiff: 56.175
+ *                   lunch:
+ *                     - _id: "692ebe81e68471451b81aa0e"
+ *                       name: "Mì Quảng (Quang Noodles)"
+ *                       category: "grains"
+ *                       meal: "lunch"
+ *                       nutritionalInfo:
+ *                         calories: 920
+ *                         protein: 56
+ *                         carbohydrates: 110
+ *                         fat: 28
+ *                   dinner:
+ *                     - _id: "692ebe81e68471451b81aa0f"
+ *                       name: "Cá Kho Tộ (Caramelized Fish in Clay Pot)"
+ *                       category: "protein"
+ *                       meal: "dinner"
+ *                       nutritionalInfo:
+ *                         calories: 720
+ *                         protein: 48
+ *                         carbohydrates: 82
+ *                         fat: 20
+ *                   snack:
+ *                     - _id: "692ebe81e68471451b81a9d2"
+ *                       name: "Greek Yogurt"
+ *                       category: "dairy"
+ *                       meal: "snack"
+ *                       nutritionalInfo:
+ *                         calories: 190
+ *                         protein: 19
+ *                         carbohydrates: 14
+ *                         fat: 4
+ *       400:
+ *         description: Bad request or already chose non-recommended meal today
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User or food not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getTodayMeals = catchAsync(async (req, res, next) => {
+    const userId = req.user._id;
+    const foodId = req.query.foodId || null;
+
+    const result = await FoodService.getTodayMeals(userId, foodId);
+    return res.ok(result, 200, "Success");
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/reset-today-meals:
+ *   post:
+ *     summary: Reset today's meal recommendations
+ *     description: Clears the cached non-recommended meal selection for today and returns fresh today meal recommendations for the authenticated user.
+ *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Recommendations generated successfully
+ *         description: Today meals reset successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/FoodRecommendationWrapped'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Today meals reset successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                       example: "2025-12-06"
+ *                     dayName:
+ *                       type: string
+ *                       example: "Friday"
+ *                     meals:
+ *                       type: object
+ *                       properties:
+ *                         breakfast:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         lunch:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         dinner:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *                         snack:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/FoodWithDiff'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: User not found
  *         content:
@@ -91,11 +279,10 @@ exports.getFoods = catchAsync(async (req, res, next) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
+exports.resetTodayMeals = catchAsync(async (req, res, next) => {
     const userId = req.user._id;
-
-    const result = await FoodService.getAdaptiveRecommendation(userId);
-    return res.ok(result, 200, "Success");
+    const result = await FoodService.resetTodayMeals(userId);
+    return res.ok(result, 200, "Today meals reset successfully");
 });
 
 /**
@@ -104,7 +291,7 @@ exports.getAdaptiveRecommendation = catchAsync(async (req, res, next) => {
  *   get:
  *     summary: Get weekly food recommendations for current user
  *     description: Returns 7 days of recommended foods (breakfast, lunch, dinner, snacks) based on the authenticated user's profile with diversity across days.
- *     tags: [Foods]
+ *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -311,7 +498,7 @@ exports.weeklyFoodsRecommendation = catchAsync(async (req, res, next) => {
  *   get:
  *     summary: Get a food by ID
  *     description: Retrieve details of a specific food item by its ID.
- *     tags: [Foods]
+ *     tags: [Foods - User]
  *     security: []
  *     parameters:
  *       - in: path
@@ -353,7 +540,7 @@ exports.getFoodById = catchAsync(async (req, res, next) => {
  *   get:
  *     summary: Get foods created by current user
  *     description: Retrieve all foods posted by the authenticated user with pagination support.
- *     tags: [Foods]
+ *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -409,9 +596,10 @@ exports.getOwnFoods = catchAsync(async (req, res, next) => {
  * /api/v1/foods/admin:
  *   get:
  *     summary: Get foods created by admin
- *     description: Retrieve all foods posted by admin (foods without postedBy field) with pagination support.
- *     tags: [Foods]
- *     security: []
+ *     description: Retrieve all foods posted by admin (foods without postedBy field) with pagination support. Admin only access.
+ *     tags: [Foods - Admin]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: page
@@ -437,6 +625,18 @@ exports.getOwnFoods = catchAsync(async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/FoodListResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - Admin only
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       500:
  *         description: Internal server error
  *         content:
@@ -519,7 +719,7 @@ exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
  *   post:
  *     summary: Create a new food by admin
  *     description: Add a new food item to the database by admin (without postedBy field).
- *     tags: [Foods]
+ *     tags: [Foods - Admin]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -573,7 +773,7 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  *   post:
  *     summary: Create a new food by user
  *     description: Add a new food item to the database by authenticated user (with postedBy field).
- *     tags: [Foods]
+ *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -621,7 +821,7 @@ exports.createFoodByUser = catchAsync(async (req, res, next) => {
  *   patch:
  *     summary: Update a food (admin/user)
  *     description: Update fields of an existing food item by ID.
- *     tags: [Foods]
+ *     tags: [Foods - User]
  *     parameters:
  *       - in: path
  *         name: foodId
@@ -675,7 +875,7 @@ exports.updateFood = catchAsync(async (req, res, next) => {
  *   delete:
  *     summary: Delete a food by admin
  *     description: Admin can delete any food item by ID.
- *     tags: [Foods]
+ *     tags: [Foods - Admin]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -739,7 +939,7 @@ exports.deleteFoodByAdmin = catchAsync(async (req, res, next) => {
  *   delete:
  *     summary: Delete a food by user
  *     description: User can only delete foods they created (validates postedBy field).
- *     tags: [Foods]
+ *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -803,8 +1003,8 @@ exports.deleteFoodByUser = catchAsync(async (req, res, next) => {
  * /api/v1/foods/cache/clear:
  *   delete:
  *     summary: Clear all recommendation caches
- *     description: Admin endpoint to clear all weekly recommendation caches
- *     tags: [Foods]
+ *     description: Clear all weekly recommendation caches for current user
+ *     tags: [Foods - User]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -823,7 +1023,7 @@ exports.clearCache = catchAsync(async (req, res, next) => {
  *   post:
  *     summary: Log a consumed meal
  *     description: Log any food (from recommendations or user-posted) as consumed for tracking daily nutrition
- *     tags: [Foods]
+ *     tags: [Food Logs]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -923,7 +1123,7 @@ exports.logMeal = catchAsync(async (req, res, next) => {
  *   get:
  *     summary: Get today's nutrition progress
  *     description: Returns consumed vs target calories and macros, plus logged and remaining meals
- *     tags: [Foods]
+ *     tags: [Food Logs]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -1004,7 +1204,7 @@ exports.getTodayProgress = catchAsync(async (req, res, next) => {
  *   get:
  *     summary: Get all food logs for current user
  *     description: Returns all logged meals for the authenticated user, sorted by date (most recent first)
- *     tags: [Foods]
+ *     tags: [Food Logs]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -1144,7 +1344,7 @@ exports.getAllFoodLogs = catchAsync(async (req, res, next) => {
  *   get:
  *     summary: Get food logs for a specific date
  *     description: Returns all logged meals for the authenticated user on a specific date
- *     tags: [Foods]
+ *     tags: [Food Logs]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -1286,4 +1486,228 @@ exports.getFoodLog = catchAsync(async (req, res, next) => {
     const { date } = req.params;
     const result = await FoodLogService.getFoodLog(req.user._id, date);
     return res.ok(result, 200);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/check-appropriate:
+ *   post:
+ *     summary: Check if a food is appropriate for user's preferences
+ *     description: |
+ *       Checks whether a food object matches any of the authenticated user's dietary preferences based on food tags.
+ *       Returns false if user has no preferences or food has no tags.
+ *       This endpoint is useful to check appropriateness before creating a new food.
+ *     tags: [Foods - User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - category
+ *               - meal
+ *               - nutritionalInfo
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Name of the food
+ *                 example: "Grilled Chicken Salad"
+ *               description:
+ *                 type: string
+ *                 description: Description of the food
+ *                 example: "Healthy grilled chicken with mixed greens"
+ *               category:
+ *                 type: string
+ *                 enum: [protein, vegetables, fruits, grains, dairy]
+ *                 description: Food category
+ *                 example: "protein"
+ *               meal:
+ *                 type: string
+ *                 enum: [breakfast, lunch, dinner, snack]
+ *                 description: Meal type
+ *                 example: "lunch"
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Tags for food preferences (vegetarian, vegan, gluten-free, etc.)
+ *                 example: ["high-protein", "low-carb", "gluten-free"]
+ *               allergens:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: List of allergens in the food
+ *                 example: []
+ *               nutritionalInfo:
+ *                 type: object
+ *                 required:
+ *                   - calories
+ *                   - protein
+ *                   - carbohydrates
+ *                   - fat
+ *                 properties:
+ *                   calories:
+ *                     type: number
+ *                     description: Calories in kcal
+ *                     example: 350
+ *                   protein:
+ *                     type: number
+ *                     description: Protein in grams
+ *                     example: 40
+ *                   carbohydrates:
+ *                     type: number
+ *                     description: Carbohydrates in grams
+ *                     example: 15
+ *                   fat:
+ *                     type: number
+ *                     description: Fat in grams
+ *                     example: 12
+ *     responses:
+ *       200:
+ *         description: Food appropriateness check completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     isAppropriate:
+ *                       type: boolean
+ *                       description: Whether the food matches user's preferences. False if user has no preferences or food has no tags.
+ *                       example: true
+ *                     userId:
+ *                       type: string
+ *                       example: "67562c8b5e4f123456789abc"
+ *             examples:
+ *               appropriate:
+ *                 summary: Food matches user preferences
+ *                 value:
+ *                   success: true
+ *                   message: "Success"
+ *                   data:
+ *                     isAppropriate: true
+ *                     userId: "67562c8b5e4f123456789abc"
+ *               notAppropriate:
+ *                 summary: Food does not match user preferences
+ *                 value:
+ *                   success: true
+ *                   message: "Success"
+ *                   data:
+ *                     isAppropriate: false
+ *                     userId: "67562c8b5e4f123456789abc"
+ *               noPreferencesOrTags:
+ *                 summary: User has no preferences or food has no tags
+ *                 value:
+ *                   success: true
+ *                   message: "Success"
+ *                   data:
+ *                     isAppropriate: false
+ *                     userId: "67562c8b5e4f123456789abc"
+ *       400:
+ *         description: Bad request - Invalid food data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.checkFoodAppropriate = catchAsync(async (req, res, next) => {
+    const userId = req.user._id;
+    const foodInfo = req.body;
+    
+    // Check if food is appropriate for user's preferences
+    const isAppropriate = await FoodService.isAppropriate(userId, foodInfo);
+    
+    return res.ok({
+        isAppropriate,
+        userId
+    }, 200, "Success");
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/logs/reset:
+ *   delete:
+ *     summary: Reset today's food logs
+ *     description: Delete all food logs for the current day for the authenticated user. This will clear all logged meals for today.
+ *     tags: [Food Logs]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Today's food logs reset successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Today's meals have been reset."
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message:
+ *                       type: string
+ *                       example: "Today's food logs have been reset."
+ *             example:
+ *               success: true
+ *               message: "Success"
+ *               data:
+ *                 message: "Today's food logs have been reset."
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.resetTodayLogs = catchAsync(async (req, res, next) => {
+    const userId = req.user._id;
+    const result = await FoodLogService.resetTodayLogs(userId);
+    return res.ok(result, 200, "Success");
 });
