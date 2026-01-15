@@ -1,7 +1,9 @@
 const User = require('../model/userModel');
 const AppError = require('../libs/util/AppError');
 const emailService = require('../libs/util/emailService');
-const { nutritiousFoodConditions } = require('../libs/conditions/recommendConditions');
+const {
+  nutritiousFoodConditions,
+} = require('../libs/conditions/recommendConditions');
 
 class UserService {
   // Register a new user
@@ -20,7 +22,7 @@ class UserService {
       // Create new user (email verification will be required)
       const newUser = await User.create({
         ...userData,
-        isEmailVerified: false
+        isEmailVerified: false,
       });
 
       // Generate email verification OTP
@@ -29,7 +31,11 @@ class UserService {
 
       // Send verification email
       try {
-        await emailService.sendEmailVerificationOTP(newUser.email, newUser.name, otp);
+        await emailService.sendEmailVerificationOTP(
+          newUser.email,
+          newUser.name,
+          otp
+        );
       } catch (emailError) {
         // If email fails, still return success but log the error
         console.error('Failed to send verification email:', emailError);
@@ -39,7 +45,8 @@ class UserService {
       // Return user without password and sensitive data
       return {
         ...newUser.getPublicProfile(),
-        message: 'Registration successful! Please check your email for verification code.'
+        message:
+          'Registration successful! Please check your email for verification code.',
       };
     } catch (error) {
       if (error.name === 'ValidationError') {
@@ -76,7 +83,10 @@ class UserService {
 
       // Require email verification before allowing login
       if (!user.isEmailVerified) {
-        throw new AppError('Please verify your email address before logging in.', 401);
+        throw new AppError(
+          'Please verify your email address before logging in.',
+          401
+        );
       }
 
       // Update last login
@@ -139,7 +149,6 @@ class UserService {
         throw new AppError('User not found', 404);
       }
 
-
       return updatedUser;
     } catch (error) {
       if (error.name === 'ValidationError') {
@@ -192,6 +201,67 @@ class UserService {
       }
 
       return { message: 'Account deactivated successfully' };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async followUser(userId, targetUserId) {
+    try {
+      if (userId === targetUserId) {
+        throw new AppError('You cannot follow yourself', 400);
+      }
+
+      const [user, targetUser] = await Promise.all([
+        User.findById(userId),
+        User.findById(targetUserId),
+      ]);
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+      if (!targetUser) {
+        throw new AppError('Target user not found', 404);
+      }
+
+      // Dùng method tiện ích
+      const isAlreadyFollowing = user.followingUsers.some(
+        (id) => id.toString() === targetUserId.toString()
+      );
+
+      user.followingUsers.push(targetUserId);
+      await user.save({ validateBeforeSave: false });
+
+      return {
+        message: `You are now following ${targetUser.name}`,
+        following: targetUser.getPublicProfile(),
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async unfollowUser(userId, targetUserId) {
+    try {
+      if (userId === targetUserId) {
+        throw new AppError('You cannot unfollow yourself', 400);
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      if (!user.followingUsers.includes(targetUserId)) {
+        throw new AppError('You are not following this user', 400);
+      }
+
+      user.followingUsers = user.followingUsers.filter(
+        (id) => id.toString() !== targetUserId
+      );
+      await user.save();
+
+      return { message: 'Unfollowed successfully' };
     } catch (error) {
       throw error;
     }

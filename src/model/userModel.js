@@ -65,7 +65,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Activity level is required'],
       enum: {
-        values: ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extra_active'],
+        values: [
+          'sedentary',
+          'lightly_active',
+          'moderately_active',
+          'very_active',
+          'extra_active',
+        ],
         message:
           'Activity level must be one of: sedentary, lightly_active, moderately_active, very_active, extra_active',
       },
@@ -180,6 +186,12 @@ const userSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    followingUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,
@@ -254,8 +266,7 @@ userSchema.methods.verifyEmailOTP = function (otp) {
 // Verify password reset OTP
 userSchema.methods.verifyPasswordResetOTP = function (otp) {
   return (
-    this.passwordResetOTP === otp &&
-    this.passwordResetOTPExpires > new Date()
+    this.passwordResetOTP === otp && this.passwordResetOTPExpires > new Date()
   );
 };
 
