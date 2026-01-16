@@ -297,6 +297,7 @@ class PostService {
           $addFields: {
             priority: 1,
             source: 'following',
+            is_from_follower: true,
           },
         },
       ]);
@@ -364,6 +365,7 @@ class PostService {
             populated.priority = p.priority;
             populated.source = p.source;
             populated.matchScore = p.matchScore;
+            populated.is_from_follower = p.is_from_follower || false;
           }
           return populated;
         })
