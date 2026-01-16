@@ -218,20 +218,20 @@ class UserService {
         User.findById(targetUserId),
       ]);
 
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
-      if (!targetUser) {
-        throw new AppError('Target user not found', 404);
-      }
+      if (!user) throw new AppError('User not found', 404);
+      if (!targetUser) throw new AppError('Target user not found', 404);
 
-      // Dùng method tiện ích
       const isAlreadyFollowing = user.followingUsers.some(
         (id) => id.toString() === targetUserId.toString()
       );
 
+      if (isAlreadyFollowing) {
+        throw new AppError('You are already following this user', 400);
+      }
+
       user.followingUsers.push(targetUserId);
       await user.save({ validateBeforeSave: false });
+
       return {
         message: `You are now following ${targetUser.name}`,
         following: targetUser.getPublicProfile(),
@@ -248,23 +248,70 @@ class UserService {
       }
 
       const user = await User.findById(userId);
-      if (!user) {
-        throw new AppError('User not found', 404);
-      }
+      if (!user) throw new AppError('User not found', 404);
 
-      if (!user.followingUsers.includes(targetUserId)) {
+      const isFollowing = user.followingUsers.some(
+        (id) => id.toString() === targetUserId.toString()
+      );
+
+      if (!isFollowing) {
         throw new AppError('You are not following this user', 400);
       }
 
       user.followingUsers = user.followingUsers.filter(
-        (id) => id.toString() !== targetUserId
+        (id) => id.toString() !== targetUserId.toString()
       );
-      await user.save();
+      await user.save({ validateBeforeSave: false });
 
       return { message: 'Unfollowed successfully' };
     } catch (error) {
       throw error;
     }
+  }
+
+  // Thêm trạng thái follow cho 1 user
+  async _addFollowStatus(currentUserId, targetUser) {
+    if (!currentUserId) {
+      targetUser.has_followed = false;
+      return targetUser;
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    if (!currentUser) {
+      targetUser.has_followed = false;
+      return targetUser;
+    }
+
+    const isFollowing = currentUser.followingUsers.some(
+      (id) => id.toString() === targetUser._id.toString()
+    );
+
+    targetUser.has_followed = isFollowing;
+    return targetUser;
+  }
+
+  // Thêm trạng thái follow cho nhiều users (bulk)
+  async _addFollowStatusBulk(currentUserId, users) {
+    if (!currentUserId || users.length === 0) {
+      users.forEach((u) => (u.has_followed = false));
+      return users;
+    }
+
+    const currentUser = await User.findById(currentUserId);
+    if (!currentUser) {
+      users.forEach((u) => (u.has_followed = false));
+      return users;
+    }
+
+    const followingSet = new Set(
+      currentUser.followingUsers.map((id) => id.toString())
+    );
+
+    users.forEach((user) => {
+      user.has_followed = followingSet.has(user._id.toString());
+    });
+
+    return users;
   }
 }
 
