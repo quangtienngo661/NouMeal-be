@@ -29,7 +29,8 @@
     "allergens": ["banana"],
     "isActive": true,
     "tags": ["vegetarian", "high_fiber"],
-    "isRecommendable": true
+    "isRecommendable": true,
+    "isPublic": true
   },
   {
     "name": "Grilled Chicken Breast",
@@ -62,7 +63,8 @@
     "isActive": true,
     "tags": ["high_protein", "balanced"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Greek Yogurt",
@@ -91,7 +93,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Quinoa Salad",
@@ -126,7 +129,8 @@
     "isActive": true,
     "tags": ["vegetarian", "vegan"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Avocado Toast",
@@ -158,7 +162,8 @@
     "isActive": true,
     "tags": ["vegetarian", "high_fiber"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Apple",
@@ -187,7 +192,8 @@
     "isActive": true,
     "tags": ["vegan", "gluten_free"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Salmon Fillet",
@@ -220,7 +226,8 @@
     "isActive": true,
     "tags": ["omega_3", "gluten_free"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Mixed Nuts",
@@ -251,7 +258,8 @@
     "isActive": true,
     "tags": ["vegetarian", "keto_friendly"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Spinach Smoothie",
@@ -283,7 +291,8 @@
     "isActive": true,
     "tags": ["vegetarian"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Dark Chocolate (70%)",
@@ -312,7 +321,8 @@
     "isActive": true,
     "tags": ["vegetarian"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Egg Omelette with Veggies",
@@ -345,7 +355,8 @@
     "isActive": true,
     "tags": ["keto_friendly", "high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Beef Stir-Fry with Rice",
@@ -378,7 +389,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Tofu Buddha Bowl",
@@ -412,7 +424,8 @@
     "isActive": true,
     "tags": ["vegan", "high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Peanut Butter Banana Toast",
@@ -444,7 +457,8 @@
     "isActive": true,
     "tags": ["vegetarian"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Protein Pancakes",
@@ -476,7 +490,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Turkey Sandwich on Whole Grain",
@@ -508,7 +523,8 @@
     "isActive": true,
     "tags": ["balanced", "high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Shrimp Pasta",
@@ -541,7 +557,8 @@
     "isActive": true,
     "tags": ["balanced"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Greek Yogurt Parfait",
@@ -572,7 +589,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Protein Shake",
@@ -603,7 +621,8 @@
     "isActive": true,
     "tags": ["high_protein", "post_workout"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Veggie Chili",
@@ -636,7 +655,8 @@
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Scrambled Eggs with Toast",
@@ -668,7 +688,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Chicken Caesar Salad",
@@ -701,7 +722,8 @@
     "isActive": true,
     "tags": ["high_protein", "low_carb"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Baked Sweet Potato",
@@ -733,7 +755,8 @@
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Grilled Tilapia with Vegetables",
@@ -766,7 +789,8 @@
     "isActive": true,
     "tags": ["high_protein", "balanced"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Carrot Sticks with Hummus",
@@ -796,7 +820,8 @@
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Cottage Cheese with Berries",
@@ -826,7 +851,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Chia Pudding",
@@ -859,7 +885,8 @@
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Tuna Salad Wrap",
@@ -893,7 +920,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Lentil Soup",
@@ -926,7 +954,8 @@
     "isActive": true,
     "tags": ["vegan", "high_fiber", "high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Rice Cakes with Almond Butter",
@@ -956,7 +985,8 @@
     "isActive": true,
     "tags": ["vegetarian"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Blueberry Smoothie Bowl",
@@ -989,7 +1019,8 @@
     "isActive": true,
     "tags": ["high_fiber"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Chicken Wrap with Hummus",
@@ -1023,7 +1054,8 @@
     "isActive": true,
     "tags": ["high_protein", "balanced"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Baked Cod with Quinoa",
@@ -1056,7 +1088,8 @@
     "isActive": true,
     "tags": ["high_protein", "balanced"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Banana",
@@ -1084,7 +1117,8 @@
     "isActive": true,
     "tags": ["vegan", "gluten_free"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Whole Wheat Bagel with Cream Cheese",
@@ -1115,7 +1149,8 @@
     "isActive": true,
     "tags": ["vegetarian"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Pork Chop with Mashed Potatoes",
@@ -1148,7 +1183,8 @@
     "isActive": true,
     "tags": ["high_protein"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   },
   {
     "name": "Orange",
@@ -1177,6 +1213,7 @@
     "isActive": true,
     "tags": ["vegan", "gluten_free"],
     "postedBy": "692597af9106c79565447ce8",
-    "isRecommendable": false
+    "isRecommendable": false,
+    "isPublic": true
   }
 ]
