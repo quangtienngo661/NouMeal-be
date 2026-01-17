@@ -134,7 +134,6 @@ class FoodService {
         }
 
         const weeklyPlan = await this.generateWeeklyPlan(userId, false);
-        // Weekly cache should last until end of week (Sunday 23:59) not just midnight
         const ttl = this.getSecondsUntilEndOfWeek();
 
         caching.set(cacheKey, JSON.stringify(weeklyPlan), ttl);
@@ -234,7 +233,7 @@ class FoodService {
         const newFood = await Food.create({
             ...foodInfo,
             postedBy: userId,
-            isPublic: false,
+            isRecommendable: false,
             imageUrl: result.url
         });
 
@@ -340,6 +339,64 @@ class FoodService {
         return food;
     }
 
+    async updateRecommendableStatus(foodId, isRecommendable) {
+        const food = await Food.findById(foodId);
+
+        if (!food) {
+            throw new AppError(404, "Food not found");
+        }
+
+        const updatedFood = await Food.findByIdAndUpdate(
+            foodId,
+            { isRecommendable },
+            { new: true, runValidators: true }
+        );
+
+        return updatedFood;
+    }
+
+    async getPublicFoods(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+        const parsedLimit = parseInt(limit);
+
+        const foods = await Food.find({ isPublic: true, isRecommendable: false })
+            .skip(skip)
+            .limit(parsedLimit)
+            .sort({ createdAt: -1 });
+
+        const total = await Food.countDocuments({ isPublic: true, isRecommendable: false });
+
+        const meta = {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / parsedLimit),
+            totalItems: total,
+            itemsPerPage: parsedLimit
+        };
+
+        return { result: foods, meta };
+    }
+
+    async getNonRecommendableFoods(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+        const parsedLimit = parseInt(limit);
+
+        const foods = await Food.find({ isRecommendable: false })
+            .skip(skip)
+            .limit(parsedLimit)
+            .sort({ createdAt: -1 });
+
+        const total = await Food.countDocuments({ isRecommendable: false });
+
+        const meta = {
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / parsedLimit),
+            totalItems: total,
+            itemsPerPage: parsedLimit
+        };
+
+        return { result: foods, meta };
+    }
+
 
     // Internal methods
     getWeekDate(offset) {
@@ -383,7 +440,7 @@ class FoodService {
             allergens: { $nin: user.allergies || [] },
             isActive: true,
             _id: { $nin: Array.from(usedIds) },
-            isPublic: true
+            isRecommendable: true
         };
 
         // console.log(allergensCondition);
@@ -403,7 +460,7 @@ class FoodService {
         const snack = await Food.find({
             meal: 'snack',
             _id: { $nin: Array.from(usedIds) },
-            isPublic: true
+            isRecommendable: true
         }).limit(1);
 
         return {
@@ -424,13 +481,13 @@ class FoodService {
         const allergensCondition = {
             allergens: { $nin: user.allergies || [] },
             isActive: true,
-            isPublic: true
+            isRecommendable: true
         };
 
         const breakfastFoods = await Food.aggregate(await aggregateConditions(user, 'breakfast', allergensCondition));
         const lunchFoods = await Food.aggregate(await aggregateConditions(user, 'lunch', allergensCondition));
         const dinnerFoods = await Food.aggregate(await aggregateConditions(user, 'dinner', allergensCondition));
-        const snacks = await Food.find({ meal: 'snack', isPublic: true }).limit(1);
+        const snacks = await Food.find({ meal: 'snack', isRecommendable: true }).limit(1);
 
         return {
             breakfast: breakfastFoods,
@@ -513,7 +570,7 @@ class FoodService {
         const allergensCondition = {
             allergens: { $nin: user.allergies || [] },
             isActive: true,
-            isPublic: true
+            isRecommendable: true
         };
 
         if (food) {
@@ -532,7 +589,7 @@ class FoodService {
                 meal: 'snack',
                 allergens: { $nin: user.allergies || [] },
                 isActive: true,
-                isPublic: true
+                isRecommendable: true
             }).limit(1);
 
             // Replace the chosen meal with the non-recommended food

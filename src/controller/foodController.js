@@ -740,9 +740,39 @@ exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
  *               description:
  *                 type: string
  *                 example: "Fresh Atlantic salmon grilled with olive oil, served with steamed broccoli"
+ *               instructions:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - step
+ *                     - description
+ *                   properties:
+ *                     step:
+ *                       type: number
+ *                       minimum: 1
+ *                       example: 1
+ *                     description:
+ *                       type: string
+ *                       example: "Season salmon with salt and pepper"
+ *                 example: [{"step": 1, "description": "Season salmon with salt and pepper"}, {"step": 2, "description": "Grill for 4-5 minutes per side"}]
+ *               ingredients:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - name
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "Salmon fillet"
+ *                     amount:
+ *                       type: string
+ *                       example: "200g"
+ *                 example: [{"name": "Salmon fillet", "amount": "200g"}, {"name": "Broccoli", "amount": "100g"}]
  *               category:
  *                 type: string
- *                 enum: [protein, carbs, vegetables, fruits, dairy, grains, fats]
+ *                 enum: [fruits, vegetables, grains, protein, dairy, fats, beverages, snacks, desserts, spices]
  *                 example: "protein"
  *               meal:
  *                 type: string
@@ -768,15 +798,28 @@ exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
  *                   fat:
  *                     type: number
  *                     example: 22
+ *                   fiber:
+ *                     type: number
+ *                     example: 3
+ *                   sugar:
+ *                     type: number
+ *                     example: 2
+ *                   sodium:
+ *                     type: number
+ *                     example: 420
+ *                   cholesterol:
+ *                     type: number
+ *                     example: 75
  *               tags:
  *                 type: array
  *                 items:
  *                   type: string
- *                 example: ["high_protein", "low_carb", "omega_3"]
+ *                 example: ["high_protein", "low_carb", "heart_healthy"]
  *               allergens:
  *                 type: array
  *                 items:
  *                   type: string
+ *                   enum: [peanuts, tree_nuts, milk, eggs, wheat_gluten, fish, shellfish, soy, corn, sesame, pineapple, strawberry, banana, tomato, apple, chocolate, honey, mustard, other]
  *                 example: ["fish"]
  *               image:
  *                 type: string
@@ -797,7 +840,110 @@ exports.getFoodsByUserId = catchAsync(async (req, res, next) => {
  *                   type: string
  *                   example: "Success"
  *                 data:
- *                   $ref: '#/components/schemas/Food'
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                       example: "64f1f77bcf86cd7994390123"
+ *                     name:
+ *                       type: string
+ *                       example: "Grilled Salmon with Vegetables"
+ *                     description:
+ *                       type: string
+ *                       example: "Fresh Atlantic salmon grilled with olive oil, served with steamed broccoli"
+ *                     instructions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           step:
+ *                             type: number
+ *                             example: 1
+ *                           description:
+ *                             type: string
+ *                             example: "Season salmon with salt and pepper"
+ *                           _id:
+ *                             type: string
+ *                             example: "6968aad8c8c36a312277419a"
+ *                       example: [{"step": 1, "description": "Season salmon with salt and pepper", "_id": "6968aad8c8c36a312277419a"}, {"step": 2, "description": "Grill for 4-5 minutes per side", "_id": "6968aad8c8c36a312277419b"}]
+ *                     imageUrl:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/xxx/mealgenie/foods/abc123.jpg"
+ *                     category:
+ *                       type: string
+ *                       enum: [fruits, vegetables, grains, protein, dairy, fats, beverages, snacks, desserts, spices]
+ *                       example: "protein"
+ *                     meal:
+ *                       type: string
+ *                       enum: [breakfast, lunch, dinner, snack]
+ *                       example: "lunch"
+ *                     ingredients:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Salmon fillet"
+ *                           amount:
+ *                             type: string
+ *                             example: "200g"
+ *                           _id:
+ *                             type: string
+ *                             example: "6968aad8c8c36a312277419d"
+ *                       example: [{"name": "Salmon fillet", "amount": "200g", "_id": "6968aad8c8c36a312277419d"}, {"name": "Broccoli", "amount": "100g", "_id": "6968aad8c8c36a312277419e"}]
+ *                     nutritionalInfo:
+ *                       type: object
+ *                       properties:
+ *                         calories:
+ *                           type: number
+ *                           example: 450
+ *                         protein:
+ *                           type: number
+ *                           example: 42
+ *                         carbohydrates:
+ *                           type: number
+ *                           example: 18
+ *                         fat:
+ *                           type: number
+ *                           example: 22
+ *                         fiber:
+ *                           type: number
+ *                           example: 3
+ *                         sugar:
+ *                           type: number
+ *                           example: 2
+ *                         sodium:
+ *                           type: number
+ *                           example: 420
+ *                         cholesterol:
+ *                           type: number
+ *                           example: 75
+ *                     allergens:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["fish"]
+ *                     tags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["high_protein", "low_carb", "heart_healthy"]
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
+ *                     isPublic:
+ *                       type: boolean
+ *                       example: true
+ *                       description: Admin-created foods are public by default
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-10-07T10:30:00.000Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-10-07T10:30:00.000Z"
  *       400:
  *         description: Validation error or invalid base64 format
  *         content:
@@ -858,9 +1004,39 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  *               description:
  *                 type: string
  *                 example: "Homemade smoothie bowl with banana and Greek yogurt"
+ *               instructions:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - step
+ *                     - description
+ *                   properties:
+ *                     step:
+ *                       type: number
+ *                       minimum: 1
+ *                       example: 1
+ *                     description:
+ *                       type: string
+ *                       example: "Blend banana with Greek yogurt"
+ *                 example: [{"step": 1, "description": "Blend banana with Greek yogurt"}, {"step": 2, "description": "Pour into bowl and top with granola"}]
+ *               ingredients:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - name
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       example: "Greek Yogurt"
+ *                     amount:
+ *                       type: string
+ *                       example: "200g"
+ *                 example: [{"name": "Greek Yogurt", "amount": "200g"}, {"name": "Banana", "amount": "1 medium"}]
  *               category:
  *                 type: string
- *                 enum: [protein, carbs, vegetables, fruits, dairy, grains, fats]
+ *                 enum: [fruits, vegetables, grains, protein, dairy, fats, beverages, snacks, desserts, spices]
  *                 example: "dairy"
  *               meal:
  *                 type: string
@@ -886,6 +1062,18 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  *                   fat:
  *                     type: number
  *                     example: 10
+ *                   fiber:
+ *                     type: number
+ *                     example: 3
+ *                   sugar:
+ *                     type: number
+ *                     example: 18
+ *                   sodium:
+ *                     type: number
+ *                     example: 80
+ *                   cholesterol:
+ *                     type: number
+ *                     example: 15
  *               tags:
  *                 type: array
  *                 items:
@@ -895,6 +1083,7 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  *                 type: array
  *                 items:
  *                   type: string
+ *                   enum: [peanuts, tree_nuts, milk, eggs, wheat_gluten, fish, shellfish, soy, corn, sesame, pineapple, strawberry, banana, tomato, apple, chocolate, honey, mustard, other]
  *                 example: ["dairy"]
  *               image:
  *                 type: string
@@ -923,16 +1112,106 @@ exports.createFoodByAdmin = catchAsync(async (req, res, next) => {
  *                     name:
  *                       type: string
  *                       example: "My Protein Smoothie Bowl"
- *                     imageUrl:
+ *                     description:
  *                       type: string
- *                       example: "https://res.cloudinary.com/xxx/mealgenie/foods/abc123.jpg"
+ *                       example: "Homemade smoothie bowl with banana and Greek yogurt"
  *                     postedBy:
  *                       type: string
  *                       example: "692d24c28e5236c6f9ba3aa8"
+ *                       description: User ID who created this food
+ *                     instructions:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           step:
+ *                             type: number
+ *                             example: 1
+ *                           description:
+ *                             type: string
+ *                             example: "Blend banana with Greek yogurt"
+ *                           _id:
+ *                             type: string
+ *                             example: "6968aad8c8c36a312277419a"
+ *                       example: [{"step": 1, "description": "Blend banana with Greek yogurt", "_id": "6968aad8c8c36a312277419a"}, {"step": 2, "description": "Pour into bowl and top with granola", "_id": "6968aad8c8c36a312277419b"}]
+ *                     imageUrl:
+ *                       type: string
+ *                       example: "https://res.cloudinary.com/xxx/mealgenie/foods/abc123.jpg"
+ *                     category:
+ *                       type: string
+ *                       enum: [fruits, vegetables, grains, protein, dairy, fats, beverages, snacks, desserts, spices]
+ *                       example: "dairy"
+ *                     meal:
+ *                       type: string
+ *                       enum: [breakfast, lunch, dinner, snack]
+ *                       example: "breakfast"
+ *                     ingredients:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                             example: "Greek Yogurt"
+ *                           amount:
+ *                             type: string
+ *                             example: "200g"
+ *                           _id:
+ *                             type: string
+ *                             example: "6968aad8c8c36a312277419d"
+ *                       example: [{"name": "Greek Yogurt", "amount": "200g", "_id": "6968aad8c8c36a312277419d"}, {"name": "Banana", "amount": "1 medium", "_id": "6968aad8c8c36a312277419e"}]
+ *                     nutritionalInfo:
+ *                       type: object
+ *                       properties:
+ *                         calories:
+ *                           type: number
+ *                           example: 380
+ *                         protein:
+ *                           type: number
+ *                           example: 28
+ *                         carbohydrates:
+ *                           type: number
+ *                           example: 45
+ *                         fat:
+ *                           type: number
+ *                           example: 10
+ *                         fiber:
+ *                           type: number
+ *                           example: 3
+ *                         sugar:
+ *                           type: number
+ *                           example: 18
+ *                         sodium:
+ *                           type: number
+ *                           example: 80
+ *                         cholesterol:
+ *                           type: number
+ *                           example: 15
+ *                     allergens:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["dairy"]
+ *                     tags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["high_protein", "balanced"]
+ *                     isActive:
+ *                       type: boolean
+ *                       example: true
  *                     isPublic:
  *                       type: boolean
  *                       example: false
- *                       description: Food will not appear in recommendations until admin approval
+ *                       description: User-created foods are private by default until admin approval
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-10-07T10:30:00.000Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2024-10-07T10:30:00.000Z"
  *       400:
  *         description: Validation error, missing required image, or invalid base64 format
  *         content:
@@ -1006,6 +1285,7 @@ exports.createFoodByUser = catchAsync(async (req, res, next) => {
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 exports.updateFood = catchAsync(async (req, res, next) => {
+    const { foodId } = req.params;
     const foodInfo = { ...req.body.data };
 
     // Thêm thông tin ảnh từ Cloudinary nếu có
@@ -1163,6 +1443,261 @@ exports.deleteFoodByUser = catchAsync(async (req, res, next) => {
 exports.clearCache = catchAsync(async (req, res, next) => {
     const result = await FoodService.clearAllCache();
     return res.ok(result, 200);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/admin/{foodId}/recommendable:
+ *   patch:
+ *     summary: Update food recommendable status
+ *     description: Update the isRecommendable status of a food item. Only accessible by admin.
+ *     tags: [Foods - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: foodId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the food to update
+ *         example: "692ebe81e68471451b81aa09"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isRecommendable
+ *             properties:
+ *               isRecommendable:
+ *                 type: boolean
+ *                 description: Whether the food can be recommended to users
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Food recommendable status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Food recommendable status updated successfully"
+ *                 data:
+ *                   $ref: '#/components/schemas/Food'
+ *       400:
+ *         description: Bad request - Invalid request body
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - User is not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       404:
+ *         description: Food not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.updateRecommendableStatus = catchAsync(async (req, res, next) => {
+    const { foodId } = req.params;
+    const { isRecommendable } = req.body;
+
+    const updatedFood = await FoodService.updateRecommendableStatus(foodId, isRecommendable);
+    return res.ok(updatedFood, 200, "Food recommendable status updated successfully");
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/admin/public:
+ *   get:
+ *     summary: Get all public non-recommendable foods
+ *     description: Retrieve all foods that are marked as public (isPublic = true) and not recommendable (isRecommendable = false). Only accessible by admin.
+ *     tags: [Foods - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Public non-recommendable foods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Public foods retrieved successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Food'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 5
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 48
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - User is not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getPublicFoods = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.query;
+    const { result, meta } = await FoodService.getPublicFoods(page, limit);
+    return res.ok(result, 200, "Public foods retrieved successfully", meta);
+});
+
+/**
+ * @swagger
+ * /api/v1/foods/admin/non-recommendable:
+ *   get:
+ *     summary: Get all non-recommendable foods
+ *     description: Retrieve all foods that are not recommendable (isRecommendable = false). Only accessible by admin.
+ *     tags: [Foods - Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number for pagination
+ *         example: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *         example: 10
+ *     responses:
+ *       200:
+ *         description: Non-recommendable foods retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Non-recommendable foods retrieved successfully"
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Food'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     currentPage:
+ *                       type: integer
+ *                       example: 1
+ *                     totalPages:
+ *                       type: integer
+ *                       example: 10
+ *                     totalItems:
+ *                       type: integer
+ *                       example: 95
+ *                     itemsPerPage:
+ *                       type: integer
+ *                       example: 10
+ *       401:
+ *         description: Unauthorized - User not authenticated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Forbidden - User is not an admin
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+exports.getNonRecommendableFoods = catchAsync(async (req, res, next) => {
+    const { page, limit } = req.query;
+    const { result, meta } = await FoodService.getNonRecommendableFoods(page, limit);
+    return res.ok(result, 200, "Non-recommendable foods retrieved successfully", meta);
 });
 
 // 📝 FOOD LOGGING
@@ -1732,37 +2267,60 @@ exports.getFoodLog = catchAsync(async (req, res, next) => {
  *                 data:
  *                   type: object
  *                   properties:
- *                     isAppropriate:
- *                       type: boolean
- *                       description: Whether the food matches user's preferences. False if user has no preferences or food has no tags.
- *                       example: true
+ *                     result:
+ *                       type: object
+ *                       properties:
+ *                         isAppropriate:
+ *                           type: boolean
+ *                           description: Whether the food tags match user's dietary goal preferences. False if user has no goal preferences or food has no tags.
+ *                           example: true
+ *                         isAllergyFree:
+ *                           type: boolean
+ *                           description: Whether the food is free from user's allergens. True if food has no allergens that user is allergic to.
+ *                           example: true
  *                     userId:
  *                       type: string
  *                       example: "67562c8b5e4f123456789abc"
  *             examples:
- *               appropriate:
- *                 summary: Food matches user preferences
+ *               appropriate_and_safe:
+ *                 summary: Food matches user preferences and is allergy-free
  *                 value:
  *                   success: true
  *                   message: "Success"
  *                   data:
- *                     isAppropriate: true
+ *                     result:
+ *                       isAppropriate: true
+ *                       isAllergyFree: true
  *                     userId: "67562c8b5e4f123456789abc"
- *               notAppropriate:
- *                 summary: Food does not match user preferences
+ *               appropriate_but_allergen:
+ *                 summary: Food matches preferences but contains allergen
  *                 value:
  *                   success: true
  *                   message: "Success"
  *                   data:
- *                     isAppropriate: false
+ *                     result:
+ *                       isAppropriate: true
+ *                       isAllergyFree: false
  *                     userId: "67562c8b5e4f123456789abc"
- *               noPreferencesOrTags:
- *                 summary: User has no preferences or food has no tags
+ *               not_appropriate_but_safe:
+ *                 summary: Food doesn't match preferences but is allergy-free
  *                 value:
  *                   success: true
  *                   message: "Success"
  *                   data:
- *                     isAppropriate: false
+ *                     result:
+ *                       isAppropriate: false
+ *                       isAllergyFree: true
+ *                     userId: "67562c8b5e4f123456789abc"
+ *               not_appropriate_and_allergen:
+ *                 summary: Food doesn't match preferences and contains allergen
+ *                 value:
+ *                   success: true
+ *                   message: "Success"
+ *                   data:
+ *                     result:
+ *                       isAppropriate: false
+ *                       isAllergyFree: false
  *                     userId: "67562c8b5e4f123456789abc"
  *       400:
  *         description: Bad request - Invalid food data
@@ -1794,10 +2352,10 @@ exports.checkFoodAppropriate = catchAsync(async (req, res, next) => {
     const foodInfo = req.body;
 
     // Check if food is appropriate for user's preferences
-    const isAppropriate = await FoodService.isAppropriate(userId, foodInfo);
+    const result = await FoodService.isAppropriate(userId, foodInfo);
 
     return res.ok({
-        isAppropriate,
+        result,
         userId
     }, 200, "Success");
 });

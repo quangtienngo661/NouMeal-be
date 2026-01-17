@@ -20,7 +20,10 @@ const {
     deleteFoodByAdmin,
     deleteFoodByUser,
     checkFoodAppropriate,
-    resetTodayLogs
+    resetTodayLogs,
+    updateRecommendableStatus,
+    getPublicFoods,
+    getNonRecommendableFoods
 } = require('../controller/foodController');
 const { authenticate, restrictTo } = require('../middleware/authMiddleware');
 const { handleValidationErrors } = require('../middleware/validator');
@@ -40,6 +43,8 @@ router.get('/weekly-recommended', authenticate, weeklyFoodsRecommendation);
 router.get('/user', authenticate, getOwnFoods);
 router.get('/user/:userId', authenticate, getFoodsByUserId);
 router.get('/admin', authenticate, restrictTo('admin'), getAdminFoods);
+router.get('/admin/public', authenticate, restrictTo('admin'), getPublicFoods);
+router.get('/admin/non-recommendable', authenticate, restrictTo('admin'), getNonRecommendableFoods);
 
 // 📝 FOOD LOGGING - Must come before /:foodId to avoid conflicts
 router.post('/log', authenticate, validateLogMeal, handleValidationErrors, logMeal);
@@ -57,6 +62,17 @@ router.get('/:foodId', validateFoodIdParam, handleValidationErrors, getFoodById)
 // ✏️ CREATE / UPDATE / DELETE
 router.post('/admin', authenticate, restrictTo('admin'), validateCreateFood, handleValidationErrors, createFoodByAdmin);
 router.post('/user', authenticate, validateCreateFood, handleValidationErrors, createFoodByUser);
+
+// Update recommendable status (Admin only) - Must come before /:foodId
+router.patch(
+    '/admin/:foodId/recommendable',
+    authenticate,
+    restrictTo('admin'),
+    validateFoodIdParam,
+    handleValidationErrors,
+    updateRecommendableStatus
+);
+
 router.patch(
     '/:foodId',
     authenticate,

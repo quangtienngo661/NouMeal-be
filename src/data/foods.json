@@ -28,7 +28,8 @@
     },
     "allergens": ["banana"],
     "isActive": true,
-    "tags": ["vegetarian", "high_fiber"]
+    "tags": ["vegetarian", "high_fiber"],
+    "isRecommendable": true
   },
   {
     "name": "Grilled Chicken Breast",
@@ -60,7 +61,8 @@
     "allergens": [],
     "isActive": true,
     "tags": ["high_protein", "balanced"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Greek Yogurt",
@@ -88,7 +90,8 @@
     "allergens": ["milk"],
     "isActive": true,
     "tags": ["high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Quinoa Salad",
@@ -122,7 +125,8 @@
     "allergens": [],
     "isActive": true,
     "tags": ["vegetarian", "vegan"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Avocado Toast",
@@ -153,7 +157,8 @@
     "allergens": ["wheat_gluten"],
     "isActive": true,
     "tags": ["vegetarian", "high_fiber"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Apple",
@@ -181,7 +186,8 @@
     "allergens": ["apple"],
     "isActive": true,
     "tags": ["vegan", "gluten_free"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Salmon Fillet",
@@ -213,7 +219,8 @@
     "allergens": ["fish"],
     "isActive": true,
     "tags": ["omega_3", "gluten_free"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Mixed Nuts",
@@ -243,7 +250,8 @@
     "allergens": ["peanuts", "tree_nuts"],
     "isActive": true,
     "tags": ["vegetarian", "keto_friendly"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Spinach Smoothie",
@@ -274,7 +282,8 @@
     "allergens": ["banana", "milk"],
     "isActive": true,
     "tags": ["vegetarian"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Dark Chocolate (70%)",
@@ -302,7 +311,8 @@
     "allergens": [],
     "isActive": true,
     "tags": ["vegetarian"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Egg Omelette with Veggies",
@@ -334,7 +344,8 @@
     "allergens": ["eggs"],
     "isActive": true,
     "tags": ["keto_friendly", "high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Beef Stir-Fry with Rice",
@@ -366,7 +377,8 @@
     "allergens": ["soy"],
     "isActive": true,
     "tags": ["high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Tofu Buddha Bowl",
@@ -399,7 +411,8 @@
     "allergens": ["soy", "sesame"],
     "isActive": true,
     "tags": ["vegan", "high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Peanut Butter Banana Toast",
@@ -430,7 +443,8 @@
     "allergens": ["peanuts", "wheat_gluten", "banana"],
     "isActive": true,
     "tags": ["vegetarian"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Protein Pancakes",
@@ -461,7 +475,8 @@
     "allergens": ["eggs", "milk", "wheat_gluten"],
     "isActive": true,
     "tags": ["high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Turkey Sandwich on Whole Grain",
@@ -492,7 +507,8 @@
     "allergens": ["wheat_gluten"],
     "isActive": true,
     "tags": ["balanced", "high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Shrimp Pasta",
@@ -524,7 +540,8 @@
     "allergens": ["shellfish", "wheat_gluten"],
     "isActive": true,
     "tags": ["balanced"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Greek Yogurt Parfait",
@@ -554,7 +571,8 @@
     "allergens": ["milk"],
     "isActive": true,
     "tags": ["high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Protein Shake",
@@ -584,7 +602,8 @@
     "allergens": ["milk", "banana"],
     "isActive": true,
     "tags": ["high_protein", "post_workout"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Veggie Chili",
@@ -616,7 +635,8 @@
     "allergens": [],
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Scrambled Eggs with Toast",
@@ -647,7 +667,8 @@
     "allergens": ["eggs", "milk", "wheat_gluten"],
     "isActive": true,
     "tags": ["high_protein"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Chicken Caesar Salad",
@@ -679,7 +700,8 @@
     "allergens": ["milk", "eggs"],
     "isActive": true,
     "tags": ["high_protein", "low_carb"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Baked Sweet Potato",
@@ -710,7 +732,8 @@
     "allergens": [],
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Grilled Tilapia with Vegetables",
@@ -742,7 +765,8 @@
     "allergens": ["fish"],
     "isActive": true,
     "tags": ["high_protein", "balanced"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Carrot Sticks with Hummus",
@@ -771,7 +795,8 @@
     "allergens": ["sesame"],
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Cottage Cheese with Berries",
@@ -800,7 +825,8 @@
     "allergens": ["milk"],
     "isActive": true,
     "tags": ["high_protein"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Chia Pudding",
@@ -832,7 +858,8 @@
     "allergens": ["tree_nuts"],
     "isActive": true,
     "tags": ["vegan", "high_fiber"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Tuna Salad Wrap",
@@ -865,7 +892,8 @@
     "allergens": ["fish", "eggs", "wheat_gluten"],
     "isActive": true,
     "tags": ["high_protein"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Lentil Soup",
@@ -897,7 +925,8 @@
     "allergens": [],
     "isActive": true,
     "tags": ["vegan", "high_fiber", "high_protein"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Rice Cakes with Almond Butter",
@@ -926,7 +955,8 @@
     "allergens": ["tree_nuts"],
     "isActive": true,
     "tags": ["vegetarian"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Blueberry Smoothie Bowl",
@@ -958,7 +988,8 @@
     "allergens": ["milk", "banana"],
     "isActive": true,
     "tags": ["high_fiber"],
-    "postedBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Chicken Wrap with Hummus",
@@ -991,7 +1022,8 @@
     "allergens": ["wheat_gluten", "sesame"],
     "isActive": true,
     "tags": ["high_protein", "balanced"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Baked Cod with Quinoa",
@@ -1023,7 +1055,8 @@
     "allergens": ["fish"],
     "isActive": true,
     "tags": ["high_protein", "balanced"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Banana",
@@ -1050,7 +1083,8 @@
     "allergens": ["banana"],
     "isActive": true,
     "tags": ["vegan", "gluten_free"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Whole Wheat Bagel with Cream Cheese",
@@ -1080,7 +1114,8 @@
     "allergens": ["wheat_gluten", "milk"],
     "isActive": true,
     "tags": ["vegetarian"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Pork Chop with Mashed Potatoes",
@@ -1112,7 +1147,8 @@
     "allergens": ["milk"],
     "isActive": true,
     "tags": ["high_protein"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   },
   {
     "name": "Orange",
@@ -1140,6 +1176,7 @@
     "allergens": [],
     "isActive": true,
     "tags": ["vegan", "gluten_free"],
-    "createdBy": "692597af9106c79565447ce8"
+    "postedBy": "692597af9106c79565447ce8",
+    "isRecommendable": false
   }
 ]
