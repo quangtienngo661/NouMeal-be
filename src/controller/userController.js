@@ -254,7 +254,7 @@ const deactivateAccount = catchAsync(async (req, res, next) => {
  * /api/v1/users/follow/{targetUserId}:
  *   post:
  *     summary: Follow a user
- *     description: Follow another user by their user ID
+ *     description: Follow another user by their user ID. Returns the followed user's public profile information.
  *     tags: [User Social]
  *     security:
  *       - bearerAuth: []
@@ -280,6 +280,54 @@ const deactivateAccount = catchAsync(async (req, res, next) => {
  *                 message:
  *                   type: string
  *                   example: "You are now following John Doe"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     following:
+ *                       type: object
+ *                       description: Public profile of the followed user
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                           example: "507f1f77bcf86cd799439011"
+ *                         name:
+ *                           type: string
+ *                           example: "John Doe"
+ *                         email:
+ *                           type: string
+ *                           example: "john.doe@example.com"
+ *                         age:
+ *                           type: number
+ *                           example: 25
+ *                         gender:
+ *                           type: string
+ *                           example: "male"
+ *                         height:
+ *                           type: number
+ *                           example: 175
+ *                         weight:
+ *                           type: number
+ *                           example: 70
+ *                         activity:
+ *                           type: string
+ *                           example: "moderately_active"
+ *                         goal:
+ *                           type: string
+ *                           example: "build_muscle"
+ *                         preferences:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["vegetarian", "high_protein"]
+ *                         allergies:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["nuts"]
+ *                         createdAt:
+ *                           type: string
+ *                           format: date-time
+ *                           example: "2024-01-15T10:30:00.000Z"
  *       400:
  *         description: Bad request - Cannot follow yourself or already following
  *         content:
@@ -292,11 +340,13 @@ const deactivateAccount = catchAsync(async (req, res, next) => {
  *                 value:
  *                   success: false
  *                   message: "You cannot follow yourself"
+ *                   statusCode: 400
  *               alreadyFollowing:
  *                 summary: Already following the user
  *                 value:
  *                   success: false
  *                   message: "You are already following this user"
+ *                   statusCode: 400
  *       401:
  *         description: Unauthorized - Authentication required
  *         content:
@@ -309,6 +359,19 @@ const deactivateAccount = catchAsync(async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               userNotFound:
+ *                 summary: Current user not found
+ *                 value:
+ *                   success: false
+ *                   message: "User not found"
+ *                   statusCode: 404
+ *               targetUserNotFound:
+ *                 summary: Target user not found
+ *                 value:
+ *                   success: false
+ *                   message: "Target user not found"
+ *                   statusCode: 404
  *       500:
  *         description: Internal server error
  *         content:
@@ -319,17 +382,22 @@ const deactivateAccount = catchAsync(async (req, res, next) => {
 const followUser = catchAsync(async (req, res, next) => {
   const { targetUserId } = req.params;
   const result = await userService.followUser(req.user._id, targetUserId);
+
   res.status(200).json({
     success: true,
     message: result.message,
+    data: {
+      following: result.following,
+    },
   });
 });
+
 /**
  * @swagger
  * /api/v1/users/unfollow/{targetUserId}:
  *   delete:
  *     summary: Unfollow a user
- *     description: Unfollow a user that you are currently following
+ *     description: Unfollow a user that you are currently following. Removes the user from your following list.
  *     tags: [User Social]
  *     security:
  *       - bearerAuth: []
@@ -355,6 +423,9 @@ const followUser = catchAsync(async (req, res, next) => {
  *                 message:
  *                   type: string
  *                   example: "Unfollowed successfully"
+ *             example:
+ *               success: true
+ *               message: "Unfollowed successfully"
  *       400:
  *         description: Bad request - Cannot unfollow yourself or not following
  *         content:
@@ -367,11 +438,13 @@ const followUser = catchAsync(async (req, res, next) => {
  *                 value:
  *                   success: false
  *                   message: "You cannot unfollow yourself"
+ *                   statusCode: 400
  *               notFollowing:
  *                 summary: Not following the user
  *                 value:
  *                   success: false
  *                   message: "You are not following this user"
+ *                   statusCode: 400
  *       401:
  *         description: Unauthorized - Authentication required
  *         content:
@@ -394,6 +467,7 @@ const followUser = catchAsync(async (req, res, next) => {
 const unfollowUser = catchAsync(async (req, res, next) => {
   const { targetUserId } = req.params;
   const result = await userService.unfollowUser(req.user._id, targetUserId);
+
   res.status(200).json({
     success: true,
     message: result.message,

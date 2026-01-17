@@ -159,40 +159,64 @@ class PostService {
 
       const query = {};
 
-      // Visibility filter with proper logic
+      // Build visibility query
       if (userId) {
         const user = await User.findById(userId);
         if (!user) {
           throw new AppError('User not found', 404);
         }
 
-        const followingIds = user.following || [];
+        const followingIds = (user.followingUsers || []).map((id) =>
+          id.toString()
+        );
 
-        query.$or = [
-          { visibility: 'public' },
-          { author: userId },
-          {
-            visibility: 'followers',
-            author: { $in: followingIds },
-          },
-        ];
+        // Nếu có filter author cụ thể
+        if (author) {
+          const authorIdStr = author.toString();
+
+          // Nếu đang xem posts của chính mình
+          if (authorIdStr === userId.toString()) {
+            query.author = author;
+            // Có thể xem tất cả visibility của chính mình
+          }
+          // Nếu đang xem posts của người mình follow
+          else if (followingIds.includes(authorIdStr)) {
+            query.author = author;
+            query.visibility = { $in: ['public', 'followers'] };
+          }
+          // Nếu đang xem posts của người lạ
+          else {
+            query.author = author;
+            query.visibility = 'public';
+          }
+        }
+        // Nếu không có filter author (xem tất cả posts)
+        else {
+          query.$or = [
+            { visibility: 'public' },
+            { author: userId },
+            {
+              visibility: 'followers',
+              author: { $in: followingIds },
+            },
+          ];
+        }
       } else {
-        // Non-authenticated users can only see public posts
+        // Non-authenticated users
+        if (author) {
+          query.author = author;
+        }
         query.visibility = 'public';
       }
 
-      // Apply other filters
-      if (author) query.author = author;
-
-      // Override visibility if explicitly requested and user has access
-      if (visibility && userId) {
-        // Only allow filtering by visibility if user is authenticated
+      // Override visibility if explicitly requested
+      if (visibility && !author) {
+        delete query.$or;
         query.visibility = visibility;
       }
 
       if (hashtags) {
         const hashtagArray = Array.isArray(hashtags) ? hashtags : [hashtags];
-
         if (hashtagArray.length > 0) {
           query.hashtags = {
             $in: hashtagArray.map((tag) => tag.toLowerCase()),
@@ -203,10 +227,7 @@ class PostService {
       if (foodId) {
         query.foods = foodId;
       }
-      const userAccount = await User.findById(userId);
-      if (userAccount.followingUsers.includes(author)) {
-        query.is_from_follower = true;
-      }
+
       // Text search
       if (search) {
         query.$text = { $search: search };
@@ -232,7 +253,27 @@ class PostService {
           .lean(),
         Post.countDocuments(query),
       ]);
+
+      // Add is_from_follower metadata
+      if (userId) {
+        const user = await User.findById(userId);
+        const followingIds = (user?.followingUsers || []).map((id) =>
+          id.toString()
+        );
+
+        posts.forEach((post) => {
+          post.is_from_follower = followingIds.includes(
+            post.author._id.toString()
+          );
+        });
+      } else {
+        posts.forEach((post) => {
+          post.is_from_follower = false;
+        });
+      }
+
       await this._addLikeStatusBulk(posts, userId);
+
       return {
         posts,
         pagination: {
@@ -280,56 +321,144 @@ class PostService {
         ...(user.allergies || []).map((allergy) => allergy.toLowerCase()),
       ];
 
-      const followingPosts = await Post.aggregate([
-        {
-          $match: {
-            author: { $in: followingIds },
-            $or: [
-              { visibility: 'public' },
-              { visibility: 'followers', author: { $in: followingIds } },
-            ],
-          },
-        },
-        {
-          $sort: { createdAt: -1 },
-        },
-        {
-          $addFields: {
-            priority: 1,
-            source: 'following',
-            is_from_follower: true,
-          },
-        },
-      ]);
+      const hasFollowing = followingIds.length > 0;
+      const hasHashtags = userHashtags.length > 0;
 
-      const hashtagPosts = await Post.aggregate([
-        {
-          $match: {
-            visibility: 'public',
-            author: { $nin: [...followingIds, userId] },
-            hashtags: { $in: userHashtags },
+      // Nếu không follow ai và không có hashtag nào → lấy tất cả public posts
+      if (!hasFollowing && !hasHashtags) {
+        const [posts, total] = await Promise.all([
+          Post.find({ visibility: 'public' })
+            .populate('author', 'name email avatar')
+            .populate({
+              path: 'foods',
+              select:
+                'name description imageUrl category meal ingredients nutritionalInfo allergens tags postedBy isActive',
+              match: { isActive: true },
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+          Post.countDocuments({ visibility: 'public' }),
+        ]);
+
+        // Thêm metadata cho các posts
+        posts.forEach((post) => {
+          post.priority = 3;
+          post.source = 'public';
+          post.is_from_follower = false;
+        });
+
+        await this._addLikeStatusBulk(posts, userId);
+
+        return {
+          posts,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            pages: Math.ceil(total / limit),
           },
-        },
-        {
-          $addFields: {
-            priority: 2,
-            source: 'hashtag',
-            matchScore: {
-              $size: {
-                $setIntersection: ['$hashtags', userHashtags],
+          stats: {
+            followingPosts: 0,
+            hashtagPosts: 0,
+            publicPosts: posts.length,
+            totalUnique: total,
+            userHashtags: 0,
+            followingCount: 0,
+          },
+        };
+      }
+
+      // Logic cũ cho trường hợp có following hoặc hashtags
+      let followingPosts = [];
+      let hashtagPosts = [];
+
+      if (hasFollowing) {
+        followingPosts = await Post.aggregate([
+          {
+            $match: {
+              author: { $in: followingIds },
+              $or: [
+                { visibility: 'public' },
+                { visibility: 'followers', author: { $in: followingIds } },
+              ],
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $addFields: {
+              priority: 1,
+              source: 'following',
+              is_from_follower: true,
+            },
+          },
+        ]);
+      }
+
+      if (hasHashtags) {
+        hashtagPosts = await Post.aggregate([
+          {
+            $match: {
+              visibility: 'public',
+              author: { $nin: [...followingIds, userId] },
+              hashtags: { $in: userHashtags },
+            },
+          },
+          {
+            $addFields: {
+              priority: 2,
+              source: 'hashtag',
+              matchScore: {
+                $size: {
+                  $setIntersection: ['$hashtags', userHashtags],
+                },
               },
             },
           },
-        },
-        {
-          $sort: {
-            matchScore: -1,
-            createdAt: -1,
+          {
+            $sort: {
+              matchScore: -1,
+              createdAt: -1,
+            },
           },
-        },
-      ]);
+        ]);
+      }
+
+      // Nếu có following nhưng không có hashtag → thêm public posts để đủ nội dung
+      if (hasFollowing && !hasHashtags && followingPosts.length < limit) {
+        const publicPosts = await Post.aggregate([
+          {
+            $match: {
+              visibility: 'public',
+              author: { $nin: [...followingIds, userId] },
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $limit: limit * 2,
+          },
+          {
+            $addFields: {
+              priority: 3,
+              source: 'public',
+              is_from_follower: false,
+            },
+          },
+        ]);
+        hashtagPosts = publicPosts;
+      }
 
       const allPosts = [...followingPosts, ...hashtagPosts];
+
+      // Sắp xếp theo thời gian sau khi merge
+      allPosts.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
 
       const uniquePosts = [];
       const seenIds = new Set();
