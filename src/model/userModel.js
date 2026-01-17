@@ -193,6 +193,12 @@ const userSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,
@@ -285,7 +291,10 @@ userSchema.methods.clearPasswordResetOTP = function () {
 };
 // Number of followers virtual field
 userSchema.virtual('NumberOfFollowers').get(function () {
-  return this.followingUsers.length;
+  return this.followingUsers ? this.followingUsers.length : 0;
+});
+userSchema.virtual('NumberOfFollowers').get(function () {
+  return this.followers ? this.followers.length : 0;
 });
 const User = mongoose.model('User', userSchema);
 

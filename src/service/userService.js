@@ -103,7 +103,9 @@ class UserService {
   // Get user by ID
   async getUserById(userId) {
     try {
-      const user = await User.findById(userId).populate('favoriteFoods');
+      const user = await User.findById(userId)
+        .populate('favoriteFoods')
+        .populate('followingUsers', 'name email');
       if (!user) {
         throw new AppError('User not found', 404);
       }
@@ -230,6 +232,7 @@ class UserService {
       }
 
       user.followingUsers.push(targetUserId);
+      targetUser.followers.push(userId);
       await user.save({ validateBeforeSave: false });
 
       return {
@@ -260,6 +263,9 @@ class UserService {
 
       user.followingUsers = user.followingUsers.filter(
         (id) => id.toString() !== targetUserId.toString()
+      );
+      targetUser.followers = targetUser.followers.filter(
+        (id) => id.toString() !== userId.toString()
       );
       await user.save({ validateBeforeSave: false });
 
@@ -312,6 +318,25 @@ class UserService {
     });
 
     return users;
+  }
+
+  async getFollowingUsers(userId) {
+    try {
+      const user = await User.findById(userId)
+        .select('followingUsers')
+        .populate('followingUsers', 'name email');
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      return user.followingUsers;
+    } catch (error) {
+      if (error.name === 'CastError') {
+        throw new AppError('Invalid user ID', 400);
+      }
+      throw error;
+    }
   }
 }
 
