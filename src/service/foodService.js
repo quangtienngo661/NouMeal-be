@@ -147,8 +147,6 @@ class FoodService {
             throw new AppError('Food not found', 404);
         }
 
-        console.log("food:", food);
-
         return food;
     }
 
@@ -205,7 +203,6 @@ class FoodService {
                 folder: 'mealgenie/foods',
             });
             imageUrl = result.url;
-            console.log("Cloudinary upload result:", result);
         }
 
         const newFood = await Food.create({
@@ -227,8 +224,6 @@ class FoodService {
         const result = await uploadToCloudinary(buffer, {
             folder: 'mealgenie/foods',
         });
-
-        console.log("Cloudinary upload result:", result);
 
         const newFood = await Food.create({
             ...foodInfo,
@@ -254,7 +249,7 @@ class FoodService {
         return { isAppropriate, isAllergyFree };
     }
 
-    async updateFood(foodId, foodInfo, userId) {
+    async updateFood(foodId, base64Image, foodInfo, userId) {
         const existingFood = await Food.findById(foodId);
 
         if (!existingFood) {
@@ -279,29 +274,30 @@ class FoodService {
             throw new AppError('You are not authorized to update this food', 403);
         }
 
-        // Nếu có imageUrl mới và food có imageUrl cũ, xóa ảnh cũ từ Cloudinary
-        if (foodInfo.imageUrl && existingFood.imageUrl) {
+        let imageUrl;
+        if (base64Image && existingFood.imageUrl) {
             try {
-                // Extract publicId from Cloudinary URL
-                const urlParts = existingFood.imageUrl.split('mealgenie/foods/');
-                if (urlParts.length > 1) {
-                    const publicId = 'mealgenie/foods/' + urlParts[1].split('.')[0];
-                    await deleteFromCloudinary(publicId);
-                    console.log('Deleted old image from Cloudinary:', publicId);
-                }
+                const buffer = base64ToBuffer(base64Image);
+                
+                const urlPath = existingFood.imageUrl.split('/').pop(); // Get last segment
+                const publicId = urlPath.split('.')[0]; // Remove extension
+                
+                const result = await uploadToCloudinary(buffer, {
+                    folder: 'mealgenie/foods',
+                    public_id: publicId, 
+                    overwrite: true
+                });
+
+                imageUrl = result.url;
             } catch (error) {
-                console.error('Failed to delete old image:', error);
-                // Không throw error, vẫn tiếp tục update
+                console.error('Failed to update image:', error);
             }
         }
 
         const updatedFood = await Food.findByIdAndUpdate(
             foodId,
-            { ...foodInfo },
-            {
-                runValidators: true,
-                new: true
-            }
+            { ...foodInfo, ...(imageUrl && { imageUrl }) },
+            { new: true, runValidators: true }
         );
 
         return updatedFood;
@@ -443,8 +439,6 @@ class FoodService {
             isRecommendable: true
         };
 
-        // console.log(allergensCondition);
-
         const breakfast = await Food.aggregate(
             await aggregateConditions(user, 'breakfast', allergensCondition, isDiff, isCached)
         );
@@ -516,7 +510,6 @@ class FoodService {
                 meals: dayMeals
             });
 
-            // Track all food IDs from arrays (each meal now has multiple foods)
             Object.values(dayMeals).forEach(foodArray => {
                 if (Array.isArray(foodArray)) {
                     foodArray.forEach(food => {
@@ -527,7 +520,6 @@ class FoodService {
                 }
             });
 
-            // Reset diversity tracker every 3 days
             if (i > 0 && i % 3 === 0) usedIds.clear();
         }
 
@@ -549,14 +541,14 @@ class FoodService {
     getSecondsUntilEndOfWeek() {
         const now = new Date();
         const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-        
+
         // Calculate days until Sunday (week ends on Sunday 23:59:59)
         const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-        
+
         const endOfWeek = new Date(now);
         endOfWeek.setDate(now.getDate() + daysUntilSunday);
         endOfWeek.setHours(23, 59, 59, 999);
-        
+
         return Math.floor((endOfWeek - now) / 1000);
     }
 
@@ -574,8 +566,6 @@ class FoodService {
         };
 
         if (food) {
-            // Generate adaptive meals based on the non-recommended food chosen
-            // User can switch foods within the same meal type before logging
             const breakfast = await Food.aggregate(
                 await aggregateConditions(user, 'breakfast', allergensCondition, true)
             );
@@ -592,7 +582,6 @@ class FoodService {
                 isRecommendable: true
             }).limit(1);
 
-            // Replace the chosen meal with the non-recommended food
             adaptiveMeals = {
                 breakfast: food.meal === 'breakfast' ? [food] : breakfast,
                 lunch: food.meal === 'lunch' ? [food] : lunch,
@@ -600,7 +589,6 @@ class FoodService {
                 snack: food.meal === 'snack' ? [food] : snack
             };
         } else {
-            // No non-recommended food chosen, return today's recommended meals
             adaptiveMeals = { ...todayMeals.meals };
         }
 

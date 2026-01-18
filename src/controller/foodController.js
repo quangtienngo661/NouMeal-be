@@ -1286,15 +1286,9 @@ exports.createFoodByUser = catchAsync(async (req, res, next) => {
  */
 exports.updateFood = catchAsync(async (req, res, next) => {
     const { foodId } = req.params;
-    const foodInfo = { ...req.body.data };
+    const { foodInfo, image } = { ...req.body };
 
-    // Thêm thông tin ảnh từ Cloudinary nếu có
-    let imgUrl = null;
-    if (req.cloudinaryResult) {
-        imgUrl = req.cloudinaryResult.url;
-    }
-
-    const result = await FoodService.updateFood(foodId, foodInfo, req.user._id);
+    const result = await FoodService.updateFood(foodId, image, foodInfo, req.user._id);
     return res.ok(result, 200);
 });
 

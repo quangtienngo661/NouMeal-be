@@ -172,7 +172,7 @@ const swaggerOptions = {
                 }
               }
             },
-            imageUrl: { type: 'string', format: 'uri' },
+            imageUrl: { type: 'string', format: 'string' },
             category: {
               type: 'string', enum: [
                 'fruits', 'vegetables', 'grains', 'protein', 'dairy', 'fats', 'beverages', 'snacks', 'desserts', 'spices'
@@ -198,7 +198,8 @@ const swaggerOptions = {
             },
             allergens: { type: 'array', items: { type: 'string' } },
             isActive: { type: 'boolean' },
-            tags: { type: 'array', items: { type: 'string' } }
+            tags: { type: 'array', items: { type: 'string' } },
+            image: { type: 'string', format: 'base64', description: 'Base64 encoded image string for upload' }
           }
         },
         FoodWithDiff: {
