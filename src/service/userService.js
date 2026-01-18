@@ -237,7 +237,12 @@ class UserService {
 
       user.followingUsers.push(targetUserId);
       targetUser.followers.push(userId);
-      await user.save({ validateBeforeSave: false });
+
+      // Save cả 2 users
+      await Promise.all([
+        user.save({ validateBeforeSave: false }),
+        targetUser.save({ validateBeforeSave: false }),
+      ]);
 
       return {
         message: `You are now following ${targetUser.name}`,
@@ -254,8 +259,14 @@ class UserService {
         throw new AppError('You cannot unfollow yourself', 400);
       }
 
-      const user = await User.findById(userId);
+      // Query cả 2 users
+      const [user, targetUser] = await Promise.all([
+        User.findById(userId),
+        User.findById(targetUserId),
+      ]);
+
       if (!user) throw new AppError('User not found', 404);
+      if (!targetUser) throw new AppError('Target user not found', 404);
 
       const isFollowing = user.followingUsers.some(
         (id) => id.toString() === targetUserId.toString()
@@ -265,13 +276,19 @@ class UserService {
         throw new AppError('You are not following this user', 400);
       }
 
+      // Remove from both arrays
       user.followingUsers = user.followingUsers.filter(
         (id) => id.toString() !== targetUserId.toString()
       );
       targetUser.followers = targetUser.followers.filter(
         (id) => id.toString() !== userId.toString()
       );
-      await user.save({ validateBeforeSave: false });
+
+      // Save cả 2 users
+      await Promise.all([
+        user.save({ validateBeforeSave: false }),
+        targetUser.save({ validateBeforeSave: false }),
+      ]);
 
       return { message: 'Unfollowed successfully' };
     } catch (error) {
