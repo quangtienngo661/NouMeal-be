@@ -689,6 +689,9 @@ def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, b
         preferences_text = "none"
         preference_list = []
     
+    # Tạo danh sách tags cho prompt (uppercase for display)
+    allowed_tags_display = ", ".join([tag.upper().replace('_', '-') for tag in DIETARY_PREFERENCE_TAGS])
+    
     # Create prompt for AI
     prompt = f"""You are a nutrition expert. The user wants: "{user_query if user_query else f'{meal_time} meal'}"
 
@@ -699,21 +702,20 @@ def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, b
 - Budget: {budget_range}
 - Cooking time: {cooking_time}
 
-**VALID DIETARY TAGS (use only these):**
-{', '.join([tag.upper().replace('_', '-') for tag in DIETARY_PREFERENCE_TAGS])}
+**VALID DIETARY TAGS (for internal classification only):**
+{allowed_tags_display}
 
 Please suggest 1-3 meals that STRICTLY match the dietary preferences. Return JSON (NO markdown):
 
 {{
     "suggested_meals": [
         {{
-            "name": "Dish name",
+            "name": "Dish name (English or Vietnamese)",
             "description": "Why this dish matches the requirements",
             "difficulty": "EASY/MEDIUM/HARD",
             "match_percentage": 95,
             "prep_time": "15 minutes",
             "servings": 2,
-            "tags": ["HIGH-PROTEIN", "GLUTEN-FREE", "DAIRY-FREE"],
             "nutrition_facts": {{
                 "calories": {{"value": 420, "unit": "cal"}},
                 "protein": {{"value": 38, "unit": "g"}},
@@ -731,47 +733,18 @@ Please suggest 1-3 meals that STRICTLY match the dietary preferences. Return JSO
             "instructions": [
                 "Step 1",
                 "Step 2"
-            ],
-            "allergen_info": {{
-                "contains": ["nuts", "soy"],
-                "free_from": ["gluten", "dairy", "eggs"]
-            }},
-            "dietary_compliance": {{
-                "vegetarian": true,
-                "vegan": false,
-                "gluten_free": true,
-                "dairy_free": true,
-                "keto": false,
-                "paleo": false,
-                "low_carb": true,
-                "high_protein": true,
-                "low_fat": false,
-                "pescatarian": false,
-                "halal": false,
-                "kosher": false,
-                "organic": false,
-                "low_sodium": false,
-                "diabetic_friendly": false,
-                "heart_healthy": false
-            }}
+            ]
         }}
-    ],
-    "filters_applied": {{
-        "dietary_preferences": {preference_list},
-        "meal_time": "{meal_time}",
-        "health_condition": "{health_condition}"
-    }}
+    ]
 }}
 
 **CRITICAL RULES:**
-1. tags array MUST only contain tags from the valid list above
-2. If user selected "vegetarian", ALL meals MUST be vegetarian
-3. If user selected "gluten_free", ALL meals MUST be gluten-free
-4. If user selected multiple preferences (e.g., "vegan,high_protein"), meals MUST satisfy ALL
-5. match_percentage should reflect how well the meal matches ALL requirements
-6. dietary_compliance MUST include ALL 16 tags with true/false values
-7. Include allergen_info for transparency
-8. Prioritize Vietnamese and Asian cuisine when appropriate"""
+1. If user selected "vegetarian", ALL meals MUST be vegetarian
+2. If user selected "gluten_free", ALL meals MUST be gluten-free
+3. If user selected multiple preferences (e.g., "vegan,high_protein"), meals MUST satisfy ALL
+4. match_percentage should reflect how well the meal matches ALL requirements
+5. Prioritize Vietnamese and Asian cuisine when appropriate
+6. Ingredients must be available in Vietnam"""
     
     try:
         response = client.chat.completions.create(
@@ -794,37 +767,22 @@ Please suggest 1-3 meals that STRICTLY match the dietary preferences. Return JSO
         
         suggestion_data = json.loads(response_text)
         
-        # Validate that suggested meals match the dietary preferences
+        # Get meals
         meals = suggestion_data.get("suggested_meals", [])
-        validated_meals = []
-        
-        for meal in meals:
-            meal_tags = [tag.lower().replace('-', '_') for tag in meal.get("tags", [])]
-            
-            # Check if meal matches all required preferences
-            if preference_list:
-                matches_all = all(pref in meal_tags for pref in preference_list)
-                if matches_all:
-                    validated_meals.append(meal)
-                else:
-                    print(f"⚠️ Filtered out '{meal.get('name')}' - doesn't match all tags: {preference_list}")
-            else:
-                validated_meals.append(meal)
         
         return {
             "message": "Meal suggestions completed successfully",
             "data": {
                 "query": user_query or f"{meal_time} meal",
-                "total_suggestions": len(validated_meals),
-                "meals": validated_meals,
+                "total_suggestions": len(meals),
+                "meals": meals,
                 "filters": {
                     "meal_time": meal_time,
                     "health_condition": health_condition,
                     "dietary_preferences": preference_list,
                     "budget_range": budget_range,
                     "cooking_time": cooking_time
-                },
-                "available_tags": DIETARY_PREFERENCE_TAGS
+                }
             }
         }
         
@@ -843,8 +801,7 @@ Please suggest 1-3 meals that STRICTLY match the dietary preferences. Return JSO
                     "meal_time": meal_time,
                     "health_condition": health_condition,
                     "dietary_preferences": preference_list
-                },
-                "available_tags": DIETARY_PREFERENCE_TAGS
+                }
             }
         }
         
@@ -863,6 +820,10 @@ def meal_suggestion():
     description: >
       User selects dietary preference tags (e.g., "vegetarian,high_protein"),
       AI will suggest ONLY dishes that match ALL selected tags.
+      
+      **Valid Tags:** vegetarian, vegan, pescatarian, keto, paleo, low_carb, low_fat, 
+      high_protein, gluten_free, dairy_free, halal, kosher, organic, low_sodium, 
+      diabetic_friendly, heart_healthy
     requestBody:
       required: true
       content:
@@ -882,10 +843,10 @@ def meal_suggestion():
               health_condition:
                 type: string
                 default: "healthy"
-                example: "diabetic_friendly"
+                example: "diabetes"
               dietary_preferences:
                 type: string
-                description: Comma-separated dietary tags (must match valid tags)
+                description: Comma-separated dietary tags
                 example: "vegetarian,high_protein,gluten_free"
               budget_range:
                 type: string
@@ -898,95 +859,8 @@ def meal_suggestion():
     responses:
       200:
         description: Suggestion successful
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                message:
-                  type: string
-                data:
-                  type: object
-                  properties:
-                    query:
-                      type: string
-                    total_suggestions:
-                      type: integer
-                    meals:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          name:
-                            type: string
-                          tags:
-                            type: array
-                            items:
-                              type: string
-                              enum: [VEGETARIAN, VEGAN, PESCATARIAN, KETO, PALEO, LOW-CARB, LOW-FAT, HIGH-PROTEIN, GLUTEN-FREE, DAIRY-FREE, HALAL, KOSHER, ORGANIC, LOW-SODIUM, DIABETIC-FRIENDLY, HEART-HEALTHY]
-                          allergen_info:
-                            type: object
-                            properties:
-                              contains:
-                                type: array
-                                items:
-                                  type: string
-                              free_from:
-                                type: array
-                                items:
-                                  type: string
-                          dietary_compliance:
-                            type: object
-                            properties:
-                              vegetarian:
-                                type: boolean
-                              vegan:
-                                type: boolean
-                              gluten_free:
-                                type: boolean
-                    available_tags:
-                      type: array
-                      items:
-                        type: string
-            example:
-              success: true
-              message: "Meal suggestions completed successfully"
-              data:
-                query: "High protein vegetarian meal"
-                total_suggestions: 2
-                meals:
-                  - name: "Grilled Tofu Buddha Bowl"
-                    tags: ["VEGETARIAN", "HIGH-PROTEIN", "GLUTEN-FREE"]
-                    allergen_info:
-                      contains: ["soy"]
-                      free_from: ["gluten", "dairy", "nuts"]
-                    dietary_compliance:
-                      vegetarian: true
-                      vegan: true
-                      gluten_free: true
-                      high_protein: true
-                available_tags: ["vegetarian", "vegan", "high_protein", "gluten_free", ...]
       400:
         description: Invalid dietary preference tags
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                error:
-                  type: string
-                valid_tags:
-                  type: array
-                  items:
-                    type: string
-            example:
-              success: false
-              error: "Invalid dietary preference tags: low_sugar, no_carbs"
-              valid_tags: ["vegetarian", "vegan", "keto", ...]
     """
     try:
         data = request.json
@@ -1024,36 +898,6 @@ def meal_suggestion():
             "error": str(e)
         }), 500
 
-@app.route('/api/v1/dietary-tags', methods=['GET'])
-def get_dietary_tags():
-    """
-    Get list of valid dietary preference tags
-    ---
-    tags:
-      - Meal Planning
-    summary: Get available dietary tags
-    responses:
-      200:
-        description: List of valid tags
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                success:
-                  type: boolean
-                tags:
-                  type: array
-                  items:
-                    type: string
-            example:
-              success: true
-              tags: ["vegetarian", "vegan", "keto", "paleo", ...]
-    """
-    return jsonify({
-        "success": True,
-        "tags": DIETARY_PREFERENCE_TAGS
-    }), 200
 
 def internal_weekly_menu(health_condition, dietary_preferences, budget_range, cooking_time):
     prompt = f"""Create a 7-day menu:
