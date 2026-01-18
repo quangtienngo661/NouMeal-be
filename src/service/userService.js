@@ -92,9 +92,13 @@ class UserService {
 
       // Update last login
       user.lastLogin = new Date();
-      const newUser = await user.save({ validateBeforeSave: false });
+      await user.save({ validateBeforeSave: false });
 
-      return newUser;
+      const loggedInUser = await User.findById(user._id)
+        .populate('favoriteFoods')
+        .populate('followingUsers', '_id name email');
+
+      return loggedInUser;
     } catch (error) {
       throw error;
     }
