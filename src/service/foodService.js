@@ -8,7 +8,7 @@ const FoodLog = require("../model/foodLogModel");
 const { GOAL_TAG_MAPPING } = require("../libs/mappers/goalTagMapping");
 const { image } = require("../config/cloudinaryConfig");
 const { uploadToCloudinary, deleteFromCloudinary } = require("../middleware/multer");
-const { base64ToBuffer } = require("../libs/util/imageHelper");
+const { base64ToBuffer, isFromCloudinary } = require("../libs/util/imageHelper");
 
 
 class FoodService {
@@ -262,7 +262,6 @@ class FoodService {
             throw new AppError('User not found', 404);
         }
 
-
         const isAdmin = user.role === "admin";
 
         let isOwner = false;
@@ -277,18 +276,27 @@ class FoodService {
         let imageUrl;
         if (base64Image && existingFood.imageUrl) {
             try {
+                const isFromCloudinaryUrl = isFromCloudinary(existingFood.imageUrl);
                 const buffer = base64ToBuffer(base64Image);
-                
-                const urlPath = existingFood.imageUrl.split('/').pop(); // Get last segment
-                const publicId = urlPath.split('.')[0]; // Remove extension
-                
-                const result = await uploadToCloudinary(buffer, {
-                    folder: 'mealgenie/foods',
-                    public_id: publicId, 
-                    overwrite: true
-                });
-
-                imageUrl = result.url;
+                if (!isFromCloudinaryUrl) {
+                    const uploadResult = await uploadToCloudinary(buffer, {
+                        folder: 'mealgenie/foods',
+                    });
+                    imageUrl = uploadResult.url;
+                    // return;
+                } else {
+                    const urlPath = existingFood.imageUrl.split('/').pop(); // Get last segment
+                    const publicId = urlPath.split('.')[0]; // Remove extension
+                    
+                    const result = await uploadToCloudinary(buffer, {
+                        folder: 'mealgenie/foods',
+                        public_id: publicId, 
+                        overwrite: true
+                    });
+    
+                    imageUrl = result.url;
+                }
+                    
             } catch (error) {
                 console.error('Failed to update image:', error);
             }

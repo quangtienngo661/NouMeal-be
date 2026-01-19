@@ -48,7 +48,12 @@ const getImageFormatFromBase64 = (base64String) => {
     return match ? match[1] : 'jpeg';
 };
 
+const isFromCloudinary = (url) => {
+    return url.includes('res.cloudinary.com');
+}
+
 module.exports = {
+    isFromCloudinary,
     base64ToBuffer,
     getImageFormatFromBase64
 };
