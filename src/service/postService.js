@@ -17,6 +17,20 @@ class PostService {
         hashtags: [...new Set([...(postData.hashtags || []), ...hashtags])], // Merge and deduplicate
       });
 
+      postData.foods.forEach(async (foodId) => {
+        const food = await Food.findById(foodId);
+        if (!food) {
+          throw new AppError(`Food item with ID ${foodId} not found`, 400);
+        }
+
+        if (!food.isActive) {
+          throw new AppError(`Food item with ID ${foodId} is not active`, 400);
+        }
+
+        food.isPublic = true;
+        await food.save();
+      });
+
       await post.save();
       return await this.getPostById(post._id, postData.author);
     } catch (error) {
@@ -131,6 +145,15 @@ class PostService {
           403
         );
       }
+
+      post.foods.forEach(async (foodId) => {
+        const food = await Food.findById(foodId);
+        if (food) {
+          food.isPublic = false;
+          food.isRecommendable = false;
+          await food.save();
+        }
+      });
 
       await Post.findByIdAndDelete(postId);
       return { message: 'Post deleted successfully' };
