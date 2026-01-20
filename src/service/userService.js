@@ -5,7 +5,7 @@ const {
   nutritiousFoodConditions,
 } = require('../libs/conditions/recommendConditions');
 const { number } = require('joi');
-
+const NotificationService = require('./notificationServices');
 class UserService {
   // Register a new user
   async registerUser(userData) {

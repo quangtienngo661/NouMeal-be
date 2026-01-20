@@ -3,6 +3,7 @@ const AppError = require('../libs/util/AppError');
 const User = require('../model/userModel');
 const Food = require('../model/foodModel');
 const Like = require('../model/likeModel');
+const NotificationService = require('./notificationServices');
 class PostService {
   async createPost(postData) {
     try {
@@ -758,7 +759,7 @@ class PostService {
 
       // Tăng likes_count
       const updatedPost = await this.updateEngagement(postId, 'likes_count', 1);
-
+      await NotificationService.createPostLikeNotification(postId, userId);
       return {
         post_id: postId,
         likes_count: updatedPost.engagement.likes_count,
