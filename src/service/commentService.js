@@ -3,7 +3,7 @@ const Post = require('../model/postModel');
 const Like = require('../model/likeModel');
 const User = require('../model/userModel');
 const AppError = require('../libs/util/AppError');
-const NotificationService = require('./notificationServices');
+const NotificationService = require('./notificationService');
 class CommentService {
   async createComment(commentData) {
     try {
@@ -328,6 +328,11 @@ class CommentService {
         commentId,
         { $inc: { likes_count: 1 } },
         { new: true }
+      );
+
+      await NotificationService.createCommentLikeNotification(
+        commentId,
+        userId
       );
 
       return {

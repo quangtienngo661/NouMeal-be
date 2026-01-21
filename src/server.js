@@ -1,7 +1,6 @@
 require('dotenv').config();
 const app = require('./app');
 const { mergePythonSpecs } = require('./swagger');
-const { Server } = require('socket.io')
 
 const PORT = process.env.PORT || process.env.BE_PORT || 3000;
 

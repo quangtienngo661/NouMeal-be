@@ -1,5 +1,5 @@
 const { catchAsync } = require('../libs/util/catchAsync');
-const notificationService = require('../service/notificationServices');
+const notificationService = require('../service/notificationService');
 const { validationResult } = require('express-validator');
 const AppError = require('../libs/util/AppError');
 

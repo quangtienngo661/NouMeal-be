@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controller/notificationController');
-const notificationValidation = require('../validation/notificationVadiation');
+const notificationValidation = require('../validation/notificationValidation');
 const { authenticate } = require('../middleware/authMiddleware');
 
 // ==================== STATIC ROUTES (MUST BE FIRST) ====================

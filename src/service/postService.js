@@ -3,7 +3,7 @@ const AppError = require('../libs/util/AppError');
 const User = require('../model/userModel');
 const Food = require('../model/foodModel');
 const Like = require('../model/likeModel');
-const NotificationService = require('./notificationServices');
+const NotificationService = require('./notificationService');
 class PostService {
   async createPost(postData) {
     try {

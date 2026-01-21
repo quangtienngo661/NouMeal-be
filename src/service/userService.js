@@ -5,7 +5,7 @@ const {
   nutritiousFoodConditions,
 } = require('../libs/conditions/recommendConditions');
 const { number } = require('joi');
-const NotificationService = require('./notificationServices');
+const NotificationService = require('./notificationService');
 class UserService {
   // Register a new user
   async registerUser(userData) {
@@ -243,6 +243,8 @@ class UserService {
         user.save({ validateBeforeSave: false }),
         targetUser.save({ validateBeforeSave: false }),
       ]);
+
+      await NotificationService.createFollowNotification(userId, targetUserId);
 
       return {
         message: `You are now following ${targetUser.name}`,
