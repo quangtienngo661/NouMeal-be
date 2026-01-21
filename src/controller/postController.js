@@ -3,102 +3,6 @@ const postService = require('../service/postService');
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     PostWithLikeStatus:
- *       type: object
- *       properties:
- *         _id:
- *           type: string
- *           example: "507f1f77bcf86cd799439011"
- *         author:
- *           type: object
- *           properties:
- *             _id:
- *               type: string
- *             name:
- *               type: string
- *             email:
- *               type: string
- *             avatar:
- *               type: string
- *         text:
- *           type: string
- *         foods:
- *           type: array
- *           items:
- *             type: object
- *             properties:
- *               _id:
- *                 type: string
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *               imageUrl:
- *                 type: string
- *               category:
- *                 type: string
- *               nutritionalInfo:
- *                 type: object
- *         engagement:
- *           type: object
- *           properties:
- *             likes_count:
- *               type: number
- *               example: 42
- *             comments_count:
- *               type: number
- *               example: 15
- *             shares_count:
- *               type: number
- *               example: 8
- *         visibility:
- *           type: string
- *           enum: [public, followers, private]
- *           example: public
- *         hashtags:
- *           type: array
- *           items:
- *             type: string
- *           example: ["vietnamese", "foodie", "homecooking"]
- *         has_liked:
- *           type: boolean
- *           description: Whether the current authenticated user has liked this post (false for unauthenticated users)
- *           example: true
- *         is_edited:
- *           type: boolean
- *           example: false
- *         edited_at:
- *           type: string
- *           format: date-time
- *           nullable: true
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *
- *     Pagination:
- *       type: object
- *       properties:
- *         page:
- *           type: integer
- *           example: 1
- *         limit:
- *           type: integer
- *           example: 10
- *         total:
- *           type: integer
- *           example: 156
- *         pages:
- *           type: integer
- *           example: 16
- */
-
-/**
- * @swagger
  * /api/v1/posts:
  *   post:
  *     summary: Create a new post
@@ -162,7 +66,61 @@ const postService = require('../service/postService');
  *                   type: string
  *                   example: "Post created successfully"
  *                 data:
- *                   $ref: '#/components/schemas/PostWithLikeStatus'
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     author:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                     text:
+ *                       type: string
+ *                     foods:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           imageUrl:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           nutritionalInfo:
+ *                             type: object
+ *                     engagement:
+ *                       type: object
+ *                       properties:
+ *                         likes_count:
+ *                           type: number
+ *                         comments_count:
+ *                           type: number
+ *                         shares_count:
+ *                           type: number
+ *                     visibility:
+ *                       type: string
+ *                     hashtags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     is_edited:
+ *                       type: boolean
+ *                     createdAt:
+ *                       type: string
+ *                     updatedAt:
+ *                       type: string
  *       400:
  *         description: Validation error
  *         content:
@@ -180,10 +138,9 @@ const postService = require('../service/postService');
  *         description: Authentication required
  *       500:
  *         description: Internal server error
- *
  *   get:
  *     summary: Get all posts with filters
- *     description: Retrieve posts with pagination, filtering, and sorting options. Each post includes has_liked status. Visibility logic - Unauthenticated users only see public posts. Authenticated users see public posts, their own posts, and follower-only posts from people they follow.
+ *     description: Retrieve posts with pagination, filtering, and sorting options. Visibility logic - Unauthenticated users only see public posts. Authenticated users see public posts, their own posts, and follower-only posts from people they follow.
  *     tags: [Posts]
  *     parameters:
  *       - in: query
@@ -258,9 +215,37 @@ const postService = require('../service/postService');
  *                     posts:
  *                       type: array
  *                       items:
- *                         $ref: '#/components/schemas/PostWithLikeStatus'
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           author:
+ *                             type: object
+ *                           text:
+ *                             type: string
+ *                           foods:
+ *                             type: array
+ *                           engagement:
+ *                             type: object
+ *                           visibility:
+ *                             type: string
+ *                           hashtags:
+ *                             type: array
+ *                           createdAt:
+ *                             type: string
+ *                           updatedAt:
+ *                             type: string
  *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         pages:
+ *                           type: integer
  *       500:
  *         description: Internal server error
  */
@@ -312,7 +297,7 @@ const getPosts = catchAsync(async (req, res, next) => {
  * /api/v1/posts/{postId}:
  *   get:
  *     summary: Get post by ID
- *     description: Retrieve detailed information of a specific post. Visibility permissions are checked - private posts only visible to author, follower posts visible to followers. Returns post with has_liked status for authenticated users.
+ *     description: Retrieve detailed information of a specific post. Visibility permissions are checked - private posts only visible to author, follower posts visible to followers.
  *     tags: [Posts]
  *     parameters:
  *       - in: path
@@ -333,50 +318,86 @@ const getPosts = catchAsync(async (req, res, next) => {
  *                   type: boolean
  *                   example: true
  *                 data:
- *                   $ref: '#/components/schemas/PostWithLikeStatus'
+ *                   type: object
+ *                   properties:
+ *                     _id:
+ *                       type: string
+ *                     author:
+ *                       type: object
+ *                       properties:
+ *                         _id:
+ *                           type: string
+ *                         name:
+ *                           type: string
+ *                         email:
+ *                           type: string
+ *                         avatar:
+ *                           type: string
+ *                     text:
+ *                       type: string
+ *                     foods:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           imageUrl:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           meal:
+ *                             type: string
+ *                           ingredients:
+ *                             type: array
+ *                           nutritionalInfo:
+ *                             type: object
+ *                           allergens:
+ *                             type: array
+ *                           tags:
+ *                             type: array
+ *                           isActive:
+ *                             type: boolean
+ *                     engagement:
+ *                       type: object
+ *                       properties:
+ *                         likes_count:
+ *                           type: number
+ *                         comments_count:
+ *                           type: number
+ *                         shares_count:
+ *                           type: number
+ *                     visibility:
+ *                       type: string
+ *                       enum: [public, followers, private]
+ *                     hashtags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                     is_edited:
+ *                       type: boolean
+ *                     edited_at:
+ *                       type: string
+ *                       format: date-time
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
  *       403:
  *         description: No permission to view this post
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "No permission to view this post"
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- *
  *   put:
  *     summary: Update post
- *     description: Update post content, foods, visibility or hashtags. Only post author can update. Hashtags will be auto-extracted from text and merged with provided hashtags.
+ *     description: Update post content, foods, visibility or hashtags. Only post author can update.
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -397,122 +418,26 @@ const getPosts = catchAsync(async (req, res, next) => {
  *               text:
  *                 type: string
  *                 maxLength: 5000
- *                 description: Post content text
  *               foods:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: Array of food IDs to reference
  *               visibility:
  *                 type: string
  *                 enum: [public, followers, private]
- *                 description: Post visibility setting
  *               hashtags:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: Custom hashtags (will be merged with auto-extracted ones from text)
- *           examples:
- *             update_text:
- *               summary: Update post text
- *               value:
- *                 text: "Updated my thoughts on this amazing pho! #vietnamese #updated"
- *             update_visibility:
- *               summary: Change visibility
- *               value:
- *                 visibility: "followers"
- *             full_update:
- *               summary: Update multiple fields
- *               value:
- *                 text: "Completely new post content with #newhashtags"
- *                 foods:
- *                   - "507f1f77bcf86cd799439011"
- *                 visibility: "public"
- *                 hashtags:
- *                   - "foodie"
- *                   - "dinner"
  *     responses:
  *       200:
  *         description: Post updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Post updated successfully"
- *                 data:
- *                   $ref: '#/components/schemas/PostWithLikeStatus'
  *       400:
  *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Validation Error: Text exceeds maximum length"
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       403:
  *         description: No permission to update this post
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "No permission to update this post"
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- *
  *   delete:
  *     summary: Delete post
  *     description: Delete a post. Only post author or admin can delete.
@@ -529,69 +454,10 @@ const getPosts = catchAsync(async (req, res, next) => {
  *     responses:
  *       200:
  *         description: Post deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Post deleted successfully"
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       403:
  *         description: No permission to delete this post
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "No permission to delete this post"
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 
 const getPostById = catchAsync(async (req, res, next) => {
@@ -640,7 +506,7 @@ const deletePost = catchAsync(async (req, res, next) => {
  * /api/v1/posts/user/{authorId}:
  *   get:
  *     summary: Get posts by specific user
- *     description: Retrieve all posts created by a specific user with pagination. Respects visibility rules - authenticated users see public posts, their own posts, and follower posts if they follow the author. Each post includes has_liked status for authenticated users.
+ *     description: Retrieve all posts created by a specific user with pagination. Respects visibility rules - authenticated users see public posts, their own posts, and follower posts if they follow the author.
  *     tags: [Posts]
  *     parameters:
  *       - in: path
@@ -666,7 +532,7 @@ const deletePost = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field (e.g., createdAt, updatedAt)
+ *         description: Sort field
  *       - in: query
  *         name: sortOrder
  *         schema:
@@ -684,42 +550,17 @@ const deletePost = catchAsync(async (req, res, next) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   type: object
  *                   properties:
  *                     posts:
  *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PostWithLikeStatus'
  *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
+ *                       type: object
  *       404:
  *         description: Author not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Author not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 
 // Get posts by specific user
@@ -752,7 +593,7 @@ const getUserPosts = catchAsync(async (req, res, next) => {
  * /api/v1/posts/feed:
  *   get:
  *     summary: Get feed posts
- *     description: Get personalized feed showing public posts, user's own posts (all visibility), and follower-only posts from followed users. Each post includes has_liked status for the authenticated user.
+ *     description: Get personalized feed showing public posts, user's own posts (all visibility), and follower-only posts from followed users
  *     tags: [Posts]
  *     security:
  *       - bearerAuth: []
@@ -762,85 +603,31 @@ const getUserPosts = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of posts per page
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field (e.g., createdAt, updatedAt)
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: desc
- *         description: Sort order
  *     responses:
  *       200:
  *         description: Feed posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PostWithLikeStatus'
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
  *       401:
  *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       404:
  *         description: User not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "User not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 
 // Get feed posts
@@ -868,7 +655,7 @@ const getFeedPosts = catchAsync(async (req, res, next) => {
  * /api/v1/posts/search:
  *   get:
  *     summary: Search posts
- *     description: Full-text search in post content and hashtags. Respects visibility rules - unauthenticated users only see public posts, authenticated users see public posts, their own posts, and follower-only posts from people they follow. Each post includes has_liked status for authenticated users.
+ *     description: Full-text search in post content and hashtags
  *     tags: [Posts]
  *     parameters:
  *       - in: query
@@ -877,79 +664,36 @@ const getFeedPosts = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *         description: Search query text
- *         example: "pho vietnamese"
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of posts per page
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field (e.g., createdAt, updatedAt)
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: desc
- *         description: Sort order
  *     responses:
  *       200:
  *         description: Posts found successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PostWithLikeStatus'
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
  *       400:
  *         description: Search query is required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Search query is required"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
+
 // Search posts
 const searchPosts = catchAsync(async (req, res, next) => {
   const { q, page, limit, sortBy, sortOrder } = req.query;
@@ -983,7 +727,7 @@ const searchPosts = catchAsync(async (req, res, next) => {
  * /api/v1/posts/hashtag/{hashtag}:
  *   get:
  *     summary: Get posts by hashtag
- *     description: Retrieve posts containing a specific hashtag. Respects visibility rules - unauthenticated users only see public posts, authenticated users see public posts, their own posts, and follower-only posts from people they follow. Each post includes has_liked status for authenticated users.
+ *     description: Retrieve posts containing a specific hashtag
  *     tags: [Posts]
  *     parameters:
  *       - in: path
@@ -992,65 +736,32 @@ const searchPosts = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *         description: Hashtag (without # symbol)
- *         example: "vietnamese"
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of posts per page
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field (e.g., createdAt, updatedAt)
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: desc
- *         description: Sort order
  *     responses:
  *       200:
  *         description: Posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PostWithLikeStatus'
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 
 // Get posts by hashtag
@@ -1083,7 +794,7 @@ const getPostsByHashtag = catchAsync(async (req, res, next) => {
  * /api/v1/posts/food/{foodId}:
  *   get:
  *     summary: Get posts by food
- *     description: Retrieve posts that reference a specific food. Respects visibility rules - unauthenticated users only see public posts, authenticated users see public posts, their own posts, and follower-only posts from people they follow. Each post includes has_liked status for authenticated users.
+ *     description: Retrieve posts that reference a specific food
  *     tags: [Posts]
  *     parameters:
  *       - in: path
@@ -1092,79 +803,36 @@ const getPostsByHashtag = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *         description: Food ID
- *         example: "507f1f77bcf86cd799439011"
  *       - in: query
  *         name: page
  *         schema:
  *           type: integer
  *           default: 1
- *         description: Page number
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         description: Number of posts per page
  *       - in: query
  *         name: sortBy
  *         schema:
  *           type: string
  *           default: createdAt
- *         description: Sort field (e.g., createdAt, updatedAt)
  *       - in: query
  *         name: sortOrder
  *         schema:
  *           type: string
  *           enum: [asc, desc]
  *           default: desc
- *         description: Sort order
  *     responses:
  *       200:
  *         description: Posts retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     posts:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/PostWithLikeStatus'
- *                     pagination:
- *                       $ref: '#/components/schemas/Pagination'
  *       404:
  *         description: Food not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Food not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
+
 // Get posts by food
 const getPostsByFood = catchAsync(async (req, res, next) => {
   const { foodId } = req.params;
@@ -1216,7 +884,6 @@ const getPostsByFood = catchAsync(async (req, res, next) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   type: array
  *                   items:
@@ -1224,23 +891,10 @@ const getPostsByFood = catchAsync(async (req, res, next) => {
  *                     properties:
  *                       hashtag:
  *                         type: string
- *                         example: "vietnamese"
  *                       count:
  *                         type: number
- *                         example: 156
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 
 // Get trending hashtags
@@ -1270,7 +924,6 @@ const getTrendingHashtags = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *         description: Post ID
- *         example: "507f1f77bcf86cd799439011"
  *     responses:
  *       200:
  *         description: Statistics retrieved successfully
@@ -1281,65 +934,32 @@ const getTrendingHashtags = catchAsync(async (req, res, next) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 data:
  *                   type: object
  *                   properties:
  *                     post_id:
  *                       type: string
- *                       example: "507f1f77bcf86cd799439011"
  *                     engagement:
  *                       type: object
  *                       properties:
  *                         likes_count:
  *                           type: number
- *                           example: 42
  *                         comments_count:
  *                           type: number
- *                           example: 15
  *                         shares_count:
  *                           type: number
- *                           example: 8
  *                     visibility:
  *                       type: string
- *                       enum: [public, followers, private]
- *                       example: "public"
  *                     is_edited:
  *                       type: boolean
- *                       example: false
  *                     created_at:
  *                       type: string
- *                       format: date-time
  *                     edited_at:
  *                       type: string
- *                       format: date-time
- *                       nullable: true
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
  */
 
 // Get post statistics
@@ -1370,7 +990,6 @@ const getPostStatistics = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *         description: Post ID
- *         example: "507f1f77bcf86cd799439011"
  *     responses:
  *       200:
  *         description: Post liked successfully
@@ -1381,72 +1000,21 @@ const getPostStatistics = catchAsync(async (req, res, next) => {
  *               properties:
  *                 success:
  *                   type: boolean
- *                   example: true
  *                 message:
  *                   type: string
- *                   example: "Post liked successfully"
  *                 data:
  *                   type: object
  *                   properties:
  *                     post_id:
  *                       type: string
- *                       example: "507f1f77bcf86cd799439011"
  *                     likes_count:
  *                       type: number
- *                       example: 43
  *       400:
  *         description: Already liked or validation error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "You have already liked this post"
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- *
+ *       401:
+ *         description: Authentication required
  *   delete:
  *     summary: Unlike a post
  *     description: Remove a like from a post and decrement likes count
@@ -1460,82 +1028,15 @@ const getPostStatistics = catchAsync(async (req, res, next) => {
  *         schema:
  *           type: string
  *         description: Post ID
- *         example: "507f1f77bcf86cd799439011"
  *     responses:
  *       200:
  *         description: Post unliked successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Post unliked successfully"
- *                 data:
- *                   type: object
- *                   properties:
- *                     post_id:
- *                       type: string
- *                       example: "507f1f77bcf86cd799439011"
- *                     likes_count:
- *                       type: number
- *                       example: 41
  *       400:
  *         description: Not liked yet or validation error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "You have not liked this post yet"
- *       401:
- *         description: Authentication required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Authentication required"
  *       404:
  *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
+ *       401:
+ *         description: Authentication required
  */
 
 // Like a post
@@ -1565,125 +1066,6 @@ const unlikePost = catchAsync(async (req, res, next) => {
     data: result,
   });
 });
-/**
- * @swagger
- * /api/v1/posts/{postId}/likes:
- *   get:
- *     summary: Get users who liked a post
- *     description: Retrieve a paginated list of users who have liked a specific post
- *     tags: [Posts]
- *     parameters:
- *       - in: path
- *         name: postId
- *         required: true
- *         schema:
- *           type: string
- *         description: Post ID
- *         example: "507f1f77bcf86cd799439011"
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 20
- *         description: Number of users per page
- *     responses:
- *       200:
- *         description: Users retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: object
- *                   properties:
- *                     users:
- *                       type: array
- *                       items:
- *                         type: object
- *                         properties:
- *                           _id:
- *                             type: string
- *                             example: "507f1f77bcf86cd799439012"
- *                           name:
- *                             type: string
- *                             example: "John Doe"
- *                           email:
- *                             type: string
- *                             example: "john@example.com"
- *                           avatar:
- *                             type: string
- *                             example: "https://example.com/avatar.jpg"
- *                           liked_at:
- *                             type: string
- *                             format: date-time
- *                     pagination:
- *                       type: object
- *                       properties:
- *                         page:
- *                           type: integer
- *                           example: 1
- *                         limit:
- *                           type: integer
- *                           example: 20
- *                         total:
- *                           type: integer
- *                           example: 42
- *                         pages:
- *                           type: integer
- *                           example: 3
- *       404:
- *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: false
- *                 message:
- *                   type: string
- *                   example: "Internal server error"
- */
-const getPostLikes = catchAsync(async (req, res, next) => {
-  const { postId } = req.params;
-  const { page, limit } = req.query;
-
-  const options = {
-    page: page ? parseInt(page) : 1,
-    limit: limit ? parseInt(limit) : 20,
-  };
-
-  const result = await postService.getPostLikes(postId, options);
-
-  res.status(200).json({
-    success: true,
-    data: result,
-  });
-});
 
 module.exports = {
   createPost,
@@ -1700,5 +1082,4 @@ module.exports = {
   getPostStatistics,
   likePost,
   unlikePost,
-  getPostLikes,
 };

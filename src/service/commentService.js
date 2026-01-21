@@ -3,7 +3,7 @@ const Post = require('../model/postModel');
 const Like = require('../model/likeModel');
 const User = require('../model/userModel');
 const AppError = require('../libs/util/AppError');
-
+const NotificationService = require('./notificationService');
 class CommentService {
   async createComment(commentData) {
     try {
@@ -38,6 +38,18 @@ class CommentService {
         await Comment.findByIdAndUpdate(parent_comment, {
           $inc: { replies_count: 1 },
         });
+
+        await NotificationService.createCommentReplyNotification(
+          newComment._id,
+          parent_comment,
+          author
+        );
+      } else {
+        await NotificationService.createPostCommentNotification(
+          newComment._id,
+          post,
+          author
+        );
       }
 
       return await this.getCommentById(newComment._id, author);
@@ -316,6 +328,11 @@ class CommentService {
         commentId,
         { $inc: { likes_count: 1 } },
         { new: true }
+      );
+
+      await NotificationService.createCommentLikeNotification(
+        commentId,
+        userId
       );
 
       return {

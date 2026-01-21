@@ -13,7 +13,24 @@ from dotenv import load_dotenv
 
 from flasgger import Swagger
 load_dotenv()
-
+DIETARY_PREFERENCE_TAGS = [
+    "vegetarian",
+    "vegan", 
+    "pescatarian",
+    "keto",
+    "paleo",
+    "low_carb",
+    "low_fat",
+    "high_protein",
+    "gluten_free",
+    "dairy_free",
+    "halal",
+    "kosher",
+    "organic",
+    "low_sodium",
+    "diabetic_friendly",
+    "heart_healthy"
+]
 app = Flask(__name__)
 CORS(app)
 
@@ -614,75 +631,6 @@ def internal_quick_scan(image):
     return {"detected_foods": detected_foods, "total": len(detected_foods)}
 
 
-def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, budget_range, cooking_time):
-    prompt = f"""Suggest a meal for {meal_time} for someone with {health_condition} condition.
-
-Requirements:
-- Dietary preferences: {dietary_preferences}
-- Budget: {budget_range}
-- Cooking time: {cooking_time}
-
-Return:
-1. Suggested dishes (3-5 options)
-2. Nutritional information for each
-3. Brief recipe/preparation guide
-4. Estimated cost and time"""
-    
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a nutrition expert specializing in Vietnamese cuisine."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=1500,
-        temperature=0.7
-    )
-    
-    suggestion = response.choices[0].message.content
-    
-    return {
-        "meal_time": meal_time,
-        "health_condition": health_condition,
-        "suggestions": suggestion,
-        "budget_range": budget_range,
-        "cooking_time": cooking_time
-    }
-
-
-def internal_weekly_menu(health_condition, dietary_preferences, budget_range, cooking_time):
-    prompt = f"""Create a 7-day weekly menu for someone with {health_condition} condition.
-
-Requirements:
-- Dietary preferences: {dietary_preferences}
-- Daily budget: {budget_range}
-- Cooking time per meal: {cooking_time}
-
-Return a complete weekly plan with:
-1. Breakfast, lunch, dinner for each day
-2. Nutritional balance for the week
-3. Shopping list
-4. Meal prep tips"""
-    
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a nutrition expert specializing in meal planning."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=3000,
-        temperature=0.7
-    )
-    
-    menu = response.choices[0].message.content
-    
-    return {
-        "duration": "7 days",
-        "health_condition": health_condition,
-        "weekly_menu": menu,
-        "budget_range": budget_range
-    }
-
-
 def internal_detailed_recipes(days, health_condition, dietary_preferences, budget_range):
     prompt = f"""Create detailed recipes for {days} days for someone with {health_condition} condition.
 
@@ -719,27 +667,80 @@ For each recipe, provide:
 
 def internal_meal_suggestion(meal_time, health_condition, dietary_preferences, budget_range, cooking_time, user_query=None):
     """
-    Suggest meals based on user description
-    Returns a list of meals with nutrition facts, ingredients, instructions
+    Suggest meals based on dietary preference tags
+    Returns a list of meals matching the selected tags
     """
     
+    # Validate dietary_preferences against allowed tags (OPTIONAL)
+    preference_list = []
+    preferences_text = "none"
+    
+    if dietary_preferences and dietary_preferences != "none":
+        # Convert comma-separated string to list
+        preference_list = [p.strip().lower() for p in dietary_preferences.split(",")]
+        
+        # Validate tags
+        invalid_tags = [p for p in preference_list if p not in DIETARY_PREFERENCE_TAGS]
+        if invalid_tags:
+            return {
+                "error": f"Invalid dietary preference tags: {', '.join(invalid_tags)}. Must be one of: {', '.join(DIETARY_PREFERENCE_TAGS)}",
+                "valid_tags": DIETARY_PREFERENCE_TAGS
+            }
+        
+        preferences_text = ", ".join(preference_list)
+    
+    # Tạo danh sách tags cho prompt (uppercase for display)
+    allowed_tags_display = ", ".join([tag.upper().replace('_', '-') for tag in DIETARY_PREFERENCE_TAGS])
+    
     # Create prompt for AI
-    if user_query:
-        # If there's a query from user (e.g., "High protein lunch")
-        prompt = f"""You are a nutrition expert. The user wants: "{user_query}"
+    if preference_list:
+        # Có dietary preferences - phải match chặt chẽ
+        prompt = f"""You are a nutrition expert. The user wants: "{user_query if user_query else f'{meal_time} meal'}"
 
-Please suggest 1-3 most suitable meals. Return JSON with the following structure (NO markdown):
+**STRICT REQUIREMENTS:**
+- MUST match ALL dietary preferences: {preferences_text}
+- Meal time: {meal_time}
+- Health condition: {health_condition}
+- Budget: {budget_range}
+- Cooking time: {cooking_time}
+
+**VALID DIETARY TAGS (for internal classification only):**
+{allowed_tags_display}
+
+Please suggest 1-3 meals that STRICTLY match ALL the dietary preferences listed above. Return JSON (NO markdown):
 
 {{
     "suggested_meals": [
         {{
             "name": "Dish name (English or Vietnamese)",
-            "description": "Brief description of the dish and why it's suitable",
+            "description": "Why this dish matches the requirements",
             "difficulty": "EASY/MEDIUM/HARD",
-            "match_percentage": 98,
+            "match_percentage": 95,
             "prep_time": "15 minutes",
             "servings": 2,
-            "tags": ["HIGH-PROTEIN", "LOW-CARB", "GLUTEN-FREE OPTION"],
+            "tags": ["VEGETARIAN", "HIGH-PROTEIN", "GLUTEN-FREE"],
+            "allergen_info": {{
+                "contains": ["soy", "nuts"],
+                "free_from": ["gluten", "dairy", "shellfish"]
+            }},
+            "dietary_compliance": {{
+                "vegetarian": true,
+                "vegan": false,
+                "gluten_free": true,
+                "high_protein": true,
+                "keto": false,
+                "paleo": false,
+                "low_carb": false,
+                "low_fat": false,
+                "dairy_free": true,
+                "pescatarian": false,
+                "halal": true,
+                "kosher": false,
+                "organic": false,
+                "low_sodium": false,
+                "diabetic_friendly": true,
+                "heart_healthy": true
+            }},
             "nutrition_facts": {{
                 "calories": {{"value": 420, "unit": "cal"}},
                 "protein": {{"value": 38, "unit": "g"}},
@@ -751,54 +752,110 @@ Please suggest 1-3 most suitable meals. Return JSON with the following structure
                 "cholesterol": {{"value": 85, "unit": "mg"}}
             }},
             "ingredients": [
-                "2 chicken breasts",
-                "4 cups romaine lettuce",
-                "1/2 cup Caesar dressing",
-                "1/4 cup parmesan cheese",
-                "1 cup croutons",
-                "Lemon wedges",
-                "Olive oil for grilling",
-                "Salt and pepper"
+                "Ingredient 1 with quantity",
+                "Ingredient 2 with quantity"
             ],
             "instructions": [
-                "Season chicken breasts with salt, pepper, and olive oil.",
-                "Grill chicken for 6-7 minutes per side until fully cooked.",
-                "Let chicken rest for 5 minutes, then slice.",
-                "Wash and chop romaine lettuce.",
-                "In a large bowl, toss lettuce with Caesar dressing.",
-                "Add croutons and parmesan cheese.",
-                "Top with grilled chicken slices.",
-                "Serve with lemon wedges."
+                "Step 1",
+                "Step 2"
             ]
         }}
     ]
 }}
 
-Notes:
-- match_percentage: Suitability with requirements (0-100%)
-- tags: Key characteristics (HIGH-PROTEIN, LOW-CARB, VEGETARIAN, GLUTEN-FREE, QUICK, etc.)
-- nutrition_facts: Detailed nutrition per serving
-- ingredients: List of ingredients with specific quantities
-- instructions: Clear, easy-to-understand steps
-- Prioritize popular dishes, easy to make, with ingredients available in Vietnam"""
+**CRITICAL RULES:**
+1. If user selected "vegetarian", ALL meals MUST be 100% vegetarian
+2. If user selected "gluten_free", ALL meals MUST be 100% gluten-free
+3. If user selected multiple preferences (e.g., "vegan,high_protein"), meals MUST satisfy ALL of them
+4. The "tags" array must contain UPPERCASE versions of all matching dietary tags
+5. The "dietary_compliance" object must accurately reflect which diets this meal complies with
+6. The "allergen_info" must list all allergens present and explicitly state what it's free from
+7. match_percentage should reflect how well the meal matches ALL requirements (80-100%)
+8. Prioritize Vietnamese and Asian cuisine when appropriate
+9. Ingredients must be available in Vietnam"""
     else:
-        # Fallback: Use old information
-        prompt = f"""Suggest meals for {meal_time}:
-- Health: {health_condition}
-- Preferences: {dietary_preferences}
-- Budget: {budget_range}
-- Time: {cooking_time}
+        # Không có dietary preferences - gợi ý tự do
+        prompt = f"""You are a nutrition expert. The user wants: "{user_query if user_query else f'{meal_time} meal'}"
 
-Return JSON format as above with 2-3 suitable Vietnamese dishes."""
+**REQUIREMENTS:**
+- Meal time: {meal_time}
+- Health condition: {health_condition}
+- Budget: {budget_range}
+- Cooking time: {cooking_time}
+
+Please suggest 2-3 delicious and suitable meals. Return JSON (NO markdown):
+
+{{
+    "suggested_meals": [
+        {{
+            "name": "Dish name (English or Vietnamese)",
+            "description": "Brief description of the dish",
+            "difficulty": "EASY/MEDIUM/HARD",
+            "match_percentage": 90,
+            "prep_time": "15 minutes",
+            "servings": 2,
+            "tags": ["HIGH-PROTEIN", "DAIRY-FREE"],
+            "allergen_info": {{
+                "contains": ["fish", "soy"],
+                "free_from": ["gluten", "dairy", "nuts"]
+            }},
+            "dietary_compliance": {{
+                "vegetarian": false,
+                "vegan": false,
+                "gluten_free": true,
+                "high_protein": true,
+                "keto": false,
+                "paleo": false,
+                "low_carb": false,
+                "low_fat": false,
+                "dairy_free": true,
+                "pescatarian": true,
+                "halal": true,
+                "kosher": false,
+                "organic": false,
+                "low_sodium": false,
+                "diabetic_friendly": false,
+                "heart_healthy": true
+            }},
+            "nutrition_facts": {{
+                "calories": {{"value": 420, "unit": "cal"}},
+                "protein": {{"value": 38, "unit": "g"}},
+                "carbs": {{"value": 18, "unit": "g"}},
+                "fat": {{"value": 22, "unit": "g"}},
+                "fiber": {{"value": 4, "unit": "g"}},
+                "sugar": {{"value": 3, "unit": "g"}},
+                "sodium": {{"value": 680, "unit": "mg"}},
+                "cholesterol": {{"value": 85, "unit": "mg"}}
+            }},
+            "ingredients": [
+                "Ingredient 1 with quantity",
+                "Ingredient 2 with quantity"
+            ],
+            "instructions": [
+                "Step 1",
+                "Step 2"
+            ]
+        }}
+    ]
+}}
+
+**RULES:**
+1. Prioritize popular, tasty Vietnamese and Asian dishes
+2. The "tags" array must contain all applicable dietary tags in UPPERCASE
+3. The "dietary_compliance" object must accurately reflect the meal's dietary compatibility
+4. The "allergen_info" must list common allergens and what the dish is free from
+5. Ingredients must be available in Vietnam
+6. Consider the health condition: {health_condition}
+7. Suitable for {meal_time}"""
     
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a nutrition expert and professional chef."},
+                {"role": "system", "content": "You are a nutrition expert. If dietary preferences are specified, ALWAYS strictly match them. Never suggest meals that violate the specified dietary restrictions. Always provide tags, allergen_info, and dietary_compliance for each meal."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=2500,
+            max_tokens=3000,
             temperature=0.7
         )
         
@@ -812,19 +869,23 @@ Return JSON format as above with 2-3 suitable Vietnamese dishes."""
         
         suggestion_data = json.loads(response_text)
         
+        # Get meals
+        meals = suggestion_data.get("suggested_meals", [])
+        
         return {
             "message": "Meal suggestions completed successfully",
             "data": {
                 "query": user_query or f"{meal_time} meal",
-                "total_suggestions": len(suggestion_data.get("suggested_meals", [])),
-                "meals": suggestion_data.get("suggested_meals", []),
+                "total_suggestions": len(meals),
+                "meals": meals,
                 "filters": {
                     "meal_time": meal_time,
                     "health_condition": health_condition,
-                    "dietary_preferences": dietary_preferences,
+                    "dietary_preferences": preference_list if preference_list else None,
                     "budget_range": budget_range,
                     "cooking_time": cooking_time
-                }
+                },
+                "available_tags": DIETARY_PREFERENCE_TAGS
             }
         }
         
@@ -832,7 +893,6 @@ Return JSON format as above with 2-3 suitable Vietnamese dishes."""
         print(f"❌ JSON Parse Error: {str(e)}")
         print(f"Response: {response_text}")
         
-        # Fallback
         return {
             "message": "Meal suggestions completed successfully (text mode)",
             "data": {
@@ -843,8 +903,9 @@ Return JSON format as above with 2-3 suitable Vietnamese dishes."""
                 "filters": {
                     "meal_time": meal_time,
                     "health_condition": health_condition,
-                    "dietary_preferences": dietary_preferences
-                }
+                    "dietary_preferences": preference_list if preference_list else None
+                },
+                "available_tags": DIETARY_PREFERENCE_TAGS
             }
         }
         
@@ -852,17 +913,25 @@ Return JSON format as above with 2-3 suitable Vietnamese dishes."""
         print(f"❌ Meal Suggestion Error: {str(e)}")
         return {"error": f"Meal suggestion error: {str(e)}"}
 
+
 @app.route('/api/v1/meal-suggestion', methods=['POST'])
 def meal_suggestion():
     """
-    Suggest meals based on user description
+    Suggest meals based on dietary preference tags
     ---
     tags:
       - Meal Planning
-    summary: AI suggests meals from description
+    summary: AI suggests meals (optionally matching dietary tags)
     description: >
-      User inputs description (e.g., "High protein lunch", "Quick vegan dinner"),
-      AI will suggest suitable dishes with nutrition facts, ingredients, instructions.
+      Suggest meals based on query and optional dietary preference tags.
+      
+      **If dietary_preferences is provided:** AI will suggest ONLY dishes that match ALL selected tags.
+      
+      **If dietary_preferences is not provided:** AI will suggest meals freely based on the query.
+      
+      **Valid Tags:** vegetarian, vegan, pescatarian, keto, paleo, low_carb, low_fat, 
+      high_protein, gluten_free, dairy_free, halal, kosher, organic, low_sodium, 
+      diabetic_friendly, heart_healthy
     requestBody:
       required: true
       content:
@@ -876,14 +945,17 @@ def meal_suggestion():
                 example: "High protein lunch"
               meal_time:
                 type: string
-                description: Meal time (breakfast/lunch/dinner/snack)
+                description: Meal time
+                enum: [breakfast, lunch, dinner, snack]
                 default: "lunch"
               health_condition:
                 type: string
                 default: "healthy"
+                example: "diabetes"
               dietary_preferences:
                 type: string
-                default: "none"
+                description: Comma-separated dietary tags (OPTIONAL - if provided, must be valid tags)
+                example: "vegetarian,high_protein,gluten_free"
               budget_range:
                 type: string
                 default: "100k"
@@ -930,6 +1002,19 @@ def meal_suggestion():
                             type: array
                             items:
                               type: string
+                          allergen_info:
+                            type: object
+                            properties:
+                              contains:
+                                type: array
+                                items:
+                                  type: string
+                              free_from:
+                                type: array
+                                items:
+                                  type: string
+                          dietary_compliance:
+                            type: object
                           nutrition_facts:
                             type: object
                           ingredients:
@@ -940,75 +1025,75 @@ def meal_suggestion():
                             type: array
                             items:
                               type: string
+                    available_tags:
+                      type: array
+                      items:
+                        type: string
             example:
               success: true
               message: "Meal suggestions completed successfully"
               data:
                 query: "High protein lunch"
-                total_suggestions: 1
+                total_suggestions: 2
                 meals:
-                  - name: "Grilled Chicken Caesar Salad"
-                    description: "Outstanding protein content (38g) with balanced macros. Perfect for muscle building and satiety."
-                    difficulty: "MEDIUM"
-                    match_percentage: 98
-                    prep_time: "25 minutes"
+                  - name: "Grilled Chicken Salad"
+                    description: "Healthy high-protein meal"
+                    difficulty: "EASY"
+                    match_percentage: 95
+                    prep_time: "20 minutes"
                     servings: 2
-                    tags: ["HIGH-PROTEIN", "LOW-CARB", "GLUTEN-FREE OPTION"]
+                    tags: ["HIGH-PROTEIN", "GLUTEN-FREE", "DAIRY-FREE"]
+                    allergen_info:
+                      contains: []
+                      free_from: ["gluten", "dairy", "nuts"]
+                    dietary_compliance:
+                      vegetarian: false
+                      high_protein: true
+                      gluten_free: true
                     nutrition_facts:
-                      calories: {"value": 420, "unit": "cal"}
-                      protein: {"value": 38, "unit": "g"}
-                      carbs: {"value": 18, "unit": "g"}
-                      fat: {"value": 22, "unit": "g"}
-                      fiber: {"value": 4, "unit": "g"}
-                      sugar: {"value": 3, "unit": "g"}
-                      sodium: {"value": 680, "unit": "mg"}
-                      cholesterol: {"value": 85, "unit": "mg"}
-                    ingredients:
-                      - "2 chicken breasts"
-                      - "4 cups romaine lettuce"
-                      - "1/2 cup Caesar dressing"
-                      - "1/4 cup parmesan cheese"
-                      - "1 cup croutons"
-                      - "Lemon wedges"
-                      - "Olive oil for grilling"
-                      - "Salt and pepper"
-                    instructions:
-                      - "Season chicken breasts with salt, pepper, and olive oil."
-                      - "Grill chicken for 6-7 minutes per side until fully cooked."
-                      - "Let chicken rest for 5 minutes, then slice."
-                      - "Wash and chop romaine lettuce."
-                      - "In a large bowl, toss lettuce with Caesar dressing."
-                      - "Add croutons and parmesan cheese."
-                      - "Top with grilled chicken slices."
-                      - "Serve with lemon wedges."
+                      calories: {"value": 380, "unit": "cal"}
+                      protein: {"value": 35, "unit": "g"}
+                available_tags: ["vegetarian", "vegan", "keto", ...]
       400:
-        description: Missing information
-      500:
-        description: Server error
+        description: Invalid dietary preference tags
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                error:
+                  type: string
+                valid_tags:
+                  type: array
+                  items:
+                    type: string
+            example:
+              success: false
+              error: "Invalid dietary preference tags: low_sugar, no_carbs. Must be one of: vegetarian, vegan, ..."
+              valid_tags: ["vegetarian", "vegan", "keto", ...]
     """
     try:
         data = request.json
         
-        # Get query from user (e.g., "High protein lunch")
-        user_query = data.get("query", "").strip()
+        # Get dietary preferences (OPTIONAL)
+        dietary_preferences = data.get("dietary_preferences", "none").strip()
         
-        if not user_query:
-            return jsonify({
-                "success": False,
-                "error": "Query cannot be empty"
-            }), 400
+        # Get query from user (optional but recommended)
+        user_query = data.get("query", "").strip()
         
         result = internal_meal_suggestion(
             data.get("meal_time", "lunch"),
             data.get("health_condition", "healthy"),
-            data.get("dietary_preferences", "none"),
+            dietary_preferences,
             data.get("budget_range", "100k"),
-            data.get("cooking_time", "30 minutes"),  # ✅ Added this line
-            user_query=user_query
+            data.get("cooking_time", "30 minutes"),
+            user_query=user_query if user_query else None
         )
         
         if "error" in result:
-            return jsonify({"success": False, **result}), 500
+            return jsonify({"success": False, **result}), 400
         
         return jsonify({"success": True, **result}), 200
         
@@ -1017,7 +1102,6 @@ def meal_suggestion():
             "success": False,
             "error": str(e)
         }), 500
-
 
 def internal_weekly_menu(health_condition, dietary_preferences, budget_range, cooking_time):
     prompt = f"""Create a 7-day menu:

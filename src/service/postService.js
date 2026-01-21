@@ -3,6 +3,7 @@ const AppError = require('../libs/util/AppError');
 const User = require('../model/userModel');
 const Food = require('../model/foodModel');
 const Like = require('../model/likeModel');
+const NotificationService = require('./notificationService');
 class PostService {
   async createPost(postData) {
     try {
@@ -182,39 +183,69 @@ class PostService {
 
       const query = {};
 
-      // Visibility filter with proper logic
+      // Build visibility query
       if (userId) {
         const user = await User.findById(userId);
         if (!user) {
           throw new AppError('User not found', 404);
         }
 
-        const followingIds = user.following || [];
+        const followingIds = (user.followingUsers || []).map((id) =>
+          id.toString()
+        );
 
-        query.$or = [
-          { visibility: 'public' },
-          { author: userId },
-          {
-            visibility: 'followers',
-            author: { $in: followingIds },
-          },
-        ];
+        // Nếu có filter author cụ thể
+        if (author) {
+          const authorIdStr = author.toString();
+
+          // Nếu đang xem posts của chính mình
+          if (authorIdStr === userId.toString()) {
+            query.author = author;
+            // Có thể xem tất cả visibility của chính mình
+          }
+          // Nếu đang xem posts của người mình follow
+          else if (followingIds.includes(authorIdStr)) {
+            query.author = author;
+            query.visibility = { $in: ['public', 'followers'] };
+          }
+          // Nếu đang xem posts của người lạ
+          else {
+            query.author = author;
+            query.visibility = 'public';
+          }
+        }
+        // Nếu không có filter author (xem tất cả posts)
+        else {
+          query.$or = [
+            { visibility: 'public' },
+            { author: userId },
+            {
+              visibility: 'followers',
+              author: { $in: followingIds },
+            },
+          ];
+        }
       } else {
-        // Non-authenticated users can only see public posts
+        // Non-authenticated users
+        if (author) {
+          query.author = author;
+        }
         query.visibility = 'public';
       }
 
-      // Apply other filters
-      if (author) query.author = author;
-
-      // Override visibility if explicitly requested and user has access
-      if (visibility && userId) {
-        // Only allow filtering by visibility if user is authenticated
+      // Override visibility if explicitly requested
+      if (visibility && !author) {
+        delete query.$or;
         query.visibility = visibility;
       }
 
-      if (hashtags && hashtags.length > 0) {
-        query.hashtags = { $in: hashtags.map((tag) => tag.toLowerCase()) };
+      if (hashtags) {
+        const hashtagArray = Array.isArray(hashtags) ? hashtags : [hashtags];
+        if (hashtagArray.length > 0) {
+          query.hashtags = {
+            $in: hashtagArray.map((tag) => tag.toLowerCase()),
+          };
+        }
       }
 
       if (foodId) {
@@ -246,7 +277,27 @@ class PostService {
           .lean(),
         Post.countDocuments(query),
       ]);
+
+      // Add is_from_follower metadata
+      if (userId) {
+        const user = await User.findById(userId);
+        const followingIds = (user?.followingUsers || []).map((id) =>
+          id.toString()
+        );
+
+        posts.forEach((post) => {
+          post.is_from_follower = followingIds.includes(
+            post.author._id.toString()
+          );
+        });
+      } else {
+        posts.forEach((post) => {
+          post.is_from_follower = false;
+        });
+      }
+
       await this._addLikeStatusBulk(posts, userId);
+
       return {
         posts,
         pagination: {
@@ -285,62 +336,212 @@ class PostService {
         throw new AppError('User not found', 404);
       }
 
-      const followingIds = user.following || [];
-
-      const query = {
-        $or: [
-          { visibility: 'public' },
-          {
-            visibility: 'followers',
-            author: { $in: [...followingIds, userId] },
-          },
-          { author: userId },
-        ],
-      };
-
-      const {
-        page = 1,
-        limit = 10,
-        sortBy = 'createdAt',
-        sortOrder = 'desc',
-      } = options;
-
+      const followingIds = user.followingUsers || [];
+      const { page = 1, limit = 10 } = options;
       const skip = (page - 1) * limit;
-      const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
 
-      const [posts, total] = await Promise.all([
-        Post.find(query)
-          .populate('author', 'name email avatar')
-          .populate({
-            path: 'foods',
-            select:
-              'name description imageUrl category meal ingredients nutritionalInfo allergens tags postedBy isActive',
-            match: { isActive: true },
-          })
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
-        Post.countDocuments(query),
-      ]);
-      await this._addLikeStatusBulk(posts, userId);
+      const userHashtags = [
+        ...(user.preferences || []).map((pref) => pref.toLowerCase()),
+        ...(user.allergies || []).map((allergy) => allergy.toLowerCase()),
+      ];
+
+      const hasFollowing = followingIds.length > 0;
+      const hasHashtags = userHashtags.length > 0;
+
+      // Nếu không follow ai và không có hashtag nào → lấy tất cả public posts
+      if (!hasFollowing && !hasHashtags) {
+        const [posts, total] = await Promise.all([
+          Post.find({ visibility: 'public' })
+            .populate('author', 'name email avatar')
+            .populate({
+              path: 'foods',
+              select:
+                'name description imageUrl category meal ingredients nutritionalInfo allergens tags postedBy isActive',
+              match: { isActive: true },
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
+          Post.countDocuments({ visibility: 'public' }),
+        ]);
+
+        // Thêm metadata cho các posts
+        posts.forEach((post) => {
+          post.priority = 3;
+          post.source = 'public';
+          post.is_from_follower = false;
+        });
+
+        await this._addLikeStatusBulk(posts, userId);
+
+        return {
+          posts,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            pages: Math.ceil(total / limit),
+          },
+          stats: {
+            followingPosts: 0,
+            hashtagPosts: 0,
+            publicPosts: posts.length,
+            totalUnique: total,
+            userHashtags: 0,
+            followingCount: 0,
+          },
+        };
+      }
+
+      // Logic cũ cho trường hợp có following hoặc hashtags
+      let followingPosts = [];
+      let hashtagPosts = [];
+
+      if (hasFollowing) {
+        followingPosts = await Post.aggregate([
+          {
+            $match: {
+              author: { $in: followingIds },
+              $or: [
+                { visibility: 'public' },
+                { visibility: 'followers', author: { $in: followingIds } },
+              ],
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $addFields: {
+              priority: 1,
+              source: 'following',
+              is_from_follower: true,
+            },
+          },
+        ]);
+      }
+
+      if (hasHashtags) {
+        hashtagPosts = await Post.aggregate([
+          {
+            $match: {
+              visibility: 'public',
+              author: { $nin: [...followingIds, userId] },
+              hashtags: { $in: userHashtags },
+            },
+          },
+          {
+            $addFields: {
+              priority: 2,
+              source: 'hashtag',
+              matchScore: {
+                $size: {
+                  $setIntersection: ['$hashtags', userHashtags],
+                },
+              },
+            },
+          },
+          {
+            $sort: {
+              matchScore: -1,
+              createdAt: -1,
+            },
+          },
+        ]);
+      }
+
+      // Nếu có following nhưng không có hashtag → thêm public posts để đủ nội dung
+      if (hasFollowing && !hasHashtags && followingPosts.length < limit) {
+        const publicPosts = await Post.aggregate([
+          {
+            $match: {
+              visibility: 'public',
+              author: { $nin: [...followingIds, userId] },
+            },
+          },
+          {
+            $sort: { createdAt: -1 },
+          },
+          {
+            $limit: limit * 2,
+          },
+          {
+            $addFields: {
+              priority: 3,
+              source: 'public',
+              is_from_follower: false,
+            },
+          },
+        ]);
+        hashtagPosts = publicPosts;
+      }
+
+      const allPosts = [...followingPosts, ...hashtagPosts];
+
+      // Sắp xếp theo thời gian sau khi merge
+      allPosts.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      const uniquePosts = [];
+      const seenIds = new Set();
+
+      for (const post of allPosts) {
+        const postId = post._id.toString();
+        if (!seenIds.has(postId)) {
+          seenIds.add(postId);
+          uniquePosts.push(post);
+        }
+      }
+
+      const paginatedPosts = uniquePosts.slice(skip, skip + limit);
+
+      const postIds = paginatedPosts.map((p) => p._id);
+      const populatedPosts = await Post.find({ _id: { $in: postIds } })
+        .populate('author', 'name email avatar')
+        .populate({
+          path: 'foods',
+          select:
+            'name description imageUrl category meal ingredients nutritionalInfo allergens tags postedBy isActive',
+          match: { isActive: true },
+        })
+        .lean();
+
+      const postsMap = new Map(
+        populatedPosts.map((p) => [p._id.toString(), p])
+      );
+      const orderedPosts = paginatedPosts
+        .map((p) => {
+          const populated = postsMap.get(p._id.toString());
+          if (populated) {
+            populated.priority = p.priority;
+            populated.source = p.source;
+            populated.matchScore = p.matchScore;
+            populated.is_from_follower = p.is_from_follower || false;
+          }
+          return populated;
+        })
+        .filter(Boolean);
+
+      await this._addLikeStatusBulk(orderedPosts, userId);
+
       return {
-        posts,
+        posts: orderedPosts,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / limit),
+          total: uniquePosts.length,
+          pages: Math.ceil(uniquePosts.length / limit),
+        },
+        stats: {
+          followingPosts: followingPosts.length,
+          hashtagPosts: hashtagPosts.length,
+          totalUnique: uniquePosts.length,
+          userHashtags: userHashtags.length,
+          followingCount: followingIds.length,
         },
       };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async searchPosts(searchTerm, userId = null, options = {}) {
-    try {
-      return await this.getPosts({ search: searchTerm, userId }, options);
     } catch (error) {
       throw error;
     }
@@ -558,7 +759,7 @@ class PostService {
 
       // Tăng likes_count
       const updatedPost = await this.updateEngagement(postId, 'likes_count', 1);
-
+      await NotificationService.createPostLikeNotification(postId, userId);
       return {
         post_id: postId,
         likes_count: updatedPost.engagement.likes_count,

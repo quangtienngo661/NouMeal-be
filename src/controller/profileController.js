@@ -211,7 +211,7 @@ const getUserById = catchAsync(async (req, res, next) => {
 
   const user = await userService.getUserById(userId);
 
-  return res.ok(user, 'Profile retrieved successfully', 200);
+  return res.ok(user, 200, 'Profile retrieved successfully');
 
   // res.status(200).json({
   //   success: true,
