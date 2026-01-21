@@ -16,6 +16,9 @@ class EmailService {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD, // Use app password for Gmail
       },
+      tls: {
+        rejectUnauthorized: false,
+      }
     });
   }
 
