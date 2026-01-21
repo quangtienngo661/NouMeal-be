@@ -37,6 +37,7 @@ const notificationRoute = require('./route/notificationRoute');
 // ========= MIDDLEWARE SECTION =========
 const app = express();
 connectDb();
+app.set('trust proxy', true); // Trust first proxy
 
 // Swagger configuration is now imported from swagger.js
 
