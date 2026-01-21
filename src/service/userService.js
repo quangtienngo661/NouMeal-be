@@ -31,17 +31,19 @@ class UserService {
       await newUser.save({ validateBeforeSave: false });
 
       // Send verification email
-      try {
-        await emailService.sendEmailVerificationOTP(
-          newUser.email,
-          newUser.name,
-          otp
-        );
-      } catch (emailError) {
-        // If email fails, still return success but log the error
-        console.error('Failed to send verification email:', emailError);
-        // You might want to implement a retry mechanism here
-      }
+      // try {
+      //   await emailService.sendEmailVerificationOTP(
+      //     newUser.email,
+      //     newUser.name,
+      //     otp
+      //   );
+      // } catch (emailError) {
+      //   // If email fails, still return success but log the error
+      //   console.error('Failed to send verification email:', emailError);
+      //   // You might want to implement a retry mechanism here
+      // }
+
+      console.log('Email verification OTP (development mode):', otp);
 
       // Return user without password and sensitive data
       return {

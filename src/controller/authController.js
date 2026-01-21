@@ -3,10 +3,10 @@ const { catchAsync } = require('../libs/util/catchAsync');
 const AppError = require('../libs/util/AppError');
 const userService = require('../service/userService');
 const emailService = require('../libs/util/emailService');
-const { 
-  createSendToken, 
-  generateTokenPair, 
-  verifyRefreshToken 
+const {
+  createSendToken,
+  generateTokenPair,
+  verifyRefreshToken
 } = require('../middleware/authMiddleware');
 const User = require('../model/userModel');
 
@@ -206,7 +206,9 @@ const resendVerificationEmail = catchAsync(async (req, res, next) => {
 
   // Send email
   try {
-    await emailService.sendEmailVerificationOTP(user.email, user.name, otp);
+    // await emailService.sendEmailVerificationOTP(user.email, user.name, otp);
+
+    console.log('OTP for email verification (development mode):', otp);
 
     res.status(200).json({
       success: true,
@@ -291,7 +293,7 @@ const forgotPassword = catchAsync(async (req, res, next) => {
 
   // Send email
   try {
-    await emailService.sendPasswordResetOTP(user.email, user.name, otp);
+    // await emailService.sendPasswordResetOTP(user.email, user.name, otp);
 
     res.status(200).json({
       success: true,
@@ -299,7 +301,7 @@ const forgotPassword = catchAsync(async (req, res, next) => {
     });
   } catch (error) {
     console.warn('⚠️ Email sending failed (development mode):', error.message);
-    
+
     // In development, don't clear OTP and return success with dev info
     if (process.env.NODE_ENV !== 'production') {
       return res.status(200).json({
@@ -307,6 +309,8 @@ const forgotPassword = catchAsync(async (req, res, next) => {
         message: 'Password reset OTP generated successfully (email send failed). Check server console for OTP during development.'
       });
     }
+
+    console.log('OTP for password reset (development mode):', otp);
 
     // In production, clear OTP and return error
     user.clearPasswordResetOTP();
@@ -393,11 +397,11 @@ const resetPassword = catchAsync(async (req, res, next) => {
   // Set new password and clear OTP
   user.password = newPassword;
   user.clearPasswordResetOTP();
-  
+
   // Clear all refresh tokens for security
   user.refreshToken = undefined;
   user.refreshTokenExpires = undefined;
-  
+
   await user.save();
 
   // Generate new tokens and send response
