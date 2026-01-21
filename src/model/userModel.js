@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { number } = require('joi');
 
 const userSchema = new mongoose.Schema(
   {
@@ -65,7 +66,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Activity level is required'],
       enum: {
-        values: ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extra_active'],
+        values: [
+          'sedentary',
+          'lightly_active',
+          'moderately_active',
+          'very_active',
+          'extra_active',
+        ],
         message:
           'Activity level must be one of: sedentary, lightly_active, moderately_active, very_active, extra_active',
       },
@@ -180,10 +187,23 @@ const userSchema = new mongoose.Schema(
     lastLogin: {
       type: Date,
     },
+    followingUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,
     toJSON: {
+      virtuals: true,
       transform(doc, ret) {
         delete ret.password;
         delete ret.__v;
@@ -254,8 +274,7 @@ userSchema.methods.verifyEmailOTP = function (otp) {
 // Verify password reset OTP
 userSchema.methods.verifyPasswordResetOTP = function (otp) {
   return (
-    this.passwordResetOTP === otp &&
-    this.passwordResetOTPExpires > new Date()
+    this.passwordResetOTP === otp && this.passwordResetOTPExpires > new Date()
   );
 };
 
@@ -270,7 +289,13 @@ userSchema.methods.clearPasswordResetOTP = function () {
   this.passwordResetOTP = undefined;
   this.passwordResetOTPExpires = undefined;
 };
-
+// Number of followers virtual field
+userSchema.virtual('NumberOfFollowers').get(function () {
+  return this.followingUsers ? this.followingUsers.length : 0;
+});
+userSchema.virtual('NumberOfFollowers').get(function () {
+  return this.followers ? this.followers.length : 0;
+});
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;

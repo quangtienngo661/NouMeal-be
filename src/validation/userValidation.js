@@ -1,5 +1,4 @@
 const { body } = require('express-validator');
-
 exports.validateRegistration = [
   body('email')
     .isEmail()
